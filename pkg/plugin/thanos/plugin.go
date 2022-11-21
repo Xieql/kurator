@@ -96,14 +96,17 @@ func NewPlugin(s *generic.Options, args *InstallArgs) (*Plugin, error) {
 }
 
 func (p *Plugin) Execute(cmdArgs, environment []string) error {
+	fmt.Printf("Execute preCheck", "")
 	if err := p.preCheck(); err != nil {
 		return err
 	}
 
+	fmt.Printf("Execute runInstallPrometheus", "")
 	if err := p.runInstallPrometheus(); err != nil {
 		return err
 	}
 
+	fmt.Printf("Execute runInstallThanos", "")
 	if err := p.runInstallThanos(thanosNamespace); err != nil {
 		return err
 	}
@@ -112,6 +115,10 @@ func (p *Plugin) Execute(cmdArgs, environment []string) error {
 }
 
 func (p *Plugin) preCheck() error {
+
+	fmt.Printf("check object store config , config is %v", p.args.ObjectStoreConfig)
+	println("")
+
 	if _, err := os.Stat(p.args.ObjectStoreConfig); err != nil {
 		return fmt.Errorf("check object store config fail, %w", err)
 	}
@@ -120,6 +127,7 @@ func (p *Plugin) preCheck() error {
 	if err != nil {
 		return err
 	}
+	fmt.Printf("get Clusters , Clusters is %v", clusters)
 
 	p.clusters = clusters
 
@@ -151,10 +159,13 @@ func (p *Plugin) runInstallPrometheus() error {
 	if err != nil {
 		return fmt.Errorf("load resource fail, %w", err)
 	}
+	fmt.Printf("runInstallPrometheus , setupResourceList is %v", setupResourceList)
 
 	if _, err := helmClient.Update(setupResourceList, setupResourceList, true); err != nil {
 		return fmt.Errorf("create setup resource fail, %w", err)
 	}
+
+	fmt.Printf("WaitCRDReady , crd name is prometheuses.monitoring.coreos.com ")
 
 	if err := util.WaitCRDReady(p.CrdClient(), promCRDName, p.options.WaitInterval, p.options.WaitTimeout); err != nil {
 		return fmt.Errorf("wait CRD %s ready fail, %w", promCRDName, err)

@@ -152,3 +152,95 @@ gen-crd: init-codegen ## Generate WebhookConfiguration, ClusterRole and CustomRe
 .PHONY: generate
 generate: init-codegen ## Generate code containing DeepCopy, DeepCopyInto, and DeepCopyObject method implementations.
 	hack/update-codegen.sh
+
+# dev test
+.PHONY: start
+start:
+	hack/local-dev-setup.sh
+	export LOGGING_LEVEL=debug
+	export KUBECONFIG=/root/.kube/kurator-host.config
+	kubectl config use-context kurator-host
+
+.PHONY: start-env
+start-env: export-env1  export-env2 switch-context
+
+export-env1:
+	export LOGGING_LEVEL=debug
+
+export-env2:
+	export KUBECONFIG=/root/.kube/kurator-host.config
+
+switch-context:
+	kubectl config get-contexts
+	kubectl config use-context kurator-host
+
+.PHONY: start-with-karmada
+start-with-karmada: start install-karmada
+
+.PHONY: restart
+restart: end start-with-karmada start-env
+
+.PHONY: end
+end:
+	kind delete clusters kurator-host kurator-member1 kurator-member2
+
+.PHONY: refresh
+refresh:git-pull build start-env echo-refresh-finished
+
+git-pull:
+	git pull
+
+echo-refresh-finished:
+	echo -e "Congratulations! "
+	echo -e "Congratulations! "
+	echo -e "Congratulations! The code is up to date and compiled"
+
+.PHONY: install-volcano
+install-volcano:
+	kurator install volcano
+
+.PHONY: install-prometheus
+install-prometheus:
+	kurator install prometheus --primary member1
+
+.PHONY: install-istio
+install-istio:
+	kurator install istio --primary member1 --remote member2
+
+.PHONY: tidy-install-istio
+tidy-install-istio:
+	kubectl delete ns istio-system --ignore-not-found --kubeconfig /root/.kube/kurator-members.config
+	kurator install istio --primary member1 --remote member2
+
+.PHONY: tidy-install-thanos
+install-thanos:
+	kubectl delete -f manifests/profiles/prom-thanos/ --ignore-not-found --kubeconfig /etc/karmada/karmada-apiserver.config
+	kubectl delete -f manifests/profiles/prom-thanos/setup --ignore-not-found --kubeconfig /etc/karmada/karmada-apiserver.config
+	kubectl delete ns monitoring --ignore-not-found --kubeconfig /etc/karmada/karmada-apiserver.config
+	kubectl delete cpp thanos --kubeconfig /etc/karmada/karmada-apiserver.config
+	kubectl delete -f manifests/profiles/thanos/ --ignore-not-found --kubeconfig $HOME/.kube/kurator-host.config
+	kubectl delete ns thanos --ignore-not-found --kubeconfig $HOME/.kube/kurator-host.config
+	kurator install istio --primary member1 --remote member2
+
+.PHONY: install-karmada
+install-karmada:
+	kurator install karmada --kubeconfig=/root/.kube/kurator-host.config
+	kurator join karmada member1 --cluster-kubeconfig=/root/.kube/kurator-members.config --cluster-context=kurator-member1
+	kurator join karmada member2 --cluster-kubeconfig=/root/.kube/kurator-members.config --cluster-context=kurator-member2
+	kubectl --kubeconfig /etc/karmada/karmada-apiserver.config get clusters
+
+.PHONY: karmada
+karmada:
+	kurator install karmada --kubeconfig=/root/.kube/kurator-host.config
+
+.PHONY: join-karmada
+join-karmada:
+	kurator join karmada member1 --cluster-kubeconfig=/root/.kube/kurator-members.config --cluster-context=kurator-member1
+	kurator join karmada member2 --cluster-kubeconfig=/root/.kube/kurator-members.config --cluster-context=kurator-member2
+	kubectl --kubeconfig /etc/karmada/karmada-apiserver.config get clusters
+
+.PHONY: install-argocd
+install-argocd:
+	kurator install argocd --kubeconfig=/root/.kube/kurator-host.config --cluster-kubeconfig=/etc/karmada/karmada-apiserver.config --cluster-context=karmada-apiserver
+
+
