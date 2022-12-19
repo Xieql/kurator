@@ -47,7 +47,7 @@ type CustomClusterSpec struct {
 
 	// MachineRef is the reference of nodes for provisioning a kurator cluster.
 	// +optional
-	MachineRef corev1.ObjectReference `json:"machineRef,omitempty"`
+	MachineRef *corev1.ObjectReference `json:"machineRef,omitempty"`
 }
 
 // CustomClusterStatus represents the current status of the cluster.

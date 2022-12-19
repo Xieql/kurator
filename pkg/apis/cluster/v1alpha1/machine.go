@@ -43,6 +43,8 @@ type CustomMachine struct {
 
 // CustomMachineSpec defines kubernetes cluster master and nodes.
 type CustomMachineSpec struct {
+	MachineOwner *corev1.ObjectReference `json:"machineRef,omitempty"`
+
 	Master []Machine `json:"master,omitempty"`
 	Nodes  []Machine `json:"node,omitempty"`
 }
