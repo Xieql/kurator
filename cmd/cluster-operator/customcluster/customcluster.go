@@ -31,7 +31,7 @@ func InitControllers(ctx context.Context, mgr ctrl.Manager) error {
 	if err := (&controllers.CustomClusterController{
 		Client: mgr.GetClient(),
 		Scheme: mgr.GetScheme(),
-	}).SetupWithManager(mgr); err != nil {
+	}).SetupWithManager(ctx, mgr, controller.Options{}); err != nil {
 		log.Error(err, "unable to create controller", "controller", "CustomCluster")
 		return err
 	}
