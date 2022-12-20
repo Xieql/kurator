@@ -61,7 +61,9 @@ type CustomClusterController struct {
 // For more details, check Reconcile and its Result here:
 // - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.13.0/pkg/reconcile
 func (r *CustomClusterController) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
+
 	log := ctrl.LoggerFrom(ctx)
+	log.Info("***********~~~~~~~~~~reconcile begin~~~~~~~~~")
 
 	// Fetch the KubeadmControlPlane instance.
 	kcp := &controlplanev1.KubeadmControlPlane{}
@@ -93,17 +95,17 @@ func (r *CustomClusterController) Reconcile(ctx context.Context, req ctrl.Reques
 
 func (r *CustomClusterController) reconcile(ctx context.Context, kcp *controlplanev1.KubeadmControlPlane, cluster *clusterv1.Cluster) (ctrl.Result, error) {
 	log := ctrl.LoggerFrom(ctx)
-	log.Info("reconcile begin~~~~~~~~~")
+	log.Info("~~~~~~~~~~reconcile begin~~~~~~~~~")
 
 	// TODO: 根据 Cluster KCP CustomMachine 及 SSH key secret生成kubespray参数 Configmap
-	log.Info("create configmap from ssh key secret / kcp /customMachine~~~~~~~~~~~~~")
+	log.Info("~~~~~~~~~~create configmap from ssh key secret / kcp /customMachine~~~~~~~~~~~~~")
 
 	// 创建Pod （挂载SSH证书以及配置参数） 执行ansible-playbook创建集群
-	log.Info("create job/pod to exec ansible-playbook~~~~~~~~")
+	log.Info("~~~~~~~~~~create job/pod to exec ansible-playbook~~~~~~~~")
 
-	log.Info("exec the job~~~~~~~~")
+	log.Info("~~~~~~~~~~exec the job~~~~~~~~")
 
-	log.Info("reconcile end~~~~~~~~~~")
+	log.Info("~~~~~~~~~~reconcile end~~~~~~~~~~")
 	return ctrl.Result{}, nil
 }
 

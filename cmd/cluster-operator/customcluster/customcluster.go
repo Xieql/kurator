@@ -28,6 +28,7 @@ import (
 var log = ctrl.Log.WithName("custom_cluster")
 
 func InitControllers(ctx context.Context, mgr ctrl.Manager) error {
+	log.Info("~~~~~~~~~~~start init CustomClusterController ")
 	if err := (&controllers.CustomClusterController{
 		Client: mgr.GetClient(),
 		Scheme: mgr.GetScheme(),
@@ -43,6 +44,8 @@ func InitControllers(ctx context.Context, mgr ctrl.Manager) error {
 		log.Error(err, "unable to create controller", "controller", "CustomMachine")
 		return err
 	}
+
+	log.Info("~~~~~~~~~~~finish init CustomClusterController ")
 
 	return nil
 }
