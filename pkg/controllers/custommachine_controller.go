@@ -45,6 +45,9 @@ type CustomMachineController struct {
 
 // SetupWithManager sets up the controller with the Manager.
 func (r *CustomMachineController) SetupWithManager(ctx context.Context, mgr ctrl.Manager, options controller.Options) error {
+	log := ctrl.LoggerFrom(ctx)
+
+	log.Info("~~~~~~~~~ cm  SetupWithManager begin~~~~~~~~~~")
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&clusterv1alpha1.CustomMachine{}).
 		WithOptions(options).
@@ -53,6 +56,8 @@ func (r *CustomMachineController) SetupWithManager(ctx context.Context, mgr ctrl
 
 func (r *CustomMachineController) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	log := log.FromContext(ctx)
+	log.Info("~~~~~~~~~~~~~~~~~~~~~~custom machine reconcile start")
+
 	// Fetch the CustomMachine instance.
 	customMachine := &clusterv1alpha1.CustomMachine{}
 	if err := r.Client.Get(ctx, req.NamespacedName, customMachine); err != nil {

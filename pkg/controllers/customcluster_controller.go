@@ -63,7 +63,7 @@ type CustomClusterController struct {
 func (r *CustomClusterController) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 
 	log := ctrl.LoggerFrom(ctx)
-	log.Info("***********~~~~~~~~~~reconcile begin~~~~~~~~~")
+	log.Info("***********~~~~~~~CustomClusterController reconcile begin~~~~~~~~~")
 
 	// Fetch the KubeadmControlPlane instance.
 	kcp := &controlplanev1.KubeadmControlPlane{}
@@ -111,8 +111,12 @@ func (r *CustomClusterController) reconcile(ctx context.Context, kcp *controlpla
 
 // SetupWithManager sets up the controller with the Manager.
 func (r *CustomClusterController) SetupWithManager(ctx context.Context, mgr ctrl.Manager, options controller.Options) error {
+	log := ctrl.LoggerFrom(ctx)
+
+	log.Info("~~~~~~~~~ cc SetupWithManager begin~~~~~~~~~~")
+
 	c, err := ctrl.NewControllerManagedBy(mgr).
-		For(&v1alpha1.CustomMachine{}).
+		For(&v1alpha1.CustomCluster{}).
 		WithOptions(options).
 		Build(r)
 	if err != nil {
@@ -130,6 +134,8 @@ func (r *CustomClusterController) SetupWithManager(ctx context.Context, mgr ctrl
 	if err != nil {
 		return fmt.Errorf("failed adding Watch for Clusters to controller manager: %v", err)
 	}
+
+	log.Info("~~~~~~~~~ cc SetupWithManager finish~~~~~~~~~~")
 
 	return nil
 }
