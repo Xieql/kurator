@@ -81,9 +81,6 @@ func (r *CustomClusterController) Reconcile(ctx context.Context, req ctrl.Reques
 
 	log.Info("~~~~~~~~~~~a is : ", a, "！！！！")
 
-	log.Info("~~~~~~~~~~~curJob is : ", curJob)
-	log.Info("metav1.CreateOptions{} is : ", metav1.CreateOptions{})
-
 	var err error
 	curJob, err = r.ClientSet.BatchV1().Jobs(curJob.Namespace).Create(context.Background(), curJob, metav1.CreateOptions{})
 
