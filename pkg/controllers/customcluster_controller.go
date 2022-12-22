@@ -73,8 +73,12 @@ func (r *CustomClusterController) Reconcile(ctx context.Context, req ctrl.Reques
 
 	log.Info("***********~~~~~~~let's test create a job ~~~~~")
 
-	curJob := r.CreateKubesprayInitClusterJob()
-	curJob, err := r.ClientSet.BatchV1().Jobs(curJob.Namespace).Create(context.Background(), curJob, metav1.CreateOptions{})
+	curJob := r.CreateKubesprayInitClusterJob(ctx)
+
+	log.Info("***********~~~~~~~ curJob is ok ~~~~~")
+
+	var err error
+	curJob, err = r.ClientSet.BatchV1().Jobs(curJob.Namespace).Create(context.Background(), curJob, metav1.CreateOptions{})
 
 	if err != nil {
 		log.Error(err, "Failed to create job")
@@ -221,7 +225,7 @@ func (r *CustomClusterController) KubeadmControlPlaneToCustomCluster(o client.Ob
 }
 
 // CreateKubesprayInitClusterJob create a kubespray init cluster job from configMap, or check exist first ?
-func (r *CustomClusterController) CreateKubesprayInitClusterJob() *batchv1.Job {
+func (r *CustomClusterController) CreateKubesprayInitClusterJob(ctx context.Context) *batchv1.Job {
 	clusterName := "testCluster"
 	defaultNamespace := "default"
 	defaultImage := "quay.io/kubespray/kubespray:v2.20.0"
@@ -231,6 +235,8 @@ func (r *CustomClusterController) CreateKubesprayInitClusterJob() *batchv1.Job {
 	image := defaultImage
 	containerName := clusterName + "-container"
 	DefaultMode := int32(0o600)
+	log := ctrl.LoggerFrom(ctx)
+	log.Info("~#############~~~~~~~~~CreateKubesprayInitClusterJob 1~~~~~~~~~")
 
 	initJob := &batchv1.Job{
 		TypeMeta: metav1.TypeMeta{
@@ -302,12 +308,13 @@ func (r *CustomClusterController) CreateKubesprayInitClusterJob() *batchv1.Job {
 							},
 						},
 					},
-
 					RestartPolicy: corev1.RestartPolicyNever,
 				},
 			},
 		},
 	}
+
+	log.Info("~#############~~~~~~~~~CreateKubesprayInitClusterJob 2~~~~~~~~~")
 
 	return initJob
 }
