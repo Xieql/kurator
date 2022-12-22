@@ -73,6 +73,8 @@ func (r *CustomClusterController) Reconcile(ctx context.Context, req ctrl.Reques
 	// Fetch the KubeadmControlPlane instance.
 	kcp := &controlplanev1.KubeadmControlPlane{}
 	if err := r.Client.Get(ctx, req.NamespacedName, kcp); err != nil {
+		log.Error(err, "Failed to Get kcp")
+
 		if apierrors.IsNotFound(err) {
 			return ctrl.Result{}, nil
 		}
