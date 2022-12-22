@@ -231,11 +231,11 @@ func (r *CustomClusterController) KubeadmControlPlaneToCustomCluster(o client.Ob
 
 // CreateKubesprayInitClusterJob create a kubespray init cluster job from configMap, or check exist first ?
 func (r *CustomClusterController) CreateKubesprayInitClusterJob(ctx context.Context) *batchv1.Job {
-	clusterName := "testCluster"
+	clusterName := "test-cluster"
 	defaultNamespace := "default"
 	defaultImage := "quay.io/kubespray/kubespray:v2.20.0"
 
-	jobName := clusterName + "kubespray-init-cluster-job"
+	jobName := clusterName + "-kubespray-init-cluster-job"
 	namespace := defaultNamespace
 	image := defaultImage
 	containerName := clusterName + "-container"
