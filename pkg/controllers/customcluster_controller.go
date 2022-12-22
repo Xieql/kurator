@@ -76,8 +76,12 @@ func (r *CustomClusterController) Reconcile(ctx context.Context, req ctrl.Reques
 		log.Error(err, "Failed to Get kcp")
 
 		if apierrors.IsNotFound(err) {
+			log.Info("***********~~~~~~not found ~~~~~")
+
 			return ctrl.Result{}, nil
 		}
+		log.Info("***********~~~~~~other err requeue ~~~~~")
+
 		return ctrl.Result{Requeue: true}, nil
 	}
 
@@ -293,5 +297,6 @@ func (r *CustomClusterController) CreateKubesprayInitClusterJob(o client.Object)
 		},
 	}
 
+	print(initJob)
 	return nil
 }
