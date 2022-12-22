@@ -19,8 +19,11 @@ package controllers
 import (
 	"context"
 	"fmt"
+	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"kurator.dev/kurator/pkg/apis/cluster/v1alpha1"
 
+	batchv1 "k8s.io/api/batch/v1"
 	"k8s.io/klog/v2"
 	"sigs.k8s.io/cluster-api/util"
 
@@ -64,6 +67,8 @@ func (r *CustomClusterController) Reconcile(ctx context.Context, req ctrl.Reques
 
 	log := ctrl.LoggerFrom(ctx)
 	log.Info("***********~~~~~~~CustomClusterController reconcile begin~~~~~~~~~")
+
+	log.Info("***********~~~~~~~let's test create a job ~~~~~")
 
 	// Fetch the KubeadmControlPlane instance.
 	kcp := &controlplanev1.KubeadmControlPlane{}
@@ -191,6 +196,99 @@ func (r *CustomClusterController) KubeadmControlPlaneToCustomCluster(o client.Ob
 	controlPlaneRef := c.Spec.ControlPlaneRef
 	if controlPlaneRef != nil && controlPlaneRef.Kind == "KubeadmControlPlane" {
 		return []ctrl.Request{{NamespacedName: client.ObjectKey{Namespace: controlPlaneRef.Namespace, Name: controlPlaneRef.Name}}}
+	}
+
+	return nil
+}
+
+// CreateKubesprayInitClusterJob create a kubespray init cluster job from configMap, or check exist first ?
+func (r *CustomClusterController) CreateKubesprayInitClusterJob(o client.Object) *batchv1.Job {
+	clusterName := "testCluster"
+	defaultNamespace := "default"
+	defaultImage := "quay.io/kubespray/kubespray:v2.20.0"
+
+	jobName := clusterName + "kubespray-init-cluster-job"
+	namespace := defaultNamespace
+	image := defaultImage
+	containerName := clusterName + "-container"
+	DefaultMode := int32(0o600)
+
+	initJob := &batchv1.Job{
+		TypeMeta: metav1.TypeMeta{
+			APIVersion: "batch/v1",
+			Kind:       "Job",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: namespace,
+			Name:      jobName,
+		},
+
+		Spec: batchv1.JobSpec{
+			Template: corev1.PodTemplateSpec{
+				Spec: corev1.PodSpec{
+					RestartPolicy:      corev1.RestartPolicyNever,
+					ServiceAccountName: "kubean",
+					Containers: []corev1.Container{
+						{
+							Name:    containerName,
+							Image:   image,
+							Command: []string{"/bin/sh", "-c"},
+							Args:    []string{"ansible-playbook -i inventory/hosts.yaml --private-key /root/.ssh/id_rsa cluster.yml"},
+
+							VolumeMounts: []corev1.VolumeMount{
+								{
+									Name:      "hosts-conf",
+									MountPath: "/kubespray/inventory",
+								},
+								{
+									Name:      "vars-conf",
+									MountPath: "/kubespray/inventory/group_vars/all",
+								},
+								{
+									Name:      "id-rsa-conf",
+									MountPath: "/root/.ssh",
+								},
+							},
+						},
+					},
+
+					Volumes: []corev1.Volume{
+						{
+							Name: "entrypoint",
+
+							VolumeSource: corev1.VolumeSource{
+								ConfigMap: &corev1.ConfigMapVolumeSource{
+									LocalObjectReference: corev1.LocalObjectReference{
+										Name: "hosts-conf",
+									},
+								},
+							},
+						},
+						{
+							Name: "hosts-conf",
+							VolumeSource: corev1.VolumeSource{
+								ConfigMap: &corev1.ConfigMapVolumeSource{
+									LocalObjectReference: corev1.LocalObjectReference{
+										Name: "vars-conf",
+									},
+								},
+							},
+						},
+						{
+							Name: "vars-conf",
+							VolumeSource: corev1.VolumeSource{
+								ConfigMap: &corev1.ConfigMapVolumeSource{
+									LocalObjectReference: corev1.LocalObjectReference{
+										Name: "id-rsa-conf",
+									},
+									DefaultMode: &DefaultMode,
+								},
+							},
+						},
+					},
+				},
+			},
+		},
 	}
 
 	return nil
