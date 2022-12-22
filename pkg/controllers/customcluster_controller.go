@@ -21,6 +21,7 @@ import (
 	"fmt"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/client-go/kubernetes"
 	"kurator.dev/kurator/pkg/apis/cluster/v1alpha1"
 
 	batchv1 "k8s.io/api/batch/v1"
@@ -44,6 +45,8 @@ import (
 // CustomClusterReconciler reconciles a CustomCluster object
 type CustomClusterController struct {
 	client.Client
+	ClientSet kubernetes.Interface
+
 	APIReader client.Reader
 	Scheme    *runtime.Scheme
 
@@ -69,6 +72,16 @@ func (r *CustomClusterController) Reconcile(ctx context.Context, req ctrl.Reques
 	log.Info("***********~~~~~~~CustomClusterController reconcile begin~~~~~~~~~")
 
 	log.Info("***********~~~~~~~let's test create a job ~~~~~")
+
+	curJob := r.CreateKubesprayInitClusterJob()
+	curJob, err := r.ClientSet.BatchV1().Jobs(curJob.Namespace).Create(context.Background(), curJob, metav1.CreateOptions{})
+
+	if err != nil {
+		log.Error(err, "Failed to create job")
+
+		return ctrl.Result{}, err
+	}
+	log.Info("***********~~~~~~~create a job  success  ~~~~~")
 
 	// Fetch the KubeadmControlPlane instance.
 	kcp := &controlplanev1.KubeadmControlPlane{}
@@ -208,7 +221,7 @@ func (r *CustomClusterController) KubeadmControlPlaneToCustomCluster(o client.Ob
 }
 
 // CreateKubesprayInitClusterJob create a kubespray init cluster job from configMap, or check exist first ?
-func (r *CustomClusterController) CreateKubesprayInitClusterJob(o client.Object) *batchv1.Job {
+func (r *CustomClusterController) CreateKubesprayInitClusterJob() *batchv1.Job {
 	clusterName := "testCluster"
 	defaultNamespace := "default"
 	defaultImage := "quay.io/kubespray/kubespray:v2.20.0"
@@ -232,8 +245,6 @@ func (r *CustomClusterController) CreateKubesprayInitClusterJob(o client.Object)
 		Spec: batchv1.JobSpec{
 			Template: corev1.PodTemplateSpec{
 				Spec: corev1.PodSpec{
-					RestartPolicy:      corev1.RestartPolicyNever,
-					ServiceAccountName: "kubean",
 					Containers: []corev1.Container{
 						{
 							Name:    containerName,
@@ -260,8 +271,7 @@ func (r *CustomClusterController) CreateKubesprayInitClusterJob(o client.Object)
 
 					Volumes: []corev1.Volume{
 						{
-							Name: "entrypoint",
-
+							Name: "hosts-conf",
 							VolumeSource: corev1.VolumeSource{
 								ConfigMap: &corev1.ConfigMapVolumeSource{
 									LocalObjectReference: corev1.LocalObjectReference{
@@ -271,7 +281,7 @@ func (r *CustomClusterController) CreateKubesprayInitClusterJob(o client.Object)
 							},
 						},
 						{
-							Name: "hosts-conf",
+							Name: "vars-conf",
 							VolumeSource: corev1.VolumeSource{
 								ConfigMap: &corev1.ConfigMapVolumeSource{
 									LocalObjectReference: corev1.LocalObjectReference{
@@ -281,7 +291,7 @@ func (r *CustomClusterController) CreateKubesprayInitClusterJob(o client.Object)
 							},
 						},
 						{
-							Name: "vars-conf",
+							Name: "id-rsa-conf",
 							VolumeSource: corev1.VolumeSource{
 								ConfigMap: &corev1.ConfigMapVolumeSource{
 									LocalObjectReference: corev1.LocalObjectReference{
@@ -292,11 +302,12 @@ func (r *CustomClusterController) CreateKubesprayInitClusterJob(o client.Object)
 							},
 						},
 					},
+
+					RestartPolicy: corev1.RestartPolicyNever,
 				},
 			},
 		},
 	}
 
-	print(initJob)
-	return nil
+	return initJob
 }
