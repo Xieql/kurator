@@ -18,6 +18,10 @@ package customcluster
 
 import (
 	"context"
+	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/rest"
+	"k8s.io/client-go/tools/clientcmd"
+	"os"
 
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
@@ -29,9 +33,21 @@ var log = ctrl.Log.WithName("custom_cluster")
 
 func InitControllers(ctx context.Context, mgr ctrl.Manager) error {
 	log.Info("~~~~~~~~~~~start init CustomClusterController ")
+
+	// 这里的获取 clientSet 是如何实现的？
+	resetConfig, err := rest.InClusterConfig()
+	if err != nil {
+		resetConfig, err = clientcmd.BuildConfigFromFlags("", os.Getenv("HOME")+"/.kube/config")
+		if err != nil {
+			return err
+		}
+	}
+	ClientSet, err := kubernetes.NewForConfig(resetConfig)
+
 	if err := (&controllers.CustomClusterController{
-		Client: mgr.GetClient(),
-		Scheme: mgr.GetScheme(),
+		Client:    mgr.GetClient(),
+		Scheme:    mgr.GetScheme(),
+		ClientSet: ClientSet,
 	}).SetupWithManager(ctx, mgr, controller.Options{}); err != nil {
 		log.Error(err, "unable to create controller", "controller", "CustomCluster")
 		return err
