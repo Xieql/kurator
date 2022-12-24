@@ -23,6 +23,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 	"kurator.dev/kurator/pkg/apis/cluster/v1alpha1"
+	"strings"
 
 	batchv1 "k8s.io/api/batch/v1"
 	"k8s.io/klog/v2"
@@ -70,6 +71,10 @@ func (r *CustomClusterController) Reconcile(ctx context.Context, req ctrl.Reques
 
 	log := ctrl.LoggerFrom(ctx)
 	log.Info("***********~~~~~~~CustomClusterController reconcile begin~~~~~~~~~")
+
+	log.Info("***********~~~~~~~let's test create a new host configMap ~~~~~")
+
+	r.CreateHostsConfigMap(ctx)
 
 	log.Info("***********~~~~~~~let's test create a job ~~~~~")
 
@@ -304,10 +309,8 @@ func (r *CustomClusterController) CreateKubesprayInitClusterJob(ctx context.Cont
 						{
 							Name: "id-rsa-conf",
 							VolumeSource: corev1.VolumeSource{
-								ConfigMap: &corev1.ConfigMapVolumeSource{
-									LocalObjectReference: corev1.LocalObjectReference{
-										Name: "id-rsa-conf",
-									},
+								Secret: &corev1.SecretVolumeSource{
+									SecretName:  "id-rsa-conf",
 									DefaultMode: &DefaultMode,
 								},
 							},
@@ -322,4 +325,39 @@ func (r *CustomClusterController) CreateKubesprayInitClusterJob(ctx context.Cont
 	log.Info("~#############~~~~~~~~~CreateKubesprayInitClusterJob 2~~~~~~~~~")
 
 	return initJob
+}
+
+type HostsConfStruct struct {
+	APIVersion string
+}
+
+type VarsConfStruct struct {
+	APIVersion string
+}
+
+func (r *CustomClusterController) CreateHostsConfigMap(ctx context.Context) (bool, error) {
+
+	log := ctrl.LoggerFrom(ctx)
+	log.Info("~#############~~~~~~~~ CreateHostsConfigMap ~~~~~~~~~")
+
+	configMapData := "1 hhh\n2 :hhh\nthe end"
+
+	newConfigMap := &corev1.ConfigMap{
+		TypeMeta: metav1.TypeMeta{
+			Kind:       "ConfigMap",
+			APIVersion: "v1",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      fmt.Sprintf("%s-objectmeta-name", "string"),
+			Namespace: "default",
+		},
+		Data: map[string]string{"testHost.yaml": strings.TrimSpace(configMapData)}, // |2+
+	}
+
+	var err error
+	if newConfigMap, err = r.ClientSet.CoreV1().ConfigMaps(newConfigMap.Namespace).Create(context.Background(), newConfigMap, metav1.CreateOptions{}); err != nil {
+		return false, err
+	}
+
+	return true, nil
 }
