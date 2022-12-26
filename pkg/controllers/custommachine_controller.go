@@ -75,6 +75,26 @@ func (r *CustomMachineController) Reconcile(ctx context.Context, req ctrl.Reques
 func (r *CustomMachineController) reconcile(ctx context.Context, customMachine *clusterv1alpha1.CustomMachine) (ctrl.Result, error) {
 	log := ctrl.LoggerFrom(ctx)
 	keyRef := customMachine.Spec.Master[0].SSHKey
+	if keyRef == nil {
+		log.Info("~~~~~keyRef is null ")
+
+	}
+	if ctx == nil {
+		log.Info("~~~~~ctx is null ")
+
+	}
+	if r.Client == nil {
+		log.Info("~~~~~ r.Clien is null ")
+
+	}
+	if r.APIReader == nil {
+		log.Info("~~~~~r.APIReader is null ")
+
+	}
+	if r == nil {
+		log.Info("~~~~~r is null ")
+
+	}
 	if err := utilconversion.UpdateReferenceAPIContract(ctx, r.Client, r.APIReader, keyRef); err != nil {
 		return ctrl.Result{}, err
 	}

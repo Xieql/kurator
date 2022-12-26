@@ -34,7 +34,6 @@ var log = ctrl.Log.WithName("custom_cluster")
 func InitControllers(ctx context.Context, mgr ctrl.Manager) error {
 	log.Info("~~~~~~~~~~~start init CustomClusterController ")
 
-	// 这里的获取 clientSet 是如何实现的？
 	resetConfig, err := rest.InClusterConfig()
 	if err != nil {
 		resetConfig, err = clientcmd.BuildConfigFromFlags("", os.Getenv("HOME")+"/.kube/config")

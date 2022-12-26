@@ -24,6 +24,7 @@ import (
 	"k8s.io/client-go/kubernetes"
 	"kurator.dev/kurator/pkg/apis/cluster/v1alpha1"
 	"strings"
+	"time"
 
 	batchv1 "k8s.io/api/batch/v1"
 	"k8s.io/klog/v2"
@@ -54,6 +55,13 @@ type CustomClusterController struct {
 	externalTracker external.ObjectTracker
 }
 
+const (
+	RequeueAfter     = time.Millisecond * 500
+	LoopForJobStatus = time.Second * 3
+	RetryInterval    = time.Millisecond * 300
+	RetryCount       = 5
+)
+
 //+kubebuilder:rbac:groups=kurator.dev.kurator.dev,resources=customclusters,verbs=get;list;watch;create;update;patch;delete
 //+kubebuilder:rbac:groups=kurator.dev.kurator.dev,resources=customclusters/status,verbs=get;update;patch
 //+kubebuilder:rbac:groups=kurator.dev.kurator.dev,resources=customclusters/finalizers,verbs=update
@@ -80,12 +88,6 @@ func (r *CustomClusterController) Reconcile(ctx context.Context, req ctrl.Reques
 
 	curJob := r.CreateKubesprayInitClusterJob(ctx)
 
-	log.Info("***********~~~~~~~ curJob is ok ~~~~~")
-
-	a := "aa"
-
-	log.Info("~~~~~~~~~~~a is : ", a, "！！！！")
-
 	var err error
 
 	curJob, err = r.ClientSet.BatchV1().Jobs(curJob.Namespace).Create(context.Background(), curJob, metav1.CreateOptions{})
@@ -97,7 +99,19 @@ func (r *CustomClusterController) Reconcile(ctx context.Context, req ctrl.Reques
 	}
 	log.Info("***********~~~~~~~create a job  success  ~~~~~")
 
-	// Fetch the KubeadmControlPlane instance.
+	// Fetch the customCluster instance.
+	customCluster := &v1alpha1.CustomCluster{}
+	if err := r.Client.Get(ctx, req.NamespacedName, customCluster); err != nil {
+		if apierrors.IsNotFound(err) {
+			return ctrl.Result{Requeue: false}, nil
+		}
+		klog.Error(err)
+		return ctrl.Result{RequeueAfter: RequeueAfter}, err
+	}
+
+	// TODO:Fetch the CustomMachine instance.
+
+	// TODO: Fetch the KubeadmControlPlane instance.
 	kcp := &controlplanev1.KubeadmControlPlane{}
 	if err := r.Client.Get(ctx, req.NamespacedName, kcp); err != nil {
 		log.Error(err, "Failed to Get kcp")
@@ -112,7 +126,7 @@ func (r *CustomClusterController) Reconcile(ctx context.Context, req ctrl.Reques
 		return ctrl.Result{Requeue: true}, nil
 	}
 
-	// Fetch the Cluster.
+	// TODO: Fetch the Cluster instance
 	cluster, err := util.GetOwnerCluster(ctx, r.Client, kcp.ObjectMeta)
 	if err != nil {
 		log.Error(err, "Failed to retrieve owner Cluster from the API Server")
@@ -134,8 +148,14 @@ func (r *CustomClusterController) Reconcile(ctx context.Context, req ctrl.Reques
 func (r *CustomClusterController) reconcile(ctx context.Context, kcp *controlplanev1.KubeadmControlPlane, cluster *clusterv1.Cluster) (ctrl.Result, error) {
 	log := ctrl.LoggerFrom(ctx)
 	log.Info("~~~~~~~~~~reconcile begin~~~~~~~~~")
+	// 这里认为相关资源状态正常
 
 	// TODO: 根据 Cluster KCP CustomMachine 及 SSH key secret生成kubespray参数 Configmap
+
+	log.Info("~~~~~~~~~~create hostsconf configmap from customMachine~~~~~~~~~~~~~")
+
+	r.CreateHostsConfigMap(ctx, )
+
 	log.Info("~~~~~~~~~~create configmap from ssh key secret / kcp /customMachine~~~~~~~~~~~~~")
 
 	// 创建Pod （挂载SSH证书以及配置参数） 执行ansible-playbook创建集群
