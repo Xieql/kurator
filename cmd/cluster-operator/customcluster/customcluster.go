@@ -47,14 +47,16 @@ func InitControllers(ctx context.Context, mgr ctrl.Manager) error {
 		Client:    mgr.GetClient(),
 		Scheme:    mgr.GetScheme(),
 		ClientSet: ClientSet,
+		APIReader: mgr.GetAPIReader(),
 	}).SetupWithManager(ctx, mgr, controller.Options{}); err != nil {
 		log.Error(err, "unable to create controller", "controller", "CustomCluster")
 		return err
 	}
 
 	if err := (&controllers.CustomMachineController{
-		Client: mgr.GetClient(),
-		Scheme: mgr.GetScheme(),
+		Client:    mgr.GetClient(),
+		Scheme:    mgr.GetScheme(),
+		APIReader: mgr.GetAPIReader(),
 	}).SetupWithManager(ctx, mgr, controller.Options{}); err != nil {
 		log.Error(err, "unable to create controller", "controller", "CustomMachine")
 		return err
