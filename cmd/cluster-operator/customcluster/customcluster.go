@@ -82,7 +82,7 @@ func InitControllers(ctx context.Context, mgr ctrl.Manager) error {
 		return err
 	}
 
-	log.Info("~~~~~~~~~~~finish init CustomClusterController ")
+	log.Info("~~~~~~~~~~~finish init CustomClusterController22222222 ")
 
 	return nil
 }
