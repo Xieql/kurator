@@ -53,6 +53,12 @@ func InitControllers(ctx context.Context, mgr ctrl.Manager) error {
 		return err
 	}
 
+	if mgr.GetAPIReader() == nil {
+		log.Info("~~~~~~~!!!!!!!!!!!!!!!!!!  mgr.GetAPIReader() is nil !!!")
+		log.Info("~~~~~~~!!!!!!!!!!!!!!!!!!  mgr.GetAPIReader() is nil !!!")
+
+	}
+
 	if err := (&controllers.CustomMachineController{
 		Client:    mgr.GetClient(),
 		Scheme:    mgr.GetScheme(),
