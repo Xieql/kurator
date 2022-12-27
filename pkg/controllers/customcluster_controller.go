@@ -112,18 +112,26 @@ func (r *CustomClusterController) Reconcile(ctx context.Context, req ctrl.Reques
 	}
 	log.Info("-----------------------req.ns begin")
 	log.Info(req.Namespace)
-	ns := req.Namespace
-	log.Info(ns)
-
 	log.Info("-----------------------req.ns end")
-	log.Info("-----------------------req.ns is ++--++", req.Namespace, "++--++   name is:++--++", req.Name, "++--++")
-	log.Info("--------------------get customCluster successful! name:++--++", customCluster.Name, "++--++     namespace: ++--++", customCluster.Namespace, "++--++     APIVersion：++--++", customCluster.APIVersion, "++--++  Kind: ++--++", customCluster.Kind, "++--++")
+
+	log.Info("-----------------------req.name begin")
+	log.Info(req.Name)
+	log.Info("-----------------------req.name end")
 
 	// Fetch the CustomMachine instance.
 	customMachinekey := client.ObjectKey{
 		Namespace: customCluster.Spec.MachineRef.Namespace,
 		Name:      customCluster.Spec.MachineRef.Name,
 	}
+
+	log.Info("-----------------------customMachinekey.ns begin")
+	log.Info(customMachinekey.Namespace)
+	log.Info("-----------------------customMachinekey.ns end")
+
+	log.Info("-----------------------customMachinekey.name begin")
+	log.Info(customMachinekey.Name)
+	log.Info("-----------------------customMachinekey.name end")
+
 	customMachine := &v1alpha1.CustomMachine{}
 	if err := r.Client.Get(ctx, customMachinekey, customMachine); err != nil {
 		if apierrors.IsNotFound(err) {
