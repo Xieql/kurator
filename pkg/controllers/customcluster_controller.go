@@ -105,6 +105,8 @@ func (r *CustomClusterController) Reconcile(ctx context.Context, req ctrl.Reques
 		return ctrl.Result{RequeueAfter: RequeueAfter}, err
 	}
 
+	log.Info("--------------------customCluster is ok")
+
 	// Fetch the CustomMachine instance.
 	customMachinekey := client.ObjectKey{
 		Namespace: customCluster.Spec.MachineRef.Namespace,
@@ -118,6 +120,8 @@ func (r *CustomClusterController) Reconcile(ctx context.Context, req ctrl.Reques
 		}
 		return ctrl.Result{RequeueAfter: RequeueAfter}, err
 	}
+
+	log.Info("--------------------customMachinekey is ok")
 
 	// Fetch the Cluster instance
 	clusterkey := client.ObjectKey{
@@ -133,6 +137,7 @@ func (r *CustomClusterController) Reconcile(ctx context.Context, req ctrl.Reques
 		klog.Error(err)
 		return ctrl.Result{RequeueAfter: RequeueAfter}, err
 	}
+	log.Info("--------------------cluster is ok")
 
 	// Fetch the KubeadmControlPlane instance.
 	kcpKey := client.ObjectKey{
@@ -147,6 +152,7 @@ func (r *CustomClusterController) Reconcile(ctx context.Context, req ctrl.Reques
 		klog.Error(err)
 		return ctrl.Result{RequeueAfter: RequeueAfter}, err
 	}
+	log.Info("--------------------kcp is ok")
 
 	// TODO: check cluster status
 
