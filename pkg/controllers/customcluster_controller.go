@@ -115,7 +115,7 @@ func (r *CustomClusterController) Reconcile(ctx context.Context, req ctrl.Reques
 	customMachine := &v1alpha1.CustomMachine{}
 	log.Info("-------------------customMachinekey")
 
-	klog.Infof("customMachine name is %s", customMachinekey.Name)
+	klog.Infof("customMachine name is %s ns is %s", customMachinekey.Name, customMachinekey.Namespace)
 
 	log.Info("--------------------customMachinekey not found")
 
