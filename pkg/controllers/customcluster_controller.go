@@ -110,7 +110,8 @@ func (r *CustomClusterController) Reconcile(ctx context.Context, req ctrl.Reques
 		klog.Error(err)
 		return ctrl.Result{RequeueAfter: RequeueAfter}, err
 	}
-	log.Info("--------------------get customCluster successful! name:", customCluster.Name, "  namespace: ", customCluster.Namespace, "   APIVersion ", customCluster.APIVersion, "  Kind:", customCluster.Kind)
+	log.Info("-----------------------req.ns is ++--++", req.Namespace, "++--++   name is:++--++", req.Name, "++--++")
+	log.Info("--------------------get customCluster successful! name:++--++", customCluster.Name, "++--++     namespace: ++--++", customCluster.Namespace, "++--++     APIVersion：++--++", customCluster.APIVersion, "++--++  Kind: ++--++", customCluster.Kind, "++--++")
 
 	// Fetch the CustomMachine instance.
 	customMachinekey := client.ObjectKey{
@@ -120,7 +121,7 @@ func (r *CustomClusterController) Reconcile(ctx context.Context, req ctrl.Reques
 	customMachine := &v1alpha1.CustomMachine{}
 	if err := r.Client.Get(ctx, customMachinekey, customMachine); err != nil {
 		if apierrors.IsNotFound(err) {
-			log.Info("--------------------  customMachine IsNotFound: ns is ", customMachinekey.Namespace, "name is ", customMachinekey.Name)
+			log.Info("--------------------  customMachine IsNotFound: ns is ++--++", customMachinekey.Namespace, "++--++    name is ++--++", customMachinekey.Name, "++--++")
 
 			//			return ctrl.Result{Requeue: false}, nil
 		}
