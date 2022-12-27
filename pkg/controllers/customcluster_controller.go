@@ -101,8 +101,12 @@ func (r *CustomClusterController) Reconcile(ctx context.Context, req ctrl.Reques
 	customCluster := &v1alpha1.CustomCluster{}
 	if err := r.Client.Get(ctx, req.NamespacedName, customCluster); err != nil {
 		if apierrors.IsNotFound(err) {
+			log.Info("--------------------  customCluster IsNotFound:")
+
 			return ctrl.Result{Requeue: false}, nil
 		}
+		log.Info("--------------------  customCluster err:")
+
 		klog.Error(err)
 		return ctrl.Result{RequeueAfter: RequeueAfter}, err
 	}
@@ -116,8 +120,12 @@ func (r *CustomClusterController) Reconcile(ctx context.Context, req ctrl.Reques
 	customMachine := &v1alpha1.CustomMachine{}
 	if err := r.Client.Get(ctx, customMachinekey, customMachine); err != nil {
 		if apierrors.IsNotFound(err) {
+			log.Info("--------------------  customMachine IsNotFound:")
+
 			return ctrl.Result{Requeue: false}, nil
 		}
+		log.Info("--------------------  customMachine err:")
+
 		klog.Error(err)
 		return ctrl.Result{RequeueAfter: RequeueAfter}, err
 	}
@@ -131,8 +139,12 @@ func (r *CustomClusterController) Reconcile(ctx context.Context, req ctrl.Reques
 	cluster := &clusterv1.Cluster{}
 	if err := r.Client.Get(ctx, clusterkey, cluster); err != nil {
 		if apierrors.IsNotFound(err) {
+			log.Info("--------------------  cluster IsNotFound:")
+
 			return ctrl.Result{Requeue: false}, nil
 		}
+		log.Info("--------------------  cluster err:")
+
 		klog.Error(err)
 		return ctrl.Result{RequeueAfter: RequeueAfter}, err
 	}
@@ -146,8 +158,12 @@ func (r *CustomClusterController) Reconcile(ctx context.Context, req ctrl.Reques
 	kcp := &controlplanev1.KubeadmControlPlane{}
 	if err := r.Client.Get(ctx, kcpKey, kcp); err != nil {
 		if apierrors.IsNotFound(err) {
+			log.Info("--------------------  kcp IsNotFound:")
+
 			return ctrl.Result{Requeue: false}, nil
 		}
+		log.Info("--------------------  kcp err:")
+
 		klog.Error(err)
 		return ctrl.Result{RequeueAfter: RequeueAfter}, err
 	}
