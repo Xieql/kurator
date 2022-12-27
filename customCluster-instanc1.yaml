@@ -1,0 +1,6 @@
+apiVersion: cluster.kurator.dev/v1alpha1
+kind: CustomCluster
+metadata:
+  name: cc-quickstart
+  namespace: default
+spec:

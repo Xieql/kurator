@@ -1,0 +1,32 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: kubespray-reset-cluster
+  namespace: default
+spec:
+  template:
+    spec:
+      containers:
+      - name: kubespray-reset-cluster
+        image: quay.io/kubespray/kubespray:v2.20.0
+        command: ["/bin/sh","-c"]
+        args: [ "ansible-playbook -e reset_confirmation=yes -i inventory/hosts.yaml reset.yml -vvv"]
+        volumeMounts:
+        - mountPath: /kubespray/inventory
+          name: hosts-conf
+        - mountPath: /kubespray/inventory/group_vars/all
+          name: vars-conf
+        - mountPath: /root/.ssh
+          name: id-rsa-conf
+      volumes:
+      - name: hosts-conf
+        configMap:
+          name: hosts-conf
+      - name: vars-conf
+        configMap:
+          name: vars-conf
+      - name: id-rsa-conf
+        configMap:
+          defaultMode: 384
+          name: id-rsa-conf
+      restartPolicy: Never

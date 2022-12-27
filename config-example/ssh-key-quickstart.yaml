@@ -1,0 +1,8 @@
+apiVersion: v1
+kind: Secret
+metadata:
+  creationTimestamp: null
+  name: ssh-key-quickstart
+type: kubernetes.io/ssh-auth
+stringData:
+  ssh-privatekey: LS0tLS1CRUdJTiBSU0EgUFJJVkFURSBLRVktLS0tLQpNSUlKS1FJQkFBS0NBZ0VBdWVDbC8rSng1b0RT...
