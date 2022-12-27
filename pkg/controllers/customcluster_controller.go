@@ -28,8 +28,6 @@ import (
 
 	batchv1 "k8s.io/api/batch/v1"
 	"k8s.io/klog/v2"
-	"sigs.k8s.io/cluster-api/util"
-
 	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
 	"sigs.k8s.io/cluster-api/util/predicates"
 	"sigs.k8s.io/controller-runtime/pkg/source"
@@ -108,40 +106,59 @@ func (r *CustomClusterController) Reconcile(ctx context.Context, req ctrl.Reques
 		klog.Error(err)
 		return ctrl.Result{RequeueAfter: RequeueAfter}, err
 	}
+	log.Info("--------------------get customCluster successful! name:", customCluster.Name, "  namespace: ", customCluster.Namespace, "   APIVersion ", customCluster.APIVersion, "  Kind:", customCluster.Kind)
 
-	// TODO:Fetch the CustomMachine instance.
-
-	// TODO: Fetch the KubeadmControlPlane instance.
-	kcp := &controlplanev1.KubeadmControlPlane{}
-	if err := r.Client.Get(ctx, req.NamespacedName, kcp); err != nil {
-		log.Error(err, "Failed to Get kcp")
-
-		if apierrors.IsNotFound(err) {
-			log.Info("***********~~~~~~not found ~~~~~")
-
-			return ctrl.Result{}, nil
-		}
-		log.Info("***********~~~~~~other err requeue ~~~~~")
-
-		return ctrl.Result{Requeue: true}, nil
+	// Fetch the CustomMachine instance.
+	customMachinekey := client.ObjectKey{
+		Namespace: customCluster.Spec.MachineRef.Namespace,
+		Name:      customCluster.Spec.MachineRef.Name,
 	}
+	customMachine := &v1alpha1.CustomMachine{}
+	if err := r.Client.Get(ctx, customMachinekey, customMachine); err != nil {
+		if apierrors.IsNotFound(err) {
+			return ctrl.Result{Requeue: false}, nil
+		}
+		klog.Error(err)
+		return ctrl.Result{RequeueAfter: RequeueAfter}, err
+	}
+	log.Info("--------------------get customMachine successful! name:", customMachine.Name, "  namespace: ", customMachine.Namespace, "   APIVersion ", customMachine.APIVersion, "  Kind:", customMachine.Kind)
 
 	// TODO: Fetch the Cluster instance
-	cluster, err := util.GetOwnerCluster(ctx, r.Client, kcp.ObjectMeta)
-	if err != nil {
-		log.Error(err, "Failed to retrieve owner Cluster from the API Server")
-		return ctrl.Result{}, err
+	clusterkey := client.ObjectKey{
+		Namespace: customCluster.Spec.ClusterRef.Namespace,
+		Name:      customCluster.Spec.ClusterRef.Name,
 	}
-	if cluster == nil {
-		log.Info("Cluster Controller has not yet set OwnerRef")
-		return ctrl.Result{}, nil
+	cluster := &clusterv1.Cluster{}
+	if err := r.Client.Get(ctx, clusterkey, cluster); err != nil {
+		if apierrors.IsNotFound(err) {
+			return ctrl.Result{Requeue: false}, nil
+		}
+		klog.Error(err)
+		return ctrl.Result{RequeueAfter: RequeueAfter}, err
 	}
+	log.Info("--------------------get cluster successful! name:", cluster.Name, "  namespace: ", cluster.Namespace, "   APIVersion ", cluster.APIVersion, "  Kind:", cluster.Kind)
+
+	// TODO: Fetch the KubeadmControlPlane instance.
+	kcpKey := client.ObjectKey{
+		Namespace: customCluster.Spec.ClusterRef.Namespace,
+		Name:      customCluster.Spec.ClusterRef.Name,
+	}
+	kcp := &controlplanev1.KubeadmControlPlane{}
+	if err := r.Client.Get(ctx, kcpKey, kcp); err != nil {
+		if apierrors.IsNotFound(err) {
+			return ctrl.Result{Requeue: false}, nil
+		}
+		klog.Error(err)
+		return ctrl.Result{RequeueAfter: RequeueAfter}, err
+	}
+	log.Info("--------------------get kcp successful! name:", kcp.Name, "  namespace: ", kcp.Namespace, "   APIVersion: ", kcp.APIVersion, "  Kind:", kcp.Kind)
 
 	// TODO: check cluster status
 
 	log = log.WithValues("Cluster", klog.KObj(cluster))
 	ctx = ctrl.LoggerInto(ctx, log)
 
+	log.Info("--------------------everything is ok let begin real reconcile")
 	return r.reconcile(ctx, kcp, cluster)
 }
 
@@ -154,7 +171,7 @@ func (r *CustomClusterController) reconcile(ctx context.Context, kcp *controlpla
 
 	log.Info("~~~~~~~~~~create hostsconf configmap from customMachine~~~~~~~~~~~~~")
 
-	r.CreateHostsConfigMap(ctx, )
+	r.CreateHostsConfigMap(ctx)
 
 	log.Info("~~~~~~~~~~create configmap from ssh key secret / kcp /customMachine~~~~~~~~~~~~~")
 
