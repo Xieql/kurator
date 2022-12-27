@@ -18,12 +18,14 @@ package controllers
 
 import (
 	"context"
+	_ "embed"
 	"fmt"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 	"kurator.dev/kurator/pkg/apis/cluster/v1alpha1"
 	"strings"
+	"text/template"
 	"time"
 
 	batchv1 "k8s.io/api/batch/v1"
@@ -78,10 +80,6 @@ func (r *CustomClusterController) Reconcile(ctx context.Context, req ctrl.Reques
 	log := ctrl.LoggerFrom(ctx)
 	log.Info("***********~~~~~~~CustomClusterController reconcile begin~~~~~~~~~")
 
-	log.Info("***********~~~~~~~let's test create a new host configMap ~~~~~")
-
-	r.CreateHostsConfigMap(ctx)
-
 	//log.Info("***********~~~~~~~let's test create a job ~~~~~")
 	//
 	//curJob := r.CreateKubesprayInitClusterJob(ctx)
@@ -101,50 +99,25 @@ func (r *CustomClusterController) Reconcile(ctx context.Context, req ctrl.Reques
 	customCluster := &v1alpha1.CustomCluster{}
 	if err := r.Client.Get(ctx, req.NamespacedName, customCluster); err != nil {
 		if apierrors.IsNotFound(err) {
-			log.Info("--------------------  customCluster IsNotFound:")
-
 			return ctrl.Result{Requeue: false}, nil
 		}
-		log.Info("--------------------  customCluster err:")
-
 		klog.Error(err)
 		return ctrl.Result{RequeueAfter: RequeueAfter}, err
 	}
-	log.Info("-----------------------req.ns begin")
-	log.Info(req.Namespace)
-	log.Info("-----------------------req.ns end")
-
-	log.Info("-----------------------req.name begin")
-	log.Info(req.Name)
-	log.Info("-----------------------req.name end")
 
 	// Fetch the CustomMachine instance.
 	customMachinekey := client.ObjectKey{
 		Namespace: customCluster.Spec.MachineRef.Namespace,
 		Name:      customCluster.Spec.MachineRef.Name,
 	}
-
-	log.Info("-----------------------customMachinekey.ns begin")
-	log.Info(customMachinekey.Namespace)
-	log.Info("-----------------------customMachinekey.ns end")
-
-	log.Info("-----------------------customMachinekey.name begin")
-	log.Info(customMachinekey.Name)
-	log.Info("-----------------------customMachinekey.name end")
-
 	customMachine := &v1alpha1.CustomMachine{}
 	if err := r.Client.Get(ctx, customMachinekey, customMachine); err != nil {
 		if apierrors.IsNotFound(err) {
-			log.Info("--------------------  customMachine IsNotFound: ns is ++--++", customMachinekey.Namespace, "++--++    name is ++--++", customMachinekey.Name, "++--++")
 
-			//			return ctrl.Result{Requeue: false}, nil
+			return ctrl.Result{Requeue: false}, nil
 		}
-		log.Info("--------------------  customMachine err:")
-
-		klog.Error(err)
-		//		return ctrl.Result{RequeueAfter: RequeueAfter}, err
+		return ctrl.Result{RequeueAfter: RequeueAfter}, err
 	}
-	log.Info("--------------------get customMachine successful! name:", customMachine.Name, "  namespace: ", customMachine.Namespace, "   APIVersion ", customMachine.APIVersion, "  Kind:", customMachine.Kind)
 
 	// Fetch the Cluster instance
 	clusterkey := client.ObjectKey{
@@ -154,16 +127,12 @@ func (r *CustomClusterController) Reconcile(ctx context.Context, req ctrl.Reques
 	cluster := &clusterv1.Cluster{}
 	if err := r.Client.Get(ctx, clusterkey, cluster); err != nil {
 		if apierrors.IsNotFound(err) {
-			log.Info("--------------------  cluster IsNotFound:")
 
-			//			return ctrl.Result{Requeue: false}, nil
+			return ctrl.Result{Requeue: false}, nil
 		}
-		log.Info("--------------------  cluster err:")
-
 		klog.Error(err)
-		//		return ctrl.Result{RequeueAfter: RequeueAfter}, err
+		return ctrl.Result{RequeueAfter: RequeueAfter}, err
 	}
-	log.Info("--------------------get cluster successful! name:", cluster.Name, "  namespace: ", cluster.Namespace, "   APIVersion ", cluster.APIVersion, "  Kind:", cluster.Kind)
 
 	// Fetch the KubeadmControlPlane instance.
 	kcpKey := client.ObjectKey{
@@ -173,16 +142,11 @@ func (r *CustomClusterController) Reconcile(ctx context.Context, req ctrl.Reques
 	kcp := &controlplanev1.KubeadmControlPlane{}
 	if err := r.Client.Get(ctx, kcpKey, kcp); err != nil {
 		if apierrors.IsNotFound(err) {
-			log.Info("--------------------  kcp IsNotFound:")
-
 			return ctrl.Result{Requeue: false}, nil
 		}
-		log.Info("--------------------  kcp err:")
-
 		klog.Error(err)
 		return ctrl.Result{RequeueAfter: RequeueAfter}, err
 	}
-	log.Info("--------------------get kcp successful! name:", kcp.Name, "  namespace: ", kcp.Namespace, "   APIVersion: ", kcp.APIVersion, "  Kind:", kcp.Kind)
 
 	// TODO: check cluster status
 
@@ -190,19 +154,24 @@ func (r *CustomClusterController) Reconcile(ctx context.Context, req ctrl.Reques
 	ctx = ctrl.LoggerInto(ctx, log)
 
 	log.Info("--------------------everything is ok let begin real reconcile")
-	return r.reconcile(ctx, kcp, cluster)
+	return r.reconcile(ctx, customCluster, customMachine, cluster, kcp)
 }
 
-func (r *CustomClusterController) reconcile(ctx context.Context, kcp *controlplanev1.KubeadmControlPlane, cluster *clusterv1.Cluster) (ctrl.Result, error) {
+func (r *CustomClusterController) reconcile(ctx context.Context, customCluster *v1alpha1.CustomCluster, customMachine *v1alpha1.CustomMachine, cluster *clusterv1.Cluster, kcp *controlplanev1.KubeadmControlPlane) (ctrl.Result, error) {
 	log := ctrl.LoggerFrom(ctx)
 	log.Info("~~~~~~~~~~reconcile begin~~~~~~~~~")
 	// 这里认为相关资源状态正常
 
 	// TODO: 根据 Cluster KCP CustomMachine 及 SSH key secret生成kubespray参数 Configmap
 
-	log.Info("~~~~~~~~~~create hostsconf configmap from customMachine~~~~~~~~~~~~~")
+	log.Info("~~~~~~~~~~create hosts configmap from customMachine~~~~~~~~~~~~~")
 
-	r.CreateHostsConfigMap(ctx)
+	needRequeue, err := r.CreateHostsConfigMap(ctx, customMachine)
+	if err != nil {
+		klog.Error(err)
+		return ctrl.Result{RequeueAfter: RequeueAfter}, err
+	}
+	log.Info("~~~~~~~~~~need this var ? needRequeue %v~~", needRequeue)
 
 	log.Info("~~~~~~~~~~create configmap from ssh key secret / kcp /customMachine~~~~~~~~~~~~~")
 
@@ -403,27 +372,43 @@ type VarsConfStruct struct {
 	APIVersion string
 }
 
-func (r *CustomClusterController) CreateHostsConfigMap(ctx context.Context) (bool, error) {
+//go:embed host.yaml.template
+var hostVarTemplate string
+
+type HostVar struct {
+	PreHookCMDs       []string
+	CustomMachineName string
+}
+
+func (r *CustomClusterController) CreateHostsConfigMap(ctx context.Context, customMachine *v1alpha1.CustomMachine) (bool, error) {
 
 	log := ctrl.LoggerFrom(ctx)
-	log.Info("~#############~~~~~~~~ CreateHostsConfigMap ~~~~~~~~~")
+	log.Info("~~~~~~~~~~createHostVars begin~~~~~~~~~")
 
-	configMapData := "1 hhh\n2 :hhh\nthe end"
+	hostVar := &HostVar{
+		CustomMachineName: "hello",
+	}
 
-	newConfigMap := &corev1.ConfigMap{
+	b := &strings.Builder{}
+	tmpl := template.Must(template.New("hostVar").Parse(hostVarTemplate))
+	if err := tmpl.Execute(b, hostVar); err != nil {
+		return false, err
+	}
+
+	hostVarConfigMap := &corev1.ConfigMap{
 		TypeMeta: metav1.TypeMeta{
 			Kind:       "ConfigMap",
 			APIVersion: "v1",
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      fmt.Sprintf("%s-objectmeta-name", "string"),
-			Namespace: "default",
+			Name:      fmt.Sprintf("%s-host-vars", customMachine.Name),
+			Namespace: customMachine.Namespace,
 		},
-		Data: map[string]string{"testHost.yaml": strings.TrimSpace(configMapData)}, // |2+
+		Data: map[string]string{"hosts.yaml": strings.TrimSpace(b.String())},
 	}
 
 	var err error
-	if newConfigMap, err = r.ClientSet.CoreV1().ConfigMaps(newConfigMap.Namespace).Create(context.Background(), newConfigMap, metav1.CreateOptions{}); err != nil {
+	if hostVarConfigMap, err = r.ClientSet.CoreV1().ConfigMaps(hostVarConfigMap.Namespace).Create(context.Background(), hostVarConfigMap, metav1.CreateOptions{}); err != nil {
 		return false, err
 	}
 
