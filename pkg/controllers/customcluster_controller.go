@@ -165,6 +165,7 @@ func (r *CustomClusterController) reconcile(ctx context.Context, customCluster *
 	// TODO: 根据 Cluster KCP CustomMachine 及 SSH key secret生成kubespray参数 Configmap
 
 	log.Info("~~~~~~~~~~create hosts configmap from customMachine~~~~~~~~~~~~~")
+	log.Info("$$$$$$$$$$$$$$$$$$$$$$~~~~~~~~~~createHostVars begin~~~~~~~~~")
 
 	needRequeue, err := r.CreateHostsConfigMap(ctx, customMachine)
 	if err != nil {
@@ -383,7 +384,7 @@ type HostVar struct {
 func (r *CustomClusterController) CreateHostsConfigMap(ctx context.Context, customMachine *v1alpha1.CustomMachine) (bool, error) {
 
 	log := ctrl.LoggerFrom(ctx)
-	log.Info("~~~~~~~~~~createHostVars begin~~~~~~~~~")
+	log.Info("$$$$$$$$$$$$$$$$$$$$$$~~~~~~~~~~createHostVars begin~~~~~~~~~")
 
 	hostVar := &HostVar{
 		CustomMachineName: customMachine.Name,
