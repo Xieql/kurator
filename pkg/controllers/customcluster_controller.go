@@ -113,6 +113,12 @@ func (r *CustomClusterController) Reconcile(ctx context.Context, req ctrl.Reques
 		Name:      customCluster.Spec.MachineRef.Name,
 	}
 	customMachine := &v1alpha1.CustomMachine{}
+	log.Info("-------------------customMachinekey")
+
+	log.Info("customMachine name is %s", customMachine.Name)
+
+	log.Info("--------------------customMachinekey not found")
+
 	if err := r.Client.Get(ctx, customMachinekey, customMachine); err != nil {
 		if apierrors.IsNotFound(err) {
 			log.Info("--------------------customMachinekey not found")
