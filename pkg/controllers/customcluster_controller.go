@@ -386,7 +386,7 @@ func (r *CustomClusterController) CreateHostsConfigMap(ctx context.Context, cust
 	log.Info("~~~~~~~~~~createHostVars begin~~~~~~~~~")
 
 	hostVar := &HostVar{
-		CustomMachineName: "hello",
+		CustomMachineName: customMachine.Name,
 	}
 
 	b := &strings.Builder{}
