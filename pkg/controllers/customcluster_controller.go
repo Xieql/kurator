@@ -120,18 +120,18 @@ func (r *CustomClusterController) Reconcile(ctx context.Context, req ctrl.Reques
 	customMachine := &v1alpha1.CustomMachine{}
 	if err := r.Client.Get(ctx, customMachinekey, customMachine); err != nil {
 		if apierrors.IsNotFound(err) {
-			log.Info("--------------------  customMachine IsNotFound:")
+			log.Info("--------------------  customMachine IsNotFound: ns is ", customMachinekey.Namespace, "name is ", customMachinekey.Name)
 
-			return ctrl.Result{Requeue: false}, nil
+			//			return ctrl.Result{Requeue: false}, nil
 		}
 		log.Info("--------------------  customMachine err:")
 
 		klog.Error(err)
-		return ctrl.Result{RequeueAfter: RequeueAfter}, err
+		//		return ctrl.Result{RequeueAfter: RequeueAfter}, err
 	}
 	log.Info("--------------------get customMachine successful! name:", customMachine.Name, "  namespace: ", customMachine.Namespace, "   APIVersion ", customMachine.APIVersion, "  Kind:", customMachine.Kind)
 
-	// TODO: Fetch the Cluster instance
+	// Fetch the Cluster instance
 	clusterkey := client.ObjectKey{
 		Namespace: customCluster.Spec.ClusterRef.Namespace,
 		Name:      customCluster.Spec.ClusterRef.Name,
@@ -141,16 +141,16 @@ func (r *CustomClusterController) Reconcile(ctx context.Context, req ctrl.Reques
 		if apierrors.IsNotFound(err) {
 			log.Info("--------------------  cluster IsNotFound:")
 
-			return ctrl.Result{Requeue: false}, nil
+			//			return ctrl.Result{Requeue: false}, nil
 		}
 		log.Info("--------------------  cluster err:")
 
 		klog.Error(err)
-		return ctrl.Result{RequeueAfter: RequeueAfter}, err
+		//		return ctrl.Result{RequeueAfter: RequeueAfter}, err
 	}
 	log.Info("--------------------get cluster successful! name:", cluster.Name, "  namespace: ", cluster.Namespace, "   APIVersion ", cluster.APIVersion, "  Kind:", cluster.Kind)
 
-	// TODO: Fetch the KubeadmControlPlane instance.
+	// Fetch the KubeadmControlPlane instance.
 	kcpKey := client.ObjectKey{
 		Namespace: cluster.Spec.ControlPlaneRef.Namespace,
 		Name:      cluster.Spec.ControlPlaneRef.Name,
