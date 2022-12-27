@@ -1,0 +1,23 @@
+apiVersion: cluster.kurator.dev/v1alpha1
+kind: CustomMachine
+metadata:
+  name: custom-machine-quickstart
+  namespace: default
+spec:
+  master:
+    - hostName: master1
+      privateIP: 192.168.1.1
+      publicIP: 192.168.1.11
+      instanceType: node
+      sshKey:
+        apiVersion: v1
+        kind: Secret
+        name: ssh-key-quickstart
+  node:
+    - hostName: node1
+      privateIP: 192.168.2.1
+      publicIP: 192.168.2.11 
+      sshKey:
+        apiVersion: v1
+        kind: Secret
+        name: ssh-key-quickstart
