@@ -110,6 +110,12 @@ func (r *CustomClusterController) Reconcile(ctx context.Context, req ctrl.Reques
 		klog.Error(err)
 		return ctrl.Result{RequeueAfter: RequeueAfter}, err
 	}
+	log.Info("-----------------------req.ns begin")
+	log.Info(req.Namespace)
+	ns := req.Namespace
+	log.Info(ns)
+
+	log.Info("-----------------------req.ns end")
 	log.Info("-----------------------req.ns is ++--++", req.Namespace, "++--++   name is:++--++", req.Name, "++--++")
 	log.Info("--------------------get customCluster successful! name:++--++", customCluster.Name, "++--++     namespace: ++--++", customCluster.Namespace, "++--++     APIVersion：++--++", customCluster.APIVersion, "++--++  Kind: ++--++", customCluster.Kind, "++--++")
 
