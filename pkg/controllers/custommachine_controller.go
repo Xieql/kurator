@@ -18,6 +18,7 @@ package controllers
 
 import (
 	"context"
+	"k8s.io/klog/v2"
 	"time"
 
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -66,6 +67,7 @@ func (r *CustomMachineController) Reconcile(ctx context.Context, req ctrl.Reques
 			return ctrl.Result{}, nil
 		}
 
+		klog.Infof("customMachine error occur %v", err)
 		// Error reading the object - requeue the request.
 		return ctrl.Result{Requeue: true}, err
 	}

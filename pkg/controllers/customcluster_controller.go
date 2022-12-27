@@ -121,7 +121,7 @@ func (r *CustomClusterController) Reconcile(ctx context.Context, req ctrl.Reques
 
 	if err := r.Client.Get(ctx, customMachinekey, customMachine); err != nil {
 		if apierrors.IsNotFound(err) {
-			log.Info("--------------------customMachinekey not found")
+			log.Info("--------------------customMachine not found")
 
 			return ctrl.Result{Requeue: false}, nil
 		}
