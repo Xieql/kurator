@@ -82,20 +82,20 @@ func (r *CustomClusterController) Reconcile(ctx context.Context, req ctrl.Reques
 
 	r.CreateHostsConfigMap(ctx)
 
-	log.Info("***********~~~~~~~let's test create a job ~~~~~")
-
-	curJob := r.CreateKubesprayInitClusterJob(ctx)
-
-	var err error
-
-	curJob, err = r.ClientSet.BatchV1().Jobs(curJob.Namespace).Create(context.Background(), curJob, metav1.CreateOptions{})
-
-	if err != nil {
-		log.Error(err, "~~~~~Failed to create job~~~~~~~~~~")
-
-		return ctrl.Result{}, err
-	}
-	log.Info("***********~~~~~~~create a job  success  ~~~~~")
+	//log.Info("***********~~~~~~~let's test create a job ~~~~~")
+	//
+	//curJob := r.CreateKubesprayInitClusterJob(ctx)
+	//
+	//var err error
+	//
+	//curJob, err = r.ClientSet.BatchV1().Jobs(curJob.Namespace).Create(context.Background(), curJob, metav1.CreateOptions{})
+	//
+	//if err != nil {
+	//	log.Error(err, "~~~~~Failed to create job~~~~~~~~~~")
+	//
+	//	return ctrl.Result{}, err
+	//}
+	//log.Info("***********~~~~~~~create a job  success  ~~~~~")
 
 	// Fetch the customCluster instance.
 	customCluster := &v1alpha1.CustomCluster{}
@@ -140,8 +140,8 @@ func (r *CustomClusterController) Reconcile(ctx context.Context, req ctrl.Reques
 
 	// TODO: Fetch the KubeadmControlPlane instance.
 	kcpKey := client.ObjectKey{
-		Namespace: customCluster.Spec.ClusterRef.Namespace,
-		Name:      customCluster.Spec.ClusterRef.Name,
+		Namespace: cluster.Spec.ControlPlaneRef.Namespace,
+		Name:      cluster.Spec.ControlPlaneRef.Name,
 	}
 	kcp := &controlplanev1.KubeadmControlPlane{}
 	if err := r.Client.Get(ctx, kcpKey, kcp); err != nil {
