@@ -56,10 +56,10 @@ type CustomClusterController struct {
 }
 
 const (
-	RequeueAfter     = time.Millisecond * 500
-	LoopForJobStatus = time.Second * 3
-	RetryInterval    = time.Millisecond * 300
-	RetryCount       = 5
+	RequeueAfter = time.Second * 5
+
+	HostYamlFileName = "hosts.yaml"
+	VarsYamlFileName = "vars.yaml"
 )
 
 //+kubebuilder:rbac:groups=kurator.dev.kurator.dev,resources=customclusters,verbs=get;list;watch;create;update;patch;delete
@@ -182,7 +182,7 @@ func (r *CustomClusterController) reconcile(ctx context.Context, customCluster *
 	log.Info("~~~~~~~~~~create hosts configmap from customMachine~~~~~~~~~~~~~")
 	log.Info("$$$$$$$$$$$$$$$$$$$$$$~~~~~~~~~~createHostVars begin~~~~~~~~~")
 
-	needRequeue, err := r.CreateHostsConfigMap(ctx, customMachine)
+	needRequeue, err := r.CreateHostsConfigMap(ctx, customMachine, customCluster)
 	if err != nil {
 		klog.Error(err)
 		return ctrl.Result{RequeueAfter: RequeueAfter}, err
@@ -190,6 +190,11 @@ func (r *CustomClusterController) reconcile(ctx context.Context, customCluster *
 	log.Info("~~~~~~~~~~need this var ? needRequeue %v~~", needRequeue)
 
 	log.Info("~~~~~~~~~~create configmap from ssh key secret / kcp /customMachine~~~~~~~~~~~~~")
+
+	if _, err := r.CreateVarsConfigMap(ctx, cluster, kcp, customCluster); err != nil {
+		klog.Error(err)
+		return ctrl.Result{RequeueAfter: RequeueAfter}, err
+	}
 
 	// 创建Pod （挂载SSH证书以及配置参数） 执行ansible-playbook创建集群
 	log.Info("~~~~~~~~~~create job/pod to exec ansible-playbook~~~~~~~~")
@@ -380,28 +385,30 @@ func (r *CustomClusterController) CreateKubesprayInitClusterJob(ctx context.Cont
 	return initJob
 }
 
-type HostsConfStruct struct {
-	APIVersion string
-}
-
-type VarsConfStruct struct {
-	APIVersion string
-}
-
 //go:embed hosts.yaml.template
-var hostVarTemplate string
+var hostsTemplate string
 
-type HostTemplate struct {
+//go:embed vars.yaml.template
+var varsTemplate string
+
+type HostTemplateContent struct {
 	NodeAndIP    []string
 	MasterName   []string
 	NodeName     []string
 	EtcdNodeName []string // default: NodeName + MasterName
 }
 
-func GetHostTemplateFromCustomMachine(customMachine *v1alpha1.CustomMachine) *HostTemplate {
+type VarsTemplateContent struct {
+}
+
+func GetVarContentFromCustomMachine(c *clusterv1.Cluster, kcp *controlplanev1.KubeadmControlPlane) *HostTemplateContent {
+
+}
+
+func GetHostsContentFromCustomMachine(customMachine *v1alpha1.CustomMachine) *HostTemplateContent {
 	masterMachine := customMachine.Spec.Master
 	nodeMachine := customMachine.Spec.Nodes
-	hostVar := &HostTemplate{
+	hostVar := &HostTemplateContent{
 		NodeAndIP:    make([]string, len(masterMachine)+len(nodeMachine)),
 		MasterName:   make([]string, len(masterMachine)),
 		NodeName:     make([]string, len(nodeMachine)),
@@ -426,35 +433,52 @@ func GetHostTemplateFromCustomMachine(customMachine *v1alpha1.CustomMachine) *Ho
 
 	return hostVar
 }
-func (r *CustomClusterController) CreateHostsConfigMap(ctx context.Context, customMachine *v1alpha1.CustomMachine) (bool, error) {
-	log := ctrl.LoggerFrom(ctx)
-	log.Info("$$$$$$$$$$$$$$$$$$$$$$~~~~~~~~~~createHostVars begin~~~~~~~~~")
 
-	// move to util
-	hostVar := GetHostTemplateFromCustomMachine(customMachine)
-
-	b := &strings.Builder{}
-	tmpl := template.Must(template.New("hostVar").Parse(hostVarTemplate))
-	if err := tmpl.Execute(b, hostVar); err != nil {
-		return false, err
-	}
-
+func (r *CustomClusterController) CreatConfigMapWithTemplate(name, namespace, fileName, configMapData string) (bool, error) {
 	hostVarConfigMap := &corev1.ConfigMap{
 		TypeMeta: metav1.TypeMeta{
 			Kind:       "ConfigMap",
 			APIVersion: "v1",
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      fmt.Sprintf("%s-host-vars", customMachine.Name),
-			Namespace: customMachine.Namespace,
+			Name:      name,
+			Namespace: namespace,
 		},
-		Data: map[string]string{"hosts.yaml": strings.TrimSpace(b.String())},
+		Data: map[string]string{fileName: strings.TrimSpace(configMapData)},
 	}
-
 	var err error
 	if hostVarConfigMap, err = r.ClientSet.CoreV1().ConfigMaps(hostVarConfigMap.Namespace).Create(context.Background(), hostVarConfigMap, metav1.CreateOptions{}); err != nil {
 		return false, err
 	}
-
 	return true, nil
+}
+
+func (r *CustomClusterController) CreateHostsConfigMap(ctx context.Context, customMachine *v1alpha1.CustomMachine, customCluster *v1alpha1.CustomCluster) (bool, error) {
+	log := ctrl.LoggerFrom(ctx)
+	log.Info("$$$$$$$$$$$$$$$$$$$$$$~~~~~~~~~~createHostVars begin~~~~~~~~~")
+	hostsContent := GetHostsContentFromCustomMachine(customMachine)
+
+	hostData := &strings.Builder{}
+	tmpl := template.Must(template.New("hostVar").Parse(hostsTemplate))
+	if err := tmpl.Execute(hostData, hostsContent); err != nil {
+		return false, err
+	}
+	name := fmt.Sprintf("%s-%s", customCluster.Name, HostYamlFileName)
+	namespace := customCluster.Namespace
+	return r.CreatConfigMapWithTemplate(name, namespace, HostYamlFileName, hostData.String())
+}
+
+func (r *CustomClusterController) CreateVarsConfigMap(ctx context.Context, c *clusterv1.Cluster, kcp *controlplanev1.KubeadmControlPlane, cc *v1alpha1.CustomCluster) (bool, error) {
+	log := ctrl.LoggerFrom(ctx)
+	log.Info("$$$$$$$$$$$$$$$$$$$$$$~~~~~~~~~~CreateVarsConfigMap begin~~~~~~~~~")
+	VarsContent := GetVarContentFromCustomMachine(c, kcp)
+
+	VarsData := &strings.Builder{}
+	tmpl := template.Must(template.New("hostVar").Parse(hostsTemplate))
+	if err := tmpl.Execute(VarsData, VarsContent); err != nil {
+		return false, err
+	}
+	name := fmt.Sprintf("%s-%s", cc.Name, VarsYamlFileName)
+	namespace := cc.Namespace
+	return r.CreatConfigMapWithTemplate(name, namespace, VarsYamlFileName, VarsData.String())
 }
