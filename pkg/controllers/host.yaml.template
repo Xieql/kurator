@@ -1,3 +1,43 @@
-# test var
+[k8s-cluster:children]
+kube-master
+kube-node
+
+[all]
+
+
+{{ range $i, $v := .MasterName }}
+{{$i}} => {{$v}}
+{{ - $v }}
+{{end}}
 
 {{ .CustomMachineName }}
+
+
+master ansible_host=172.27.XX.1XX ip=172.27.XX.1XX
+node1 ansible_host=172.27.XX.XX ip=172.27.XX.XX
+node2 ansible_host=172.27.XX.XX ip=172.27.XX.XX
+
+[kube-master]
+MasterName
+
+master
+
+[kube-node]
+
+
+node1
+node2
+
+[etcd]
+
+
+master
+node1
+node2
+
+[calico-rr]
+
+[vault]
+node1
+node2
+

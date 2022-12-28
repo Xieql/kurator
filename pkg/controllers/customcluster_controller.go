@@ -391,8 +391,8 @@ type VarsConfStruct struct {
 //go:embed host.yaml.template
 var hostVarTemplate string
 
-type HostVar struct {
-	PreHookCMDs       []string
+type HostTemplate struct {
+	MasterName        []string
 	CustomMachineName string
 }
 
@@ -401,9 +401,12 @@ func (r *CustomClusterController) CreateHostsConfigMap(ctx context.Context, cust
 	log := ctrl.LoggerFrom(ctx)
 	log.Info("$$$$$$$$$$$$$$$$$$$$$$~~~~~~~~~~createHostVars begin~~~~~~~~~")
 
-	hostVar := &HostVar{
+	hostVar := &HostTemplate{
 		CustomMachineName: customMachine.Name,
 	}
+	hostVar.MasterName[0] = "master1"
+
+	hostVar.MasterName[1] = "master2"
 
 	b := &strings.Builder{}
 	tmpl := template.Must(template.New("hostVar").Parse(hostVarTemplate))
