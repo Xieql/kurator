@@ -1,43 +1,36 @@
-[k8s-cluster:children]
-kube-master
-kube-node
-
 [all]
-
-
-{{ range $i, $v := .MasterName }}
-{{$i}} => {{$v}}
-{{ - $v }}
-{{end}}
-
-{{ .CustomMachineName }}
-
+{{ range $i, $v := .NodeAndIP }}
+{{ $v }}
+{{ end }}
 
 master ansible_host=172.27.XX.1XX ip=172.27.XX.1XX
 node1 ansible_host=172.27.XX.XX ip=172.27.XX.XX
 node2 ansible_host=172.27.XX.XX ip=172.27.XX.XX
 
-[kube-master]
-MasterName
+[kube_control_plane]
+{{ range $i, $v := .MasterName }}
+{{ $v }}
+{{ end }}
 
 master
-
-[kube-node]
-
-
-node1
-node2
 
 [etcd]
-
+{{ range $i, $v := .EtcdNodeName }}
+{{ $v }}
+{{ end }}
 
 master
 node1
 node2
 
-[calico-rr]
+[kube_node]
+{{ range $i, $v := .NodeName }}
+{{ $v }}
+{{ end }}
 
-[vault]
 node1
 node2
 
+[k8s-cluster:children]
+kube-master
+kube-node

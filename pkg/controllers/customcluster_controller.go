@@ -392,22 +392,46 @@ type VarsConfStruct struct {
 var hostVarTemplate string
 
 type HostTemplate struct {
-	MasterName        []string
-	CustomMachineName string
+	NodeAndIP    []string
+	MasterName   []string
+	NodeName     []string
+	EtcdNodeName []string // default: NodeName + MasterName
 }
 
-func (r *CustomClusterController) CreateHostsConfigMap(ctx context.Context, customMachine *v1alpha1.CustomMachine) (bool, error) {
+func GetHostTemplateFromCustomMachine(customMachine *v1alpha1.CustomMachine) *HostTemplate {
+	masterMachine := customMachine.Spec.Master
+	nodeMachine := customMachine.Spec.Nodes
+	hostVar := &HostTemplate{
+		NodeAndIP:    make([]string, len(masterMachine)+len(nodeMachine)),
+		MasterName:   make([]string, len(masterMachine)),
+		NodeName:     make([]string, len(nodeMachine)),
+		EtcdNodeName: make([]string, len(masterMachine)+len(nodeMachine)),
+	}
 
+	for _, machine := range masterMachine {
+		masterName := machine.HostName
+		nodeAndIp := fmt.Sprintf("%s ansible_host=%s ip=%s", machine.HostName, machine.PublicIP, machine.PrivateIP)
+		hostVar.MasterName = append(hostVar.MasterName, masterName)
+		hostVar.EtcdNodeName = append(hostVar.EtcdNodeName, masterName)
+		hostVar.NodeAndIP = append(hostVar.NodeAndIP, nodeAndIp)
+	}
+
+	for _, machine := range nodeMachine {
+		nodeName := machine.HostName
+		nodeAndIp := fmt.Sprintf("%s ansible_host=%s ip=%s", machine.HostName, machine.PublicIP, machine.PrivateIP)
+		hostVar.NodeName = append(hostVar.MasterName, nodeName)
+		hostVar.EtcdNodeName = append(hostVar.EtcdNodeName, nodeName)
+		hostVar.NodeAndIP = append(hostVar.NodeAndIP, nodeAndIp)
+	}
+
+	return hostVar
+}
+func (r *CustomClusterController) CreateHostsConfigMap(ctx context.Context, customMachine *v1alpha1.CustomMachine) (bool, error) {
 	log := ctrl.LoggerFrom(ctx)
 	log.Info("$$$$$$$$$$$$$$$$$$$$$$~~~~~~~~~~createHostVars begin~~~~~~~~~")
 
-	hostVar := &HostTemplate{
-		MasterName:        make([]string, 2),
-		CustomMachineName: customMachine.Name,
-	}
-	hostVar.MasterName[0] = "master1"
-
-	hostVar.MasterName[1] = "master2"
+	// move to util
+	hostVar := GetHostTemplateFromCustomMachine(customMachine)
 
 	b := &strings.Builder{}
 	tmpl := template.Must(template.New("hostVar").Parse(hostVarTemplate))
