@@ -2,35 +2,18 @@
 {{ range $i, $v := .NodeAndIP }}
 {{ $v }}
 {{ end }}
-
-master ansible_host=172.27.XX.1XX ip=172.27.XX.1XX
-node1 ansible_host=172.27.XX.XX ip=172.27.XX.XX
-node2 ansible_host=172.27.XX.XX ip=172.27.XX.XX
-
 [kube_control_plane]
 {{ range $i, $v := .MasterName }}
 {{ $v }}
 {{ end }}
-
-master
-
 [etcd]
 {{ range $i, $v := .EtcdNodeName }}
 {{ $v }}
 {{ end }}
-
-master
-node1
-node2
-
 [kube_node]
 {{ range $i, $v := .NodeName }}
 {{ $v }}
 {{ end }}
-
-node1
-node2
-
 [k8s-cluster:children]
 kube-master
 kube-node

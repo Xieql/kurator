@@ -388,7 +388,7 @@ type VarsConfStruct struct {
 	APIVersion string
 }
 
-//go:embed host.yaml.template
+//go:embed hosts.yaml.template
 var hostVarTemplate string
 
 type HostTemplate struct {
