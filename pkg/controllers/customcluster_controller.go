@@ -399,13 +399,20 @@ type HostTemplateContent struct {
 }
 
 type VarsTemplateContent struct {
+	KubeVersion string
+	PodCIDR     string
 }
 
-func GetVarContentFromCustomMachine(c *clusterv1.Cluster, kcp *controlplanev1.KubeadmControlPlane) *HostTemplateContent {
-
+func GetVarContent(c *clusterv1.Cluster, kcp *controlplanev1.KubeadmControlPlane) *VarsTemplateContent {
+	// add kubespray init config here
+	varContent := &VarsTemplateContent{
+		PodCIDR:     c.Spec.ClusterNetwork.Pods.CIDRBlocks[0],
+		KubeVersion: kcp.Spec.Version,
+	}
+	return varContent
 }
 
-func GetHostsContentFromCustomMachine(customMachine *v1alpha1.CustomMachine) *HostTemplateContent {
+func GetHostsContent(customMachine *v1alpha1.CustomMachine) *HostTemplateContent {
 	masterMachine := customMachine.Spec.Master
 	nodeMachine := customMachine.Spec.Nodes
 	hostVar := &HostTemplateContent{
@@ -456,7 +463,7 @@ func (r *CustomClusterController) CreatConfigMapWithTemplate(name, namespace, fi
 func (r *CustomClusterController) CreateHostsConfigMap(ctx context.Context, customMachine *v1alpha1.CustomMachine, customCluster *v1alpha1.CustomCluster) (bool, error) {
 	log := ctrl.LoggerFrom(ctx)
 	log.Info("$$$$$$$$$$$$$$$$$$$$$$~~~~~~~~~~createHostVars begin~~~~~~~~~")
-	hostsContent := GetHostsContentFromCustomMachine(customMachine)
+	hostsContent := GetHostsContent(customMachine)
 
 	hostData := &strings.Builder{}
 	tmpl := template.Must(template.New("hostVar").Parse(hostsTemplate))
@@ -471,7 +478,7 @@ func (r *CustomClusterController) CreateHostsConfigMap(ctx context.Context, cust
 func (r *CustomClusterController) CreateVarsConfigMap(ctx context.Context, c *clusterv1.Cluster, kcp *controlplanev1.KubeadmControlPlane, cc *v1alpha1.CustomCluster) (bool, error) {
 	log := ctrl.LoggerFrom(ctx)
 	log.Info("$$$$$$$$$$$$$$$$$$$$$$~~~~~~~~~~CreateVarsConfigMap begin~~~~~~~~~")
-	VarsContent := GetVarContentFromCustomMachine(c, kcp)
+	VarsContent := GetVarContent(c, kcp)
 
 	VarsData := &strings.Builder{}
 	tmpl := template.Must(template.New("hostVar").Parse(hostsTemplate))
