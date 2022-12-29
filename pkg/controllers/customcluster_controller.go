@@ -315,20 +315,21 @@ func GetHostsContent(customMachine *v1alpha1.CustomMachine) *HostTemplateContent
 		EtcdNodeName: make([]string, len(masterMachine)+len(nodeMachine)),
 	}
 
-	for _, machine := range masterMachine {
+	count := 0
+	for i, machine := range masterMachine {
 		masterName := machine.HostName
 		nodeAndIp := fmt.Sprintf("%s ansible_host=%s ip=%s", machine.HostName, machine.PublicIP, machine.PrivateIP)
-		hostVar.MasterName = append(hostVar.MasterName, masterName)
-		hostVar.EtcdNodeName = append(hostVar.EtcdNodeName, masterName)
-		hostVar.NodeAndIP = append(hostVar.NodeAndIP, nodeAndIp)
+		hostVar.MasterName[i] = masterName
+		hostVar.EtcdNodeName[count] = masterName
+		hostVar.NodeAndIP[count] = nodeAndIp
 	}
 
-	for _, machine := range nodeMachine {
+	for i, machine := range nodeMachine {
 		nodeName := machine.HostName
 		nodeAndIp := fmt.Sprintf("%s ansible_host=%s ip=%s", machine.HostName, machine.PublicIP, machine.PrivateIP)
-		hostVar.NodeName = append(hostVar.MasterName, nodeName)
-		hostVar.EtcdNodeName = append(hostVar.EtcdNodeName, nodeName)
-		hostVar.NodeAndIP = append(hostVar.NodeAndIP, nodeAndIp)
+		hostVar.NodeName[i] = nodeName
+		hostVar.EtcdNodeName[count] = nodeName
+		hostVar.NodeAndIP[count] = nodeAndIp
 	}
 
 	return hostVar
