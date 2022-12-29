@@ -444,7 +444,7 @@ func GetHostsContent(customMachine *v1alpha1.CustomMachine) *HostTemplateContent
 }
 
 func (r *CustomClusterController) CreatConfigMapWithTemplate(name, namespace, fileName, configMapData string) (bool, error) {
-	hostVarConfigMap := &corev1.ConfigMap{
+	ConfigMap := &corev1.ConfigMap{
 		TypeMeta: metav1.TypeMeta{
 			Kind:       "ConfigMap",
 			APIVersion: "v1",
@@ -456,7 +456,7 @@ func (r *CustomClusterController) CreatConfigMapWithTemplate(name, namespace, fi
 		Data: map[string]string{fileName: strings.TrimSpace(configMapData)},
 	}
 	var err error
-	if hostVarConfigMap, err = r.ClientSet.CoreV1().ConfigMaps(hostVarConfigMap.Namespace).Create(context.Background(), hostVarConfigMap, metav1.CreateOptions{}); err != nil {
+	if ConfigMap, err = r.ClientSet.CoreV1().ConfigMaps(ConfigMap.Namespace).Create(context.Background(), ConfigMap, metav1.CreateOptions{}); err != nil {
 		return false, err
 	}
 	return true, nil
@@ -468,7 +468,7 @@ func (r *CustomClusterController) CreateHostsConfigMap(ctx context.Context, cust
 	hostsContent := GetHostsContent(customMachine)
 
 	hostData := &strings.Builder{}
-	tmpl := template.Must(template.New("hostVar").Parse(hostsTemplate))
+	tmpl := template.Must(template.New(HostYamlFileName).Parse(hostsTemplate))
 	if err := tmpl.Execute(hostData, hostsContent); err != nil {
 		return false, err
 	}
@@ -485,7 +485,7 @@ func (r *CustomClusterController) CreateVarsConfigMap(ctx context.Context, c *cl
 	VarsContent := GetVarContent(c, kcp)
 
 	VarsData := &strings.Builder{}
-	tmpl := template.Must(template.New("hostVar").Parse(hostsTemplate))
+	tmpl := template.Must(template.New(VarsYamlFileName).Parse(hostsTemplate))
 	if err := tmpl.Execute(VarsData, VarsContent); err != nil {
 		return false, err
 	}
