@@ -1,5 +1,7 @@
 [all]
+---
 {{ range $v := .NodeAndIP }}
+-
 {{ $v }}
 {{ end }}
 [kube_control_plane]
