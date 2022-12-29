@@ -1,23 +1,26 @@
 [all]
----
 {{ range $v := .NodeAndIP }}
 ~~~~~~~~
-{{ ~~$v }}
+{{ $v }}
+~~~~~~~~
 {{ end }}
 [kube_control_plane]
 {{ range $v := .MasterName }}
-~~~~~~~~~~~~~
-{{ ~~~$v }}
+~~~~~~~~
+{{ $v }}
+~~~~~~~~
 {{ end }}
 [etcd]
 {{ range $v := .EtcdNodeName }}
-~~~~~~~~~~~
-{{ ~$v }}
+~~~~~~~~
+{{ $v }}
+~~~~~~~~
 {{ end }}
 [kube_node]
 {{ range $v := .NodeName }}
-~~~~~~~~~~~~~~~
-{{ ~$v }}
+~~~~~~~~
+{{ $v }}
+~~~~~~~~
 {{ end }}
 [k8s-cluster:children]
 kube-master
