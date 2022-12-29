@@ -184,7 +184,7 @@ func (r *CustomClusterController) reconcile(ctx context.Context, customCluster *
 
 	needRequeue, err := r.CreateHostsConfigMap(ctx, customMachine, customCluster)
 	if err != nil {
-		klog.Error(err)
+		klog.Infof("!!!!!!!!!!!!!!!!!!!!!!!!!!CreateHostsConfigMap error %v", err)
 		return ctrl.Result{RequeueAfter: RequeueAfter}, err
 	}
 	log.Info("~~~~~~~~~~need this var ? needRequeue %v~~", needRequeue)
@@ -472,6 +472,8 @@ func (r *CustomClusterController) CreateHostsConfigMap(ctx context.Context, cust
 	}
 	name := fmt.Sprintf("%s-%s", customCluster.Name, HostYamlFileName)
 	namespace := customCluster.Namespace
+	log.Info("$$$$$$$$$$$$$$$$$$$$$$~~~~~~~~~~createHostVars CreatConfigMapWithTemplate begin~~~~~~~~~")
+
 	return r.CreatConfigMapWithTemplate(name, namespace, HostYamlFileName, hostData.String())
 }
 
@@ -487,5 +489,7 @@ func (r *CustomClusterController) CreateVarsConfigMap(ctx context.Context, c *cl
 	}
 	name := fmt.Sprintf("%s-%s", cc.Name, VarsYamlFileName)
 	namespace := cc.Namespace
+	log.Info("$$$$$$$$$$$$$$$$$$$$$$~~~~~~~~~~createHostVars CreatConfigMapWithTemplate begin~~~~~~~~~")
+
 	return r.CreatConfigMapWithTemplate(name, namespace, VarsYamlFileName, VarsData.String())
 }
