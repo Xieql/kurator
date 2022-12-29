@@ -160,11 +160,13 @@ func (r *CustomClusterController) reconcile(ctx context.Context, customCluster *
 	// TODO: 先删除再创建？
 
 	if _, err := r.CreateHostsConfigMap(customMachine, customCluster); err != nil {
-		return ctrl.Result{RequeueAfter: RequeueAfter}, err
+		log.Error(err, "failed to CreateHostsConfigMap")
+		//return ctrl.Result{RequeueAfter: RequeueAfter}, err
 	}
 
 	if _, err := r.CreateVarsConfigMap(cluster, kcp, customCluster); err != nil {
-		return ctrl.Result{RequeueAfter: RequeueAfter}, err
+		log.Error(err, "failed to CreateVarsConfigMap")
+		//return ctrl.Result{RequeueAfter: RequeueAfter}, err
 	}
 
 	log.Info("***********~~~~~~~let's test create a job ~~~~~")
@@ -173,7 +175,6 @@ func (r *CustomClusterController) reconcile(ctx context.Context, customCluster *
 
 	if curJob, err := r.ClientSet.BatchV1().Jobs(initClusterJob.Namespace).Create(context.Background(), initClusterJob, metav1.CreateOptions{}); err != nil {
 		log.Error(err, "failed to create job", "jobName", curJob.Name)
-
 		return ctrl.Result{}, err
 	}
 
