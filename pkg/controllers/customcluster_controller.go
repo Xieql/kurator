@@ -485,7 +485,7 @@ func (r *CustomClusterController) CreateVarsConfigMap(ctx context.Context, c *cl
 	VarsContent := GetVarContent(c, kcp)
 
 	VarsData := &strings.Builder{}
-	tmpl := template.Must(template.New(VarsYamlFileName).Parse(hostsTemplate))
+	tmpl := template.Must(template.New(VarsYamlFileName).Parse(varsTemplate))
 	if err := tmpl.Execute(VarsData, VarsContent); err != nil {
 		return false, err
 	}
