@@ -183,12 +183,11 @@ func (r *CustomClusterController) reconcile(ctx context.Context, customCluster *
 	log.Info("$$$$$$$$$$$$$$$$$$$$$$~~~~~~~~~~createHostVars begin~~~~~~~~~")
 
 	// 先删除再创建？
-	needRequeue, err := r.CreateHostsConfigMap(ctx, customMachine, customCluster)
+	_, err := r.CreateHostsConfigMap(ctx, customMachine, customCluster)
 	if err != nil {
 		klog.Infof("!!!!!!!!!!!!!!!!!!!!!!!!!!CreateHostsConfigMap error %v", err)
 		//return ctrl.Result{RequeueAfter: RequeueAfter}, err
 	}
-	log.Info("~~~~~~~~~~need this var ? needRequeue %v~~", needRequeue)
 
 	log.Info("~~~~~~~~~~create configmap from ssh key secret / kcp /customMachine~~~~~~~~~~~~~")
 
