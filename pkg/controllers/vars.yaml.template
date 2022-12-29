@@ -4,8 +4,9 @@ download_run_once: true
 download_container: false
 download_localhost: true
 
-# skip_downloads: true
-# http_proxy: "socks5://10.6.108.200:10808"
+# network
+kube_pods_subnet: {{ .PodCIDR }}
+
 
 # gcr and kubernetes image repo define
 gcr_image_repo: "gcr.m.daocloud.io"
@@ -19,6 +20,7 @@ quay_image_repo: "quay.m.daocloud.io"
 
 # github image repo define (ex multus only use that)
 github_image_repo: "ghcr.m.daocloud.io"
+
 
 ## Kubernetes components
 kubeadm_download_url: "{{ .FileRepo }}/storage.googleapis.com/kubernetes-release/release/{{ .KubeVersion }}/bin/linux/{{ .HostArchitecture }}/kubeadm"
