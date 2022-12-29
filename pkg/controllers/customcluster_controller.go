@@ -60,6 +60,12 @@ const (
 
 	HostYamlFileName = "hosts.yaml"
 	VarsYamlFileName = "vars.yaml"
+
+	// default kubespray init config
+	DefaultFileRepo         = "https://files.m.daocloud.io"
+	DefaultHostArchitecture = "amd64"
+
+	DefaultCniVersion = "v1.1.1"
 )
 
 //+kubebuilder:rbac:groups=kurator.dev.kurator.dev,resources=customclusters,verbs=get;list;watch;create;update;patch;delete
@@ -401,15 +407,21 @@ type HostTemplateContent struct {
 }
 
 type VarsTemplateContent struct {
-	KubeVersion string
-	PodCIDR     string
+	KubeVersion      string
+	PodCIDR          string
+	FileRepo         string
+	HostArchitecture string
+	CniVersion       string
 }
 
 func GetVarContent(c *clusterv1.Cluster, kcp *controlplanev1.KubeadmControlPlane) *VarsTemplateContent {
 	// add kubespray init config here
 	varContent := &VarsTemplateContent{
-		PodCIDR:     c.Spec.ClusterNetwork.Pods.CIDRBlocks[0],
-		KubeVersion: kcp.Spec.Version,
+		PodCIDR:          c.Spec.ClusterNetwork.Pods.CIDRBlocks[0],
+		KubeVersion:      kcp.Spec.Version,
+		FileRepo:         DefaultFileRepo,
+		HostArchitecture: DefaultHostArchitecture,
+		CniVersion:       DefaultCniVersion,
 	}
 	return varContent
 }
