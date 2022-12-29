@@ -214,7 +214,7 @@ func (r *CustomClusterController) CreateKubesprayInitClusterJob(ctx context.Cont
 							Name:    containerName,
 							Image:   DefaultKubesprayImage,
 							Command: []string{"/bin/sh", "-c"},
-							Args:    []string{KubesprayShowConfigCMD},
+							Args:    []string{KubesprayInitCMD},
 
 							VolumeMounts: []corev1.VolumeMount{
 								{
@@ -254,15 +254,14 @@ func (r *CustomClusterController) CreateKubesprayInitClusterJob(ctx context.Cont
 								},
 							},
 						},
-						{
-							Name: "id-rsa-conf",
-							VolumeSource: corev1.VolumeSource{
-								Secret: &corev1.SecretVolumeSource{
-									SecretName:  SecretName,
-									DefaultMode: &DefaultMode,
-								},
-							},
-						},
+						//{
+						//	Name: "id-rsa-conf",
+						//	VolumeSource: corev1.VolumeSource{
+						//		Secret: &corev1.SecretVolumeSource{
+						//			SecretName:  SecretName,
+						//		},
+						//	},
+						//},
 					},
 					RestartPolicy: corev1.RestartPolicyNever,
 				},
