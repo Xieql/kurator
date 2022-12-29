@@ -64,8 +64,14 @@ const (
 	// default kubespray init config
 	DefaultFileRepo         = "https://files.m.daocloud.io"
 	DefaultHostArchitecture = "amd64"
+	DefaultCniVersion       = "v1.1.1"
+	DefaultKubesprayImage   = "quay.io/kubespray/kubespray:v2.20.0"
 
-	DefaultCniVersion = "v1.1.1"
+	KubesprayInitCMD       = "ansible-playbook -i inventory/hosts.yaml --private-key /root/.ssh/id_rsa cluster.yml"
+	KubesprayResetCMD      = "ansible-playbook -e reset_confirmation=yes -i inventory/hosts.yaml reset.yml -vvv"
+	KubesprayShowConfigCMD = "cat /root/.ssh/id_rsa && cat /kubespray/inventory/hosts.yaml && cat /kubespray/inventory/group_var/all/vars.yaml"
+
+	SecretName = "ssh-key-quickstart "
 )
 
 //+kubebuilder:rbac:groups=kurator.dev.kurator.dev,resources=customclusters,verbs=get;list;watch;create;update;patch;delete
@@ -86,32 +92,14 @@ func (r *CustomClusterController) Reconcile(ctx context.Context, req ctrl.Reques
 	log := ctrl.LoggerFrom(ctx)
 	log.Info("***********~~~~~~~CustomClusterController reconcile begin~~~~~~~~~")
 
-	//log.Info("***********~~~~~~~let's test create a job ~~~~~")
-	//
-	//curJob := r.CreateKubesprayInitClusterJob(ctx)
-	//
-	//var err error
-	//
-	//curJob, err = r.ClientSet.BatchV1().Jobs(curJob.Namespace).Create(context.Background(), curJob, metav1.CreateOptions{})
-	//
-	//if err != nil {
-	//	log.Error(err, "~~~~~Failed to create job~~~~~~~~~~")
-	//
-	//	return ctrl.Result{}, err
-	//}
-	//log.Info("***********~~~~~~~create a job  success  ~~~~~")
-
 	// Fetch the customCluster instance.
 	customCluster := &v1alpha1.CustomCluster{}
 	if err := r.Client.Get(ctx, req.NamespacedName, customCluster); err != nil {
 		if apierrors.IsNotFound(err) {
 			return ctrl.Result{Requeue: false}, nil
 		}
-		klog.Error(err)
 		return ctrl.Result{RequeueAfter: RequeueAfter}, err
 	}
-
-	log.Info("--------------------customCluster is ok")
 
 	// Fetch the CustomMachine instance.
 	customMachinekey := client.ObjectKey{
@@ -119,24 +107,14 @@ func (r *CustomClusterController) Reconcile(ctx context.Context, req ctrl.Reques
 		Name:      customCluster.Spec.MachineRef.Name,
 	}
 	customMachine := &v1alpha1.CustomMachine{}
-	log.Info("-------------------customMachinekey")
-
-	klog.Infof("customMachine name is %s ns is %s", customMachinekey.Name, customMachinekey.Namespace)
-
-	log.Info("--------------------customMachinekey not found")
 
 	if err := r.Client.Get(ctx, customMachinekey, customMachine); err != nil {
 		if apierrors.IsNotFound(err) {
 			log.Info("--------------------customMachine not found")
-
 			return ctrl.Result{Requeue: false}, nil
 		}
-		klog.Error(err)
-
 		return ctrl.Result{RequeueAfter: RequeueAfter}, err
 	}
-
-	log.Info("--------------------customMachinekey is ok")
 
 	// Fetch the Cluster instance
 	clusterkey := client.ObjectKey{
@@ -146,13 +124,10 @@ func (r *CustomClusterController) Reconcile(ctx context.Context, req ctrl.Reques
 	cluster := &clusterv1.Cluster{}
 	if err := r.Client.Get(ctx, clusterkey, cluster); err != nil {
 		if apierrors.IsNotFound(err) {
-
 			return ctrl.Result{Requeue: false}, nil
 		}
-		klog.Error(err)
 		return ctrl.Result{RequeueAfter: RequeueAfter}, err
 	}
-	log.Info("--------------------cluster is ok")
 
 	// Fetch the KubeadmControlPlane instance.
 	kcpKey := client.ObjectKey{
@@ -164,10 +139,8 @@ func (r *CustomClusterController) Reconcile(ctx context.Context, req ctrl.Reques
 		if apierrors.IsNotFound(err) {
 			return ctrl.Result{Requeue: false}, nil
 		}
-		klog.Error(err)
 		return ctrl.Result{RequeueAfter: RequeueAfter}, err
 	}
-	log.Info("--------------------kcp is ok")
 
 	// TODO: check cluster status
 
@@ -181,31 +154,30 @@ func (r *CustomClusterController) Reconcile(ctx context.Context, req ctrl.Reques
 func (r *CustomClusterController) reconcile(ctx context.Context, customCluster *v1alpha1.CustomCluster, customMachine *v1alpha1.CustomMachine, cluster *clusterv1.Cluster, kcp *controlplanev1.KubeadmControlPlane) (ctrl.Result, error) {
 	log := ctrl.LoggerFrom(ctx)
 	log.Info("~~~~~~~~~~reconcile begin~~~~~~~~~")
-	// 这里认为相关资源状态正常
 
 	// TODO: 根据 Cluster KCP CustomMachine 及 SSH key secret生成kubespray参数 Configmap
 
-	log.Info("~~~~~~~~~~create hosts configmap from customMachine~~~~~~~~~~~~~")
-	log.Info("$$$$$$$$$$$$$$$$$$$$$$~~~~~~~~~~createHostVars begin~~~~~~~~~")
+	// TODO: 先删除再创建？
 
-	// 先删除再创建？
-	_, err := r.CreateHostsConfigMap(ctx, customMachine, customCluster)
-	if err != nil {
-		klog.Infof("!!!!!!!!!!!!!!!!!!!!!!!!!!CreateHostsConfigMap error %v", err)
-		//return ctrl.Result{RequeueAfter: RequeueAfter}, err
+	if _, err := r.CreateHostsConfigMap(customMachine, customCluster); err != nil {
+		return ctrl.Result{RequeueAfter: RequeueAfter}, err
 	}
 
-	log.Info("~~~~~~~~~~create configmap from ssh key secret / kcp /customMachine~~~~~~~~~~~~~")
-
-	if _, err := r.CreateVarsConfigMap(ctx, cluster, kcp, customCluster); err != nil {
-		klog.Error(err)
-		klog.Infof("!!!!!!!!!!!!!!!!!!!!!!!!!!CreateVarsConfigMap error %v", err)
-
-		//return ctrl.Result{RequeueAfter: RequeueAfter}, err
+	if _, err := r.CreateVarsConfigMap(cluster, kcp, customCluster); err != nil {
+		return ctrl.Result{RequeueAfter: RequeueAfter}, err
 	}
 
-	// 创建Pod （挂载SSH证书以及配置参数） 执行ansible-playbook创建集群
-	log.Info("~~~~~~~~~~create job/pod to exec ansible-playbook~~~~~~~~")
+	log.Info("***********~~~~~~~let's test create a job ~~~~~")
+
+	initClusterJob := r.CreateKubesprayInitClusterJob(ctx, customCluster)
+
+	if curJob, err := r.ClientSet.BatchV1().Jobs(initClusterJob.Namespace).Create(context.Background(), initClusterJob, metav1.CreateOptions{}); err != nil {
+		log.Error(err, "failed to create job", "jobName", curJob.Name)
+
+		return ctrl.Result{}, err
+	}
+
+	log.Info("***********~~~~~~~create a job  success  ~~~~~")
 
 	log.Info("~~~~~~~~~~exec the job~~~~~~~~")
 
@@ -213,106 +185,15 @@ func (r *CustomClusterController) reconcile(ctx context.Context, customCluster *
 	return ctrl.Result{}, nil
 }
 
-// SetupWithManager sets up the controller with the Manager.
-func (r *CustomClusterController) SetupWithManager(ctx context.Context, mgr ctrl.Manager, options controller.Options) error {
-	log := ctrl.LoggerFrom(ctx)
-
-	log.Info("~~~~~~~~~ cc SetupWithManager begin~~~~~~~~~~")
-
-	c, err := ctrl.NewControllerManagedBy(mgr).
-		For(&v1alpha1.CustomCluster{}).
-		WithOptions(options).
-		Build(r)
-	if err != nil {
-		return fmt.Errorf("failed setting up with a controller manager: %v", err)
-	}
-
-	err = c.Watch(
-		&source.Kind{Type: &clusterv1.Cluster{}},
-		handler.EnqueueRequestsFromMapFunc(r.ClusterToKubeadmControlPlane),
-		predicates.All(ctrl.LoggerFrom(ctx),
-			predicates.ResourceHasFilterLabel(ctrl.LoggerFrom(ctx), ""), // TODO: add filter to distinguish from Cluster on AWS
-			predicates.ClusterUnpausedAndInfrastructureReady(ctrl.LoggerFrom(ctx)),
-		),
-	)
-	if err != nil {
-		return fmt.Errorf("failed adding Watch for Clusters to controller manager: %v", err)
-	}
-
-	log.Info("~~~~~~~~~ cc SetupWithManager finish~~~~~~~~~~")
-
-	return nil
-}
-
-func (r *CustomClusterController) ClusterToKubeadmControlPlane(o client.Object) []ctrl.Request {
-	c, ok := o.(*clusterv1.Cluster)
-	if !ok {
-		panic(fmt.Sprintf("Expected a Cluster but got a %T", o))
-	}
-
-	controlPlaneRef := c.Spec.ControlPlaneRef
-	if controlPlaneRef != nil && controlPlaneRef.Kind == "KubeadmControlPlane" {
-		return []ctrl.Request{{NamespacedName: client.ObjectKey{Namespace: controlPlaneRef.Namespace, Name: controlPlaneRef.Name}}}
-	}
-
-	return nil
-}
-
-func (r *CustomClusterController) ClusterToCustomCluster(o client.Object) []ctrl.Request {
-	c, ok := o.(*clusterv1.Cluster)
-	if !ok {
-		panic(fmt.Sprintf("Expected a Cluster but got a %T", o))
-	}
-
-	controlPlaneRef := c.Spec.ControlPlaneRef
-	if controlPlaneRef != nil && controlPlaneRef.Kind == "KubeadmControlPlane" {
-		return []ctrl.Request{{NamespacedName: client.ObjectKey{Namespace: controlPlaneRef.Namespace, Name: controlPlaneRef.Name}}}
-	}
-
-	return nil
-}
-
-func (r *CustomClusterController) CustomMachineToCustomCluster(o client.Object) []ctrl.Request {
-	c, ok := o.(*v1alpha1.CustomMachine)
-	if !ok {
-		panic(fmt.Sprintf("Expected a Cluster but got a %T", o))
-	}
-
-	machineOwner := c.Spec.MachineOwner
-	if machineOwner != nil && machineOwner.Kind == "KubeadmControlPlane" {
-		return []ctrl.Request{{NamespacedName: client.ObjectKey{Namespace: machineOwner.Namespace, Name: machineOwner.Name}}}
-	}
-
-	return nil
-}
-
-func (r *CustomClusterController) KubeadmControlPlaneToCustomCluster(o client.Object) []ctrl.Request {
-	c, ok := o.(*clusterv1.Cluster)
-	if !ok {
-		panic(fmt.Sprintf("Expected a Cluster but got a %T", o))
-	}
-
-	controlPlaneRef := c.Spec.ControlPlaneRef
-	if controlPlaneRef != nil && controlPlaneRef.Kind == "KubeadmControlPlane" {
-		return []ctrl.Request{{NamespacedName: client.ObjectKey{Namespace: controlPlaneRef.Namespace, Name: controlPlaneRef.Name}}}
-	}
-
-	return nil
-}
-
 // CreateKubesprayInitClusterJob create a kubespray init cluster job from configMap, or check exist first ?
-func (r *CustomClusterController) CreateKubesprayInitClusterJob(ctx context.Context) *batchv1.Job {
-	clusterName := "test-cluster"
-	defaultNamespace := "default"
-	defaultImage := "quay.io/kubespray/kubespray:v2.20.0"
-
-	jobName := clusterName + "-kubespray-init-cluster-job"
-	namespace := defaultNamespace
-	image := defaultImage
-	containerName := clusterName + "-container"
-	DefaultMode := int32(0o600)
+func (r *CustomClusterController) CreateKubesprayInitClusterJob(ctx context.Context, customCluster *v1alpha1.CustomCluster) *batchv1.Job {
 	log := ctrl.LoggerFrom(ctx)
-	log.Info("~#############~~~~~~~~~CreateKubesprayInitClusterJob 1~~~~~~~~~")
+	log.Info("~#############~~~~~~~~~CreateKubesprayInitClusterJob ~~~~~~~~~")
+
+	jobName := customCluster.Name + "-kubespray-init-cluster"
+	namespace := customCluster.Namespace
+	containerName := customCluster.Name + "-container"
+	DefaultMode := int32(0o600)
 
 	initJob := &batchv1.Job{
 		TypeMeta: metav1.TypeMeta{
@@ -330,9 +211,9 @@ func (r *CustomClusterController) CreateKubesprayInitClusterJob(ctx context.Cont
 					Containers: []corev1.Container{
 						{
 							Name:    containerName,
-							Image:   image,
+							Image:   DefaultKubesprayImage,
 							Command: []string{"/bin/sh", "-c"},
-							Args:    []string{"ansible-playbook -i inventory/hosts.yaml --private-key /root/.ssh/id_rsa cluster.yml"},
+							Args:    []string{KubesprayShowConfigCMD},
 
 							VolumeMounts: []corev1.VolumeMount{
 								{
@@ -357,7 +238,7 @@ func (r *CustomClusterController) CreateKubesprayInitClusterJob(ctx context.Cont
 							VolumeSource: corev1.VolumeSource{
 								ConfigMap: &corev1.ConfigMapVolumeSource{
 									LocalObjectReference: corev1.LocalObjectReference{
-										Name: "hosts-conf",
+										Name: customCluster.Name + HostYamlFileName,
 									},
 								},
 							},
@@ -367,7 +248,7 @@ func (r *CustomClusterController) CreateKubesprayInitClusterJob(ctx context.Cont
 							VolumeSource: corev1.VolumeSource{
 								ConfigMap: &corev1.ConfigMapVolumeSource{
 									LocalObjectReference: corev1.LocalObjectReference{
-										Name: "vars-conf",
+										Name: customCluster.Name + VarsYamlFileName,
 									},
 								},
 							},
@@ -376,7 +257,7 @@ func (r *CustomClusterController) CreateKubesprayInitClusterJob(ctx context.Cont
 							Name: "id-rsa-conf",
 							VolumeSource: corev1.VolumeSource{
 								Secret: &corev1.SecretVolumeSource{
-									SecretName:  "id-rsa-conf",
+									SecretName:  SecretName,
 									DefaultMode: &DefaultMode,
 								},
 							},
@@ -387,9 +268,6 @@ func (r *CustomClusterController) CreateKubesprayInitClusterJob(ctx context.Cont
 			},
 		},
 	}
-
-	log.Info("~#############~~~~~~~~~CreateKubesprayInitClusterJob 2~~~~~~~~~")
-
 	return initJob
 }
 
@@ -474,9 +352,7 @@ func (r *CustomClusterController) CreatConfigMapWithTemplate(name, namespace, fi
 	return true, nil
 }
 
-func (r *CustomClusterController) CreateHostsConfigMap(ctx context.Context, customMachine *v1alpha1.CustomMachine, customCluster *v1alpha1.CustomCluster) (bool, error) {
-	log := ctrl.LoggerFrom(ctx)
-	log.Info("$$$$$$$$$$$$$$$$$$$$$$~~~~~~~~~~createHostVars begin~~~~~~~~~")
+func (r *CustomClusterController) CreateHostsConfigMap(customMachine *v1alpha1.CustomMachine, customCluster *v1alpha1.CustomCluster) (bool, error) {
 	hostsContent := GetHostsContent(customMachine)
 
 	hostData := &strings.Builder{}
@@ -486,16 +362,12 @@ func (r *CustomClusterController) CreateHostsConfigMap(ctx context.Context, cust
 	}
 	name := fmt.Sprintf("%s-%s", customCluster.Name, HostYamlFileName)
 	namespace := customCluster.Namespace
-	log.Info("$$$$$$$$$$$$$$$$$$$$$$~~~~~~~~~~createHostVars CreatConfigMapWithTemplate begin~~~~~~~~~")
 
 	return r.CreatConfigMapWithTemplate(name, namespace, HostYamlFileName, hostData.String())
 }
 
-func (r *CustomClusterController) CreateVarsConfigMap(ctx context.Context, c *clusterv1.Cluster, kcp *controlplanev1.KubeadmControlPlane, cc *v1alpha1.CustomCluster) (bool, error) {
-	log := ctrl.LoggerFrom(ctx)
-	log.Info("$$$$$$$$$$$$$$$$$$$$$$~~~~~~~~~~CreateVarsConfigMap begin~~~~~~~~~")
+func (r *CustomClusterController) CreateVarsConfigMap(c *clusterv1.Cluster, kcp *controlplanev1.KubeadmControlPlane, cc *v1alpha1.CustomCluster) (bool, error) {
 	VarsContent := GetVarContent(c, kcp)
-
 	VarsData := &strings.Builder{}
 	tmpl := template.Must(template.New(VarsYamlFileName).Parse(varsTemplate))
 	if err := tmpl.Execute(VarsData, VarsContent); err != nil {
@@ -503,7 +375,87 @@ func (r *CustomClusterController) CreateVarsConfigMap(ctx context.Context, c *cl
 	}
 	name := fmt.Sprintf("%s-%s", cc.Name, VarsYamlFileName)
 	namespace := cc.Namespace
-	log.Info("$$$$$$$$$$$$$$$$$$$$$$~~~~~~~~~~CreateVarsConfigMap CreatConfigMapWithTemplate begin~~~~~~~~~")
 
 	return r.CreatConfigMapWithTemplate(name, namespace, VarsYamlFileName, VarsData.String())
+}
+
+// SetupWithManager sets up the controller with the Manager.
+func (r *CustomClusterController) SetupWithManager(ctx context.Context, mgr ctrl.Manager, options controller.Options) error {
+	c, err := ctrl.NewControllerManagedBy(mgr).
+		For(&v1alpha1.CustomCluster{}).
+		WithOptions(options).
+		Build(r)
+	if err != nil {
+		return fmt.Errorf("failed setting up with a controller manager: %v", err)
+	}
+
+	err = c.Watch(
+		&source.Kind{Type: &clusterv1.Cluster{}},
+		handler.EnqueueRequestsFromMapFunc(r.ClusterToKubeadmControlPlane),
+		predicates.All(ctrl.LoggerFrom(ctx),
+			predicates.ResourceHasFilterLabel(ctrl.LoggerFrom(ctx), ""), // TODO: add filter to distinguish from Cluster on AWS
+			predicates.ClusterUnpausedAndInfrastructureReady(ctrl.LoggerFrom(ctx)),
+		),
+	)
+	if err != nil {
+		return fmt.Errorf("failed adding Watch for Clusters to controller manager: %v", err)
+	}
+
+	return nil
+}
+
+func (r *CustomClusterController) ClusterToKubeadmControlPlane(o client.Object) []ctrl.Request {
+	c, ok := o.(*clusterv1.Cluster)
+	if !ok {
+		panic(fmt.Sprintf("Expected a Cluster but got a %T", o))
+	}
+
+	controlPlaneRef := c.Spec.ControlPlaneRef
+	if controlPlaneRef != nil && controlPlaneRef.Kind == "KubeadmControlPlane" {
+		return []ctrl.Request{{NamespacedName: client.ObjectKey{Namespace: controlPlaneRef.Namespace, Name: controlPlaneRef.Name}}}
+	}
+
+	return nil
+}
+
+func (r *CustomClusterController) ClusterToCustomCluster(o client.Object) []ctrl.Request {
+	c, ok := o.(*clusterv1.Cluster)
+	if !ok {
+		panic(fmt.Sprintf("Expected a Cluster but got a %T", o))
+	}
+
+	controlPlaneRef := c.Spec.ControlPlaneRef
+	if controlPlaneRef != nil && controlPlaneRef.Kind == "KubeadmControlPlane" {
+		return []ctrl.Request{{NamespacedName: client.ObjectKey{Namespace: controlPlaneRef.Namespace, Name: controlPlaneRef.Name}}}
+	}
+
+	return nil
+}
+
+func (r *CustomClusterController) CustomMachineToCustomCluster(o client.Object) []ctrl.Request {
+	c, ok := o.(*v1alpha1.CustomMachine)
+	if !ok {
+		panic(fmt.Sprintf("Expected a Cluster but got a %T", o))
+	}
+
+	machineOwner := c.Spec.MachineOwner
+	if machineOwner != nil && machineOwner.Kind == "KubeadmControlPlane" {
+		return []ctrl.Request{{NamespacedName: client.ObjectKey{Namespace: machineOwner.Namespace, Name: machineOwner.Name}}}
+	}
+
+	return nil
+}
+
+func (r *CustomClusterController) KubeadmControlPlaneToCustomCluster(o client.Object) []ctrl.Request {
+	c, ok := o.(*clusterv1.Cluster)
+	if !ok {
+		panic(fmt.Sprintf("Expected a Cluster but got a %T", o))
+	}
+
+	controlPlaneRef := c.Spec.ControlPlaneRef
+	if controlPlaneRef != nil && controlPlaneRef.Kind == "KubeadmControlPlane" {
+		return []ctrl.Request{{NamespacedName: client.ObjectKey{Namespace: controlPlaneRef.Namespace, Name: controlPlaneRef.Name}}}
+	}
+
+	return nil
 }
