@@ -193,9 +193,9 @@ func (r *CustomClusterController) reconcile(ctx context.Context, customCluster *
 
 	if _, err := r.CreateVarsConfigMap(ctx, cluster, kcp, customCluster); err != nil {
 		klog.Error(err)
-		klog.Infof("!!!!!!!!!!!!!!!!!!!!!!!!!!CreateHostsConfigMap error %v", err)
+		klog.Infof("!!!!!!!!!!!!!!!!!!!!!!!!!!CreateVarsConfigMap error %v", err)
 
-		return ctrl.Result{RequeueAfter: RequeueAfter}, err
+		//return ctrl.Result{RequeueAfter: RequeueAfter}, err
 	}
 
 	// 创建Pod （挂载SSH证书以及配置参数） 执行ansible-playbook创建集群
@@ -491,7 +491,7 @@ func (r *CustomClusterController) CreateVarsConfigMap(ctx context.Context, c *cl
 	}
 	name := fmt.Sprintf("%s-%s", cc.Name, VarsYamlFileName)
 	namespace := cc.Namespace
-	log.Info("$$$$$$$$$$$$$$$$$$$$$$~~~~~~~~~~createHostVars CreatConfigMapWithTemplate begin~~~~~~~~~")
+	log.Info("$$$$$$$$$$$$$$$$$$$$$$~~~~~~~~~~CreateVarsConfigMap CreatConfigMapWithTemplate begin~~~~~~~~~")
 
 	return r.CreatConfigMapWithTemplate(name, namespace, VarsYamlFileName, VarsData.String())
 }
