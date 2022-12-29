@@ -322,6 +322,7 @@ func GetHostsContent(customMachine *v1alpha1.CustomMachine) *HostTemplateContent
 		hostVar.MasterName[i] = masterName
 		hostVar.EtcdNodeName[count] = masterName
 		hostVar.NodeAndIP[count] = nodeAndIp
+		count++
 	}
 
 	for i, machine := range nodeMachine {
@@ -330,6 +331,7 @@ func GetHostsContent(customMachine *v1alpha1.CustomMachine) *HostTemplateContent
 		hostVar.NodeName[i] = nodeName
 		hostVar.EtcdNodeName[count] = nodeName
 		hostVar.NodeAndIP[count] = nodeAndIp
+		count++
 	}
 
 	return hostVar
