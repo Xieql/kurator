@@ -146,7 +146,6 @@ func (r *CustomClusterController) Reconcile(ctx context.Context, req ctrl.Reques
 
 	log = log.WithValues("Cluster", klog.KObj(cluster))
 	ctx = ctrl.LoggerInto(ctx, log)
-	//
 
 	log.Info("--------------------everything is ok let begin real reconcile")
 	return r.reconcile(ctx, customCluster, customMachine, cluster, kcp)

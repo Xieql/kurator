@@ -1,17 +1,17 @@
 [all]
-{{ range $i, $v := .NodeAndIP }}
+{{ range $v := .NodeAndIP }}
 {{ $v }}
 {{ end }}
 [kube_control_plane]
-{{ range $i, $v := .MasterName }}
+{{ range $v := .MasterName }}
 {{ $v }}
 {{ end }}
 [etcd]
-{{ range $i, $v := .EtcdNodeName }}
+{{ range $v := .EtcdNodeName }}
 {{ $v }}
 {{ end }}
 [kube_node]
-{{ range $i, $v := .NodeName }}
+{{ range $v := .NodeName }}
 {{ $v }}
 {{ end }}
 [k8s-cluster:children]
