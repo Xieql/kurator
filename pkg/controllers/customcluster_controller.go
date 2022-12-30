@@ -151,13 +151,21 @@ func (r *CustomClusterController) Reconcile(ctx context.Context, req ctrl.Reques
 	return r.reconcile(ctx, customCluster, customMachine, cluster, kcp)
 }
 
+func (r *CustomClusterController) RemoveCustomClusterConfigMap(customCluster *v1alpha1.CustomCluster) {
+
+}
+
 func (r *CustomClusterController) reconcile(ctx context.Context, customCluster *v1alpha1.CustomCluster, customMachine *v1alpha1.CustomMachine, cluster *clusterv1.Cluster, kcp *controlplanev1.KubeadmControlPlane) (ctrl.Result, error) {
 	log := ctrl.LoggerFrom(ctx)
 	log.Info("~~~~~~~~~~reconcile begin~~~~~~~~~")
 
 	// TODO: 根据 Cluster KCP CustomMachine 及 SSH key secret生成kubespray参数 Configmap
 
-	// TODO: 先删除再创建？
+	// 删除cm重新根据当前对象创建新的cm
+	if _, err := r.RemoveCustomClusterConfigMap(customCluster); err != nil {
+		log.Error(err, "failed to RemoveCustomClusterConfigMap")
+		//return ctrl.Result{RequeueAfter: RequeueAfter}, err
+	}
 
 	if _, err := r.CreateHostsConfigMap(customMachine, customCluster); err != nil {
 		log.Error(err, "failed to CreateHostsConfigMap")
@@ -349,7 +357,7 @@ func (r *CustomClusterController) CreatConfigMapWithTemplate(name, namespace, fi
 		Data: map[string]string{fileName: strings.TrimSpace(configMapData)},
 	}
 	var err error
-	if ConfigMap, err = r.ClientSet.CoreV1().ConfigMaps(ConfigMap.Namespace).Create(context.Background(), ConfigMap, metav1.CreateOptions{}); err != nil {
+	if ConfigMap, err = r.ClientSet.CoreV1().ConfigMaps(ConfigMap.Namespace).Update(context.Background(), ConfigMap, metav1.UpdateOptions{}); err != nil {
 		return false, err
 	}
 	return true, nil
