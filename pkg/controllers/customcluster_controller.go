@@ -225,10 +225,10 @@ func (r *CustomClusterController) CreateKubesprayInitClusterJob(ctx context.Cont
 									Name:      "vars-conf",
 									MountPath: "/kubespray/inventory/group_vars/all",
 								},
-								{
-									Name:      "id-rsa-conf",
-									MountPath: "/root/.ssh",
-								},
+								//{
+								//	Name:      "id-rsa-conf",
+								//	MountPath: "/root/.ssh",
+								//},
 							},
 						},
 					},
