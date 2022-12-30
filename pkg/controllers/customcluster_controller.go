@@ -57,8 +57,9 @@ type CustomClusterController struct {
 
 const (
 	RequeueAfter = time.Second * 5
-
+	// HostYamlFileName configmap's default name is customCluster.Name + "-" + YamlFileName
 	HostYamlFileName = "hosts.yaml"
+	// VarsYamlFileName varsConfigmap's default name is customCluster.Name + "-" + VarsYamlFileName
 	VarsYamlFileName = "vars.yaml"
 
 	// default kubespray init config
@@ -151,7 +152,21 @@ func (r *CustomClusterController) Reconcile(ctx context.Context, req ctrl.Reques
 	return r.reconcile(ctx, customCluster, customMachine, cluster, kcp)
 }
 
-func (r *CustomClusterController) RemoveCustomClusterConfigMap(customCluster *v1alpha1.CustomCluster) error {
+func (r *CustomClusterController) RemoveCustomClusterConfigMap(ctx context.Context, customCluster *v1alpha1.CustomCluster) error {
+
+	log := ctrl.LoggerFrom(ctx)
+	log.Info("++++++~~~~~~RemoveCustomClusterConfigMap begin~~~~~~~~~")
+
+	if err := r.ClientSet.CoreV1().ConfigMaps(customCluster.Namespace).Delete(context.Background(), customCluster.Name+"-"+HostYamlFileName, metav1.DeleteOptions{}); err != nil {
+		log.Error(err, "++++++~~~~~~~~~~ failed to  delete ConfigMaps  ~~~~~~~~~")
+		return err
+	}
+
+	if err := r.ClientSet.CoreV1().ConfigMaps(customCluster.Namespace).Delete(context.Background(), customCluster.Name+"-"+VarsYamlFileName, metav1.DeleteOptions{}); err != nil {
+		log.Error(err, "++++++~~~~~~~~~~ failed to  delete ConfigMaps  ~~~~~~~~~")
+		return err
+	}
+	// 如果删除无法立即完成可能需要wait
 
 	return nil
 }
@@ -163,7 +178,7 @@ func (r *CustomClusterController) reconcile(ctx context.Context, customCluster *
 	// TODO: 根据 Cluster KCP CustomMachine 及 SSH key secret生成kubespray参数 Configmap
 
 	// 删除cm重新根据当前对象创建新的cm
-	if err := r.RemoveCustomClusterConfigMap(customCluster); err != nil {
+	if err := r.RemoveCustomClusterConfigMap(ctx, customCluster); err != nil {
 		log.Error(err, "failed to RemoveCustomClusterConfigMap")
 		//return ctrl.Result{RequeueAfter: RequeueAfter}, err
 	}
