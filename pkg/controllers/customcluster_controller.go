@@ -194,7 +194,7 @@ func (r *CustomClusterController) CreateKubesprayInitClusterJob(ctx context.Cont
 	jobName := customCluster.Name + "-kubespray-init-cluster"
 	namespace := customCluster.Namespace
 	containerName := customCluster.Name + "-container"
-	DefaultMode := int32(0o600)
+	//DefaultMode := int32(0o600)
 
 	initJob := &batchv1.Job{
 		TypeMeta: metav1.TypeMeta{
@@ -239,7 +239,7 @@ func (r *CustomClusterController) CreateKubesprayInitClusterJob(ctx context.Cont
 							VolumeSource: corev1.VolumeSource{
 								ConfigMap: &corev1.ConfigMapVolumeSource{
 									LocalObjectReference: corev1.LocalObjectReference{
-										Name: customCluster.Name + HostYamlFileName,
+										Name: customCluster.Name + "-" + HostYamlFileName,
 									},
 								},
 							},
@@ -249,7 +249,7 @@ func (r *CustomClusterController) CreateKubesprayInitClusterJob(ctx context.Cont
 							VolumeSource: corev1.VolumeSource{
 								ConfigMap: &corev1.ConfigMapVolumeSource{
 									LocalObjectReference: corev1.LocalObjectReference{
-										Name: customCluster.Name + VarsYamlFileName,
+										Name: customCluster.Name + "-" + VarsYamlFileName,
 									},
 								},
 							},
