@@ -385,23 +385,24 @@ func (r *CustomClusterController) CreateHostsConfigMap(customMachine *v1alpha1.C
 	//tmpl := template.Must(template.New(HostYamlFileName).Parse("<style type=\"text/css\">" +
 	//	"\n.histoTime {\n   width: 20%;\n   white-space:nowrap;\n}\n\n</style>\n<body>\n<table"))
 
+	// If read the template file, an extra /r will appear, it will make kubespray fail to read the configuration
 	tmpl := template.Must(template.New("").Parse(`
 [all]
 {{ range $v := .NodeAndIP }}
-{{ $v }}
-{{ end }}
+{{- $v }}
+{{ end -}}
 [kube_control_plane]
-{{ range $v := .MasterName }}
+{{- range $v := .MasterName }}
 {{ $v }}
-{{ end }}
+{{ end -}}
 [etcd]
-{{ range $v := .EtcdNodeName }}
+{{- range $v := .EtcdNodeName }}
 {{ $v }}
-{{ end }}
+{{ end -}}
 [kube_node]
-{{ range $v := .NodeName }}
+{{- range $v := .NodeName }}
 {{ $v }}
-{{ end }}
+{{ end -}}
 [k8s-cluster:children]
 kube-master
 kube-node
