@@ -294,12 +294,6 @@ func (r *CustomClusterController) CreateKubesprayInitClusterJob(ctx context.Cont
 	return initJob
 }
 
-//go:embed hosts.yaml.template
-var hostsTemplate string
-
-//go:embed vars.yaml.template
-var varsTemplate string
-
 type HostTemplateContent struct {
 	NodeAndIP    []string
 	MasterName   []string
