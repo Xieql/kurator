@@ -155,15 +155,14 @@ func (r *CustomClusterController) Reconcile(ctx context.Context, req ctrl.Reques
 func (r *CustomClusterController) RemoveCustomClusterConfigMap(ctx context.Context, customCluster *v1alpha1.CustomCluster) error {
 
 	log := ctrl.LoggerFrom(ctx)
-	log.Info("++++++~~~~~~RemoveCustomClusterConfigMap begin~~~~~~~~~")
 
 	if err := r.ClientSet.CoreV1().ConfigMaps(customCluster.Namespace).Delete(context.Background(), customCluster.Name+"-"+HostYamlFileName, metav1.DeleteOptions{}); err != nil {
-		log.Error(err, "++++++~~~~~~~~~~ failed to  delete ConfigMaps  ~~~~~~~~~")
+		log.Error(err, "failed to  delete hosts configMap")
 		return err
 	}
 
 	if err := r.ClientSet.CoreV1().ConfigMaps(customCluster.Namespace).Delete(context.Background(), customCluster.Name+"-"+VarsYamlFileName, metav1.DeleteOptions{}); err != nil {
-		log.Error(err, "++++++~~~~~~~~~~ failed to  delete ConfigMaps  ~~~~~~~~~")
+		log.Error(err, "failed to  delete vars configMap")
 		return err
 	}
 	// 如果删除无法立即完成可能需要wait
@@ -179,18 +178,18 @@ func (r *CustomClusterController) reconcile(ctx context.Context, customCluster *
 
 	// 删除cm重新根据当前对象创建新的cm
 	if err := r.RemoveCustomClusterConfigMap(ctx, customCluster); err != nil {
-		log.Error(err, "failed to RemoveCustomClusterConfigMap")
-		//return ctrl.Result{RequeueAfter: RequeueAfter}, err
+		log.Error(err, "failed to remove customCluster configMap")
+		return ctrl.Result{RequeueAfter: RequeueAfter}, err
 	}
 
 	if _, err := r.CreateHostsConfigMap(customMachine, customCluster); err != nil {
 		log.Error(err, "failed to CreateHostsConfigMap")
-		//return ctrl.Result{RequeueAfter: RequeueAfter}, err
+		return ctrl.Result{RequeueAfter: RequeueAfter}, err
 	}
 
 	if _, err := r.CreateVarsConfigMap(cluster, kcp, customCluster); err != nil {
 		log.Error(err, "failed to CreateVarsConfigMap")
-		//return ctrl.Result{RequeueAfter: RequeueAfter}, err
+		return ctrl.Result{RequeueAfter: RequeueAfter}, err
 	}
 
 	log.Info("***********~~~~~~~let's test create a job ~~~~~")
