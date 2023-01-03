@@ -397,7 +397,7 @@ func (r *CustomClusterController) CreateHostsConfigMap(customMachine *v1alpha1.C
 {{ end -}}
 [etcd]
 {{- range $v := .EtcdNodeName }}
-{{ $v }}
+{{ $v -}}
 {{ end -}}
 [kube_node]
 {{- range $v := .NodeName }}
@@ -420,7 +420,31 @@ kube-node
 func (r *CustomClusterController) CreateVarsConfigMap(c *clusterv1.Cluster, kcp *controlplanev1.KubeadmControlPlane, cc *v1alpha1.CustomCluster) (bool, error) {
 	VarsContent := GetVarContent(c, kcp)
 	VarsData := &strings.Builder{}
-	tmpl := template.Must(template.New(VarsYamlFileName).Parse(varsTemplate))
+
+	tmpl := template.Must(template.New("").Parse(`
+# Download Config
+download_run_once: true
+download_container: false
+download_localhost: true
+# network
+kube_pods_subnet: {{ .PodCIDR }}
+# gcr and kubernetes image repo define
+gcr_image_repo: "gcr.m.daocloud.io"
+kube_image_repo: "k8s.m.daocloud.io"
+# docker image repo define
+docker_image_repo: "docker.m.daocloud.io"
+# quay image repo define
+quay_image_repo: "quay.m.daocloud.io"
+# github image repo define (ex multus only use that)
+github_image_repo: "ghcr.m.daocloud.io"
+# Kubernetes components
+kubeadm_download_url: "{{ .FileRepo }}/storage.googleapis.com/kubernetes-release/release/{{ .KubeVersion }}/bin/linux/{{ .HostArchitecture }}/kubeadm"
+kubectl_download_url: "{{ .FileRepo }}/storage.googleapis.com/kubernetes-release/release/{{ .KubeVersion }}/bin/linux/{{ .HostArchitecture }}/kubectl"
+kubelet_download_url: "{{ .FileRepo }}/storage.googleapis.com/kubernetes-release/release/{{ .KubeVersion }}/bin/linux/{{ .HostArchitecture }}/kubelet"
+# CNI Plugins
+cni_download_url: "{{ .FileRepo }}/github.com/containernetworking/plugins/releases/download/{{ .CniVersion }}/cni-plugins-linux-{{ .HostArchitecture }}-{{ .CniVersion }}.tgz"
+`))
+
 	if err := tmpl.Execute(VarsData, VarsContent); err != nil {
 		return false, err
 	}
