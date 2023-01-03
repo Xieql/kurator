@@ -382,7 +382,31 @@ func (r *CustomClusterController) CreateHostsConfigMap(customMachine *v1alpha1.C
 	hostsContent := GetHostsContent(customMachine)
 
 	hostData := &strings.Builder{}
-	tmpl := template.Must(template.New(HostYamlFileName).Parse(hostsTemplate))
+	//tmpl := template.Must(template.New(HostYamlFileName).Parse("<style type=\"text/css\">" +
+	//	"\n.histoTime {\n   width: 20%;\n   white-space:nowrap;\n}\n\n</style>\n<body>\n<table"))
+
+	tmpl := template.Must(template.New("").Parse(`
+[all]
+{{ range $v := .NodeAndIP }}
+{{ $v }}
+{{ end }}
+[kube_control_plane]
+{{ range $v := .MasterName }}
+{{ $v }}
+{{ end }}
+[etcd]
+{{ range $v := .EtcdNodeName }}
+{{ $v }}
+{{ end }}
+[kube_node]
+{{ range $v := .NodeName }}
+{{ $v }}
+{{ end }}
+[k8s-cluster:children]
+kube-master
+kube-node
+`))
+
 	if err := tmpl.Execute(hostData, hostsContent); err != nil {
 		return false, err
 	}
