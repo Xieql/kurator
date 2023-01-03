@@ -69,7 +69,9 @@ const (
 	DefaultCniVersion       = "v1.1.1"
 	DefaultKubesprayImage   = "quay.io/kubespray/kubespray:v2.20.0"
 
-	KubesprayInitCMD       = "ansible-playbook -i inventory/hosts.yaml --private-key /root/.ssh/id_rsa cluster.yml"
+	KubesprayInitCMD = "ansible-playbook -i inventory/hosts.yaml --private-key /root/.ssh/id_rsa cluster.yml"
+
+	// maybe need reset
 	KubesprayResetCMD      = "ansible-playbook -e reset_confirmation=yes -i inventory/hosts.yaml reset.yml -vvv"
 	KubesprayShowConfigCMD = "cat /root/.ssh/id_rsa && cat /kubespray/inventory/hosts.yaml && cat /kubespray/inventory/group_var/all/vars.yaml"
 
@@ -90,7 +92,6 @@ const (
 // For more details, check Reconcile and its Result here:
 // - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.13.0/pkg/reconcile
 func (r *CustomClusterController) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
-
 	log := ctrl.LoggerFrom(ctx)
 	log.Info("***********~~~~~~~CustomClusterController reconcile begin~~~~~~~~~")
 
@@ -111,8 +112,8 @@ func (r *CustomClusterController) Reconcile(ctx context.Context, req ctrl.Reques
 	customMachine := &v1alpha1.CustomMachine{}
 
 	if err := r.Client.Get(ctx, customMachinekey, customMachine); err != nil {
+		log.Error(err, "can not get customMachine")
 		if apierrors.IsNotFound(err) {
-			log.Info("--------------------customMachine not found")
 			return ctrl.Result{Requeue: false}, nil
 		}
 		return ctrl.Result{RequeueAfter: RequeueAfter}, err
@@ -125,6 +126,7 @@ func (r *CustomClusterController) Reconcile(ctx context.Context, req ctrl.Reques
 	}
 	cluster := &clusterv1.Cluster{}
 	if err := r.Client.Get(ctx, clusterkey, cluster); err != nil {
+		log.Error(err, "can not get cluster")
 		if apierrors.IsNotFound(err) {
 			return ctrl.Result{Requeue: false}, nil
 		}
@@ -138,6 +140,7 @@ func (r *CustomClusterController) Reconcile(ctx context.Context, req ctrl.Reques
 	}
 	kcp := &controlplanev1.KubeadmControlPlane{}
 	if err := r.Client.Get(ctx, kcpKey, kcp); err != nil {
+		log.Error(err, "can not get kcp")
 		if apierrors.IsNotFound(err) {
 			return ctrl.Result{Requeue: false}, nil
 		}
@@ -145,35 +148,29 @@ func (r *CustomClusterController) Reconcile(ctx context.Context, req ctrl.Reques
 	}
 
 	// TODO: check cluster status
+	// 如果cluster是初始状态，则开始后续； 如果正在创建中running,则检查一次job状态，然后重新排队/更新状态为完成、失败 ；如果cluster已经完成，；如果cluster失败，则执行reset； reseting状态，检查resetjob，如果完成，则重新cluster、
 
 	log = log.WithValues("Cluster", klog.KObj(cluster))
 	ctx = ctrl.LoggerInto(ctx, log)
 
-	log.Info("--------------------everything is ok let begin real reconcile")
 	return r.reconcile(ctx, customCluster, customMachine, cluster, kcp)
 }
 
 func (r *CustomClusterController) RemoveCustomClusterConfigMap(ctx context.Context, customCluster *v1alpha1.CustomCluster) error {
-
 	log := ctrl.LoggerFrom(ctx)
-
 	if err := r.ClientSet.CoreV1().ConfigMaps(customCluster.Namespace).Delete(context.Background(), customCluster.Name+"-"+HostYamlFileName, metav1.DeleteOptions{}); err != nil {
 		log.Error(err, "failed to  delete hosts configMap")
 		return err
 	}
-
 	if err := r.ClientSet.CoreV1().ConfigMaps(customCluster.Namespace).Delete(context.Background(), customCluster.Name+"-"+VarsYamlFileName, metav1.DeleteOptions{}); err != nil {
 		log.Error(err, "failed to  delete vars configMap")
 		return err
 	}
-	// 如果删除无法立即完成可能需要wait
-
 	return nil
 }
 
 func (r *CustomClusterController) reconcile(ctx context.Context, customCluster *v1alpha1.CustomCluster, customMachine *v1alpha1.CustomMachine, cluster *clusterv1.Cluster, kcp *controlplanev1.KubeadmControlPlane) (ctrl.Result, error) {
 	log := ctrl.LoggerFrom(ctx)
-	log.Info("~~~~~~~~~~reconcile begin~~~~~~~~~")
 
 	// TODO: 根据 Cluster KCP CustomMachine 及 SSH key secret生成kubespray参数 Configmap
 
@@ -184,16 +181,14 @@ func (r *CustomClusterController) reconcile(ctx context.Context, customCluster *
 	}
 
 	if _, err := r.CreateHostsConfigMap(customMachine, customCluster); err != nil {
-		log.Error(err, "failed to CreateHostsConfigMap")
+		log.Error(err, "failed to create hosts configMap")
 		return ctrl.Result{RequeueAfter: RequeueAfter}, err
 	}
 
 	if _, err := r.CreateVarsConfigMap(cluster, kcp, customCluster); err != nil {
-		log.Error(err, "failed to CreateVarsConfigMap")
+		log.Error(err, "failed to create vars configMap")
 		return ctrl.Result{RequeueAfter: RequeueAfter}, err
 	}
-
-	log.Info("***********~~~~~~~let's test create a job ~~~~~")
 
 	initClusterJob := r.CreateKubesprayInitClusterJob(ctx, customCluster)
 
@@ -347,7 +342,6 @@ func GetHostsContent(customMachine *v1alpha1.CustomMachine) *HostTemplateContent
 		hostVar.NodeAndIP[count] = nodeAndIp
 		count++
 	}
-
 	for i, machine := range nodeMachine {
 		nodeName := machine.HostName
 		nodeAndIp := fmt.Sprintf("%s ansible_host=%s ip=%s", machine.HostName, machine.PublicIP, machine.PrivateIP)
@@ -381,10 +375,7 @@ func (r *CustomClusterController) CreatConfigMapWithTemplate(name, namespace, fi
 
 func (r *CustomClusterController) CreateHostsConfigMap(customMachine *v1alpha1.CustomMachine, customCluster *v1alpha1.CustomCluster) (bool, error) {
 	hostsContent := GetHostsContent(customMachine)
-
 	hostData := &strings.Builder{}
-	//tmpl := template.Must(template.New(HostYamlFileName).Parse("<style type=\"text/css\">" +
-	//	"\n.histoTime {\n   width: 20%;\n   white-space:nowrap;\n}\n\n</style>\n<body>\n<table"))
 
 	// If read the template file, an extra /r will appear, it will make kubespray fail to read the configuration
 	tmpl := template.Must(template.New("").Parse(`
