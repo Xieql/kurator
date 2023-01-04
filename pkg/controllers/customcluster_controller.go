@@ -107,7 +107,7 @@ func (r *CustomClusterController) Reconcile(ctx context.Context, req ctrl.Reques
 		Name:      customCluster.Spec.MachineRef.Name,
 	}
 	customMachine := &v1alpha1.CustomMachine{}
-	log.Info("customMachine-name", customMachinekey.Name, "customMachine-Namespace", customMachinekey.Namespace)
+	log.Info("customMachine-name ", customMachinekey.Name, "customMachine-Namespace", customMachinekey.Namespace)
 
 	if err := r.Client.Get(ctx, customMachinekey, customMachine); err != nil {
 		log.Error(err, "can not get customMachine")
