@@ -190,6 +190,8 @@ func (r *CustomClusterController) reconcile(ctx context.Context, customCluster *
 
 	initClusterJob := r.CreateKubesprayInitClusterJob(ctx, customCluster)
 
+	log.Info("***********~~~~~~~start create a job   ~~~~~")
+
 	if curJob, err := r.ClientSet.BatchV1().Jobs(initClusterJob.Namespace).Create(context.Background(), initClusterJob, metav1.CreateOptions{}); err != nil {
 		log.Error(err, "failed to create job", "jobName", curJob.Name)
 		return ctrl.Result{}, err
