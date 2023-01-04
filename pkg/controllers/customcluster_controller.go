@@ -396,8 +396,8 @@ func (r *CustomClusterController) CreateHostsConfigMap(customMachine *v1alpha1.C
 {{ $v }}
 {{ end -}}
 [k8s-cluster:children]
-kube-master
-kube-node
+kube_node
+kube_control_plane
 `))
 
 	if err := tmpl.Execute(hostData, hostsContent); err != nil {
@@ -414,7 +414,7 @@ func (r *CustomClusterController) CreateVarsConfigMap(c *clusterv1.Cluster, kcp 
 	VarsData := &strings.Builder{}
 
 	tmpl := template.Must(template.New("").Parse(`
-# Download Config
+KubeVersion: {{ .KubeVersion}}
 download_run_once: true
 download_container: false
 download_localhost: true
