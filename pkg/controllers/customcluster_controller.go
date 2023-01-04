@@ -66,7 +66,6 @@ const (
 	// default kubespray init config
 	DefaultFileRepo         = "https://files.m.daocloud.io"
 	DefaultHostArchitecture = "amd64"
-	DefaultCniVersion       = "v1.1.1"
 	DefaultKubesprayImage   = "quay.io/kubespray/kubespray:v2.20.0"
 
 	KubesprayInitCMD = "ansible-playbook -i inventory/hosts.yaml --private-key /root/.ssh/id_rsa cluster.yml"
@@ -74,8 +73,6 @@ const (
 	// maybe need reset
 	KubesprayResetCMD      = "ansible-playbook -e reset_confirmation=yes -i inventory/hosts.yaml reset.yml -vvv"
 	KubesprayShowConfigCMD = "cat /root/.ssh/id_rsa && cat /kubespray/inventory/hosts.yaml && cat /kubespray/inventory/group_var/all/vars.yaml"
-
-	SecretName = "ssh-key-quickstart "
 )
 
 //+kubebuilder:rbac:groups=kurator.dev.kurator.dev,resources=customclusters,verbs=get;list;watch;create;update;patch;delete
@@ -93,7 +90,7 @@ const (
 // - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.13.0/pkg/reconcile
 func (r *CustomClusterController) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	log := ctrl.LoggerFrom(ctx)
-	log.Info("***********~~~~~~~CustomClusterController reconcile begin~~~~~~~~~")
+	log.Info("**********~~~~~CustomClusterController reconcile begin~~~~~~~~~")
 
 	// Fetch the customCluster instance.
 	customCluster := &v1alpha1.CustomCluster{}
@@ -247,7 +244,7 @@ func (r *CustomClusterController) CreateKubesprayInitClusterJob(ctx context.Cont
 								},
 								{
 									Name:      "ssh-auth",
-									MountPath: "/auth/ssh-privatekey",
+									MountPath: "/.ssh/ssh-privatekey",
 									SubPath:   "ssh-privatekey",
 									ReadOnly:  true,
 								},
@@ -308,7 +305,6 @@ type VarsTemplateContent struct {
 	PodCIDR          string
 	FileRepo         string
 	HostArchitecture string
-	CniVersion       string
 }
 
 func GetVarContent(c *clusterv1.Cluster, kcp *controlplanev1.KubeadmControlPlane) *VarsTemplateContent {
@@ -318,7 +314,6 @@ func GetVarContent(c *clusterv1.Cluster, kcp *controlplanev1.KubeadmControlPlane
 		KubeVersion:      kcp.Spec.Version,
 		FileRepo:         DefaultFileRepo,
 		HostArchitecture: DefaultHostArchitecture,
-		CniVersion:       DefaultCniVersion,
 	}
 	return varContent
 }
@@ -433,8 +428,6 @@ github_image_repo: "ghcr.m.daocloud.io"
 kubeadm_download_url: "{{ .FileRepo }}/storage.googleapis.com/kubernetes-release/release/{{ .KubeVersion }}/bin/linux/{{ .HostArchitecture }}/kubeadm"
 kubectl_download_url: "{{ .FileRepo }}/storage.googleapis.com/kubernetes-release/release/{{ .KubeVersion }}/bin/linux/{{ .HostArchitecture }}/kubectl"
 kubelet_download_url: "{{ .FileRepo }}/storage.googleapis.com/kubernetes-release/release/{{ .KubeVersion }}/bin/linux/{{ .HostArchitecture }}/kubelet"
-# CNI Plugins
-cni_download_url: "{{ .FileRepo }}/github.com/containernetworking/plugins/releases/download/{{ .CniVersion }}/cni-plugins-linux-{{ .HostArchitecture }}-{{ .CniVersion }}.tgz"
 `))
 
 	if err := tmpl.Execute(VarsData, VarsContent); err != nil {
