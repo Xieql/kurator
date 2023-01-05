@@ -28,4 +28,4 @@ spec:
       kind: customMachine
       name: custom-machine-quickstart
       namespace: default
-  version: v1.25.0
+  version: v1.23.7
