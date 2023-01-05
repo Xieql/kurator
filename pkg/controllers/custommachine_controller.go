@@ -104,5 +104,7 @@ func (r *CustomMachineController) reconcile(ctx context.Context, customMachine *
 	machineReady := true
 	customMachine.Status.Ready = &machineReady
 	err = patchHelper.Patch(ctx, customMachine)
+	log.Info("customMachine is ready", "customMachine.status.ready", machineReady)
+
 	return ctrl.Result{}, err
 }
