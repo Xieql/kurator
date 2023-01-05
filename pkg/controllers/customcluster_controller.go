@@ -280,7 +280,7 @@ func (r *CustomClusterController) CreateKubesprayInitClusterJob(ctx context.Cont
 								ConfigMap: &corev1.ConfigMapVolumeSource{
 									LocalObjectReference: corev1.LocalObjectReference{
 										//Name: customCluster.Name + "-" + HostYamlFileName,
-										Name: "hosts.conf",
+										Name: "hosts-conf",
 									},
 								},
 							},
