@@ -7,26 +7,27 @@ spec:
   template:
     spec:
       containers:
-      - name: kubespray-init-cluster
-        image: quay.io/kubespray/kubespray:v2.20.0
-        command: ["/bin/sh","-c"]
-        args: ["ansible-playbook -i inventory/hosts.yaml reset.yml"]
-        volumeMounts:
-        - mountPath: /kubespray/inventory
-          name: hosts-conf
-        - mountPath: /kubespray/inventory/group_vars/all
-          name: vars-conf
-        - mountPath: /root/.ssh
-          name: id-rsa-conf
+        - name: kubespray-init-cluster
+          image: quay.io/kubespray/kubespray:v2.20.0
+          command: ["/bin/sh","-c"]
+          args: ["ansible-playbook -i inventory/hosts.yaml --private-key /root/.ssh/ssh-privatekey cluster.yml"]
+          volumeMounts:
+            - mountPath: /kubespray/inventory
+              name: hosts-conf
+            - mountPath: /kubespray/inventory/group_vars/all
+              name: vars-conf
+            - mountPath: /root/.ssh/
+              name: secret-volume
+              readOnly: true
       volumes:
-      - name: hosts-conf
-        configMap:
-          name: hosts-conf
-      - name: vars-conf
-        configMap:
-          name: vars-conf
-      - name: id-rsa-conf
-        configMap:
-          defaultMode: 384
-          name: id-rsa-conf
+        - name: hosts-conf
+          configMap:
+            name: hosts-conf
+        - name: vars-conf
+          configMap:
+            name: vars-conf
+        - name: secret-volume
+          secret:
+            secretName: ssh-key-secret
+            defaultMode: 0400
       restartPolicy: Never
