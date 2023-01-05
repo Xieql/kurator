@@ -27,4 +27,5 @@ spec:
       apiVersion: cluster.kurator.dev/v1alpha1
       kind: customMachine
       name: custom-machine-quickstart
+      namespace: default
   version: v1.25.0
