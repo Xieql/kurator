@@ -426,7 +426,7 @@ func (r *CustomClusterController) CreateVarsConfigMap(c *clusterv1.Cluster, kcp 
 	VarsData := &strings.Builder{}
 
 	tmpl := template.Must(template.New("").Parse(`
-KubeVersion: {{ .KubeVersion}}
+kube_version: {{ .KubeVersion}}
 download_run_once: true
 download_container: false
 download_localhost: true
