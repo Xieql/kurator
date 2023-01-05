@@ -53,36 +53,14 @@ func InitControllers(ctx context.Context, mgr ctrl.Manager) error {
 		return err
 	}
 
-	if mgr.GetClient() == nil {
-		log.Info("~~~~~~~!!!!!!!!!!!!!!!!!!  mgr.GetClient() is nil !!!")
-		log.Info("~~~~~~~!!!!!!!!!!!!!!!!!!  mgr.GetClient() is nil !!!")
-
-	} else {
-		log.Info("~~~~~~~!!!!!!!!!!!!!!!!!!  mgr.GetClient() is not nil !!!")
-		log.Info("~~~~~~~!!!!!!!!!!!!!!!!!!  mgr.GetClient() is not nil !!!")
-
+	if err := (&controllers.CustomMachineController{
+		Client:    mgr.GetClient(),
+		Scheme:    mgr.GetScheme(),
+		APIReader: mgr.GetAPIReader(),
+	}).SetupWithManager(ctx, mgr, controller.Options{}); err != nil {
+		log.Error(err, "unable to create controller", "controller", "CustomMachine")
+		return err
 	}
-
-	if mgr.GetAPIReader() == nil {
-		log.Info("~~~~~~~!!!!!!!!!!!!!!!!!!  mgr.GetAPIReader() is nil !!!")
-		log.Info("~~~~~~~!!!!!!!!!!!!!!!!!!  mgr.GetAPIReader() is nil !!!")
-
-	} else {
-		log.Info("~~~~~~~!!!!!!!!!!!!!!!!!!  mgr.GetAPIReader() is not nil !!!")
-		log.Info("~~~~~~~!!!!!!!!!!!!!!!!!!  mgr.GetAPIReader() is not nil !!!")
-
-	}
-
-	//if err := (&controllers.CustomMachineController{
-	//	Client:    mgr.GetClient(),
-	//	Scheme:    mgr.GetScheme(),
-	//	APIReader: mgr.GetAPIReader(),
-	//}).SetupWithManager(ctx, mgr, controller.Options{}); err != nil {
-	//	log.Error(err, "unable to create controller", "controller", "CustomMachine")
-	//	return err
-	//}
-
-	log.Info("~~~~~~~~~~~finish init CustomClusterController22222222 ")
 
 	return nil
 }

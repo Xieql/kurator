@@ -12,7 +12,7 @@ spec:
       sshKey:
         apiVersion: v1
         kind: Secret
-        name: ssh-auth
+        name: ssh-key-secret
   node:
     - hostName: node1
       publicIP: 202.170.89.170
@@ -20,4 +20,4 @@ spec:
       sshKey:
         apiVersion: v1
         kind: Secret
-        name: ssh-auth
+        name: ssh-key-secret
