@@ -64,9 +64,8 @@ const (
 	secreteName      = "ssh-key-secret"
 
 	// default kubespray init config
-	DefaultFileRepo         = "https://files.m.daocloud.io"
-	DefaultHostArchitecture = "amd64"
-	DefaultKubesprayImage   = "quay.io/kubespray/kubespray:v2.20.0"
+	DefaultFileRepo       = "https://files.m.daocloud.io"
+	DefaultKubesprayImage = "quay.io/kubespray/kubespray:v2.20.0"
 
 	KubesprayInitCMD = "ansible-playbook -i inventory/hosts.yaml --private-key /root/.ssh/ssh-privatekey cluster.yml -vvv"
 
@@ -322,19 +321,17 @@ type HostTemplateContent struct {
 }
 
 type VarsTemplateContent struct {
-	KubeVersion      string
-	PodCIDR          string
-	FileRepo         string
-	HostArchitecture string
+	KubeVersion string
+	PodCIDR     string
+	FileRepo    string
 }
 
 func GetVarContent(c *clusterv1.Cluster, kcp *controlplanev1.KubeadmControlPlane) *VarsTemplateContent {
 	// add kubespray init config here
 	varContent := &VarsTemplateContent{
-		PodCIDR:          c.Spec.ClusterNetwork.Pods.CIDRBlocks[0],
-		KubeVersion:      kcp.Spec.Version,
-		FileRepo:         DefaultFileRepo,
-		HostArchitecture: DefaultHostArchitecture,
+		PodCIDR:     c.Spec.ClusterNetwork.Pods.CIDRBlocks[0],
+		KubeVersion: kcp.Spec.Version,
+		FileRepo:    DefaultFileRepo,
 	}
 	return varContent
 }
@@ -444,9 +441,9 @@ docker_image_repo: "docker.m.daocloud.io"
 quay_image_repo: "quay.m.daocloud.io"
 github_image_repo: "ghcr.m.daocloud.io"
 files_repo: "{{ .FileRepo }}"
-kubeadm_download_url: "{{ .FileRepo }}/storage.googleapis.com/kubernetes-release/release/{{ .KubeVersion }}/bin/linux/{{ .HostArchitecture }}/kubeadm"
-kubectl_download_url: "{{ .FileRepo }}/storage.googleapis.com/kubernetes-release/release/{{ .KubeVersion }}/bin/linux/{{ .HostArchitecture }}/kubectl"
-kubelet_download_url: "{{ .FileRepo }}/storage.googleapis.com/kubernetes-release/release/{{ .KubeVersion }}/bin/linux/{{ .HostArchitecture }}/kubelet"
+kubeadm_download_url: "{{ .FileRepo }}/storage.googleapis.com/kubernetes-release/release/{{ .KubeVersion }}/bin/linux/{{ "{{ image_arch }}" }}/kubeadm"
+kubectl_download_url: "{{ .FileRepo }}/storage.googleapis.com/kubernetes-release/release/{{ .KubeVersion }}/bin/linux/{{ "{{ image_arch }}" }}/kubectl"
+kubelet_download_url: "{{ .FileRepo }}/storage.googleapis.com/kubernetes-release/release/{{ .KubeVersion }}/bin/linux/{{ "{{ image_arch }}" }}/kubelet"
 `))
 
 	if err := tmpl.Execute(VarsData, VarsContent); err != nil {
