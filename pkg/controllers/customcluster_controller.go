@@ -188,6 +188,19 @@ func (r *CustomClusterController) reconcile(ctx context.Context, customCluster *
 		return ctrl.Result{RequeueAfter: RequeueAfter}, err
 	}
 
+	if testSecret, err := r.ClientSet.CoreV1().Secrets(customCluster.Namespace).Get(context.Background(), secreteName, metav1.GetOptions{}); err != nil {
+		if testSecret != nil {
+			log.Info("***********~~~~~~~ testSecret is nil  ~~~~~")
+		} else {
+			log.Info("***********~~~~~~~ testSecret is found!!!  ~~~~~")
+		}
+	} else {
+		log.Error(err, "failed to get testSecret")
+
+	}
+
+	log.Info("***********~~~~~~~start CreateKubesprayInitClusterJob   ~~~~~")
+
 	initClusterJob := r.CreateKubesprayInitClusterJob(ctx, customCluster)
 
 	log.Info("***********~~~~~~~start create a job   ~~~~~")
@@ -278,7 +291,6 @@ func (r *CustomClusterController) CreateKubesprayInitClusterJob(ctx context.Cont
 							Name: "secret-volume",
 							VolumeSource: corev1.VolumeSource{
 								Secret: &corev1.SecretVolumeSource{
-									// todo: read from customMachine
 									SecretName:  secreteName,
 									DefaultMode: &DefaultMode,
 								},
