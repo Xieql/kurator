@@ -444,7 +444,8 @@ docker_image_repo: "docker.m.daocloud.io"
 quay_image_repo: "quay.m.daocloud.io"
 # github image repo define (ex multus only use that)
 github_image_repo: "ghcr.m.daocloud.io"
-file_repo:{{ .FileRepo }}
+file_repo: {{ .FileRepo }}
+
 # Kubernetes components
 kubeadm_download_url: "{{ .FileRepo }}/storage.googleapis.com/kubernetes-release/release/{{ .KubeVersion }}/bin/linux/{{ .HostArchitecture }}/kubeadm"
 kubectl_download_url: "{{ .FileRepo }}/storage.googleapis.com/kubernetes-release/release/{{ .KubeVersion }}/bin/linux/{{ .HostArchitecture }}/kubectl"
