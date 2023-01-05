@@ -68,7 +68,7 @@ const (
 	DefaultHostArchitecture = "amd64"
 	DefaultKubesprayImage   = "quay.io/kubespray/kubespray:v2.20.0"
 
-	KubesprayInitCMD = "ansible-playbook -i inventory/hosts.yaml --private-key /root/.ssh/ssh-privatekey cluster.yml"
+	KubesprayInitCMD = "ansible-playbook -i inventory/hosts.yaml --private-key /root/.ssh/ssh-privatekey cluster.yml -vvv"
 
 	// maybe need reset
 	KubesprayResetCMD      = "ansible-playbook -e reset_confirmation=yes -i inventory/hosts.yaml reset.yml -vvv"
@@ -279,8 +279,8 @@ func (r *CustomClusterController) CreateKubesprayInitClusterJob(ctx context.Cont
 							VolumeSource: corev1.VolumeSource{
 								ConfigMap: &corev1.ConfigMapVolumeSource{
 									LocalObjectReference: corev1.LocalObjectReference{
-										//Name: customCluster.Name + "-" + HostYamlFileName,
-										Name: "hosts-conf",
+										Name: customCluster.Name + "-" + HostYamlFileName,
+										//Name: "hosts-conf",
 									},
 								},
 							},
@@ -290,8 +290,8 @@ func (r *CustomClusterController) CreateKubesprayInitClusterJob(ctx context.Cont
 							VolumeSource: corev1.VolumeSource{
 								ConfigMap: &corev1.ConfigMapVolumeSource{
 									LocalObjectReference: corev1.LocalObjectReference{
-										//Name: customCluster.Name + "-" + VarsYamlFileName,
-										Name: "vars-conf",
+										Name: customCluster.Name + "-" + VarsYamlFileName,
+										//Name: "vars-conf",
 									},
 								},
 							},
@@ -444,6 +444,7 @@ docker_image_repo: "docker.m.daocloud.io"
 quay_image_repo: "quay.m.daocloud.io"
 # github image repo define (ex multus only use that)
 github_image_repo: "ghcr.m.daocloud.io"
+file_repo:{{ .FileRepo }}
 # Kubernetes components
 kubeadm_download_url: "{{ .FileRepo }}/storage.googleapis.com/kubernetes-release/release/{{ .KubeVersion }}/bin/linux/{{ .HostArchitecture }}/kubeadm"
 kubectl_download_url: "{{ .FileRepo }}/storage.googleapis.com/kubernetes-release/release/{{ .KubeVersion }}/bin/linux/{{ .HostArchitecture }}/kubectl"
