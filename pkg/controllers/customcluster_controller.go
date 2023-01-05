@@ -362,7 +362,6 @@ func GetHostsContent(customMachine *v1alpha1.CustomMachine) *HostTemplateContent
 		nodeName := machine.HostName
 		nodeAndIp := fmt.Sprintf("%s ansible_host=%s ip=%s", machine.HostName, machine.PublicIP, machine.PrivateIP)
 		hostVar.NodeName[i] = nodeName
-		hostVar.EtcdNodeName[count] = nodeName
 		hostVar.NodeAndIP[count] = nodeAndIp
 		count++
 	}
@@ -397,20 +396,20 @@ func (r *CustomClusterController) CreateHostsConfigMap(customMachine *v1alpha1.C
 	tmpl := template.Must(template.New("").Parse(`
 [all]
 {{ range $v := .NodeAndIP }}
-{{- $v }}
-{{ end -}}
-[kube_control_plane]
-{{- range $v := .MasterName }}
 {{ $v }}
-{{ end -}}
+{{ end }}
+[kube_control_plane]
+{{ range $v := .MasterName }}
+{{ $v }}
+{{ end }}
 [etcd]
 {{- range $v := .EtcdNodeName }}
-{{ $v -}}
-{{ end -}}
+{{ $v }}
+{{ end }}
 [kube_node]
 {{- range $v := .NodeName }}
 {{ $v }}
-{{ end -}}
+{{ end }}
 [k8s-cluster:children]
 kube_node
 kube_control_plane
