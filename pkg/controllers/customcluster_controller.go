@@ -68,7 +68,7 @@ const (
 	DefaultHostArchitecture = "amd64"
 	DefaultKubesprayImage   = "quay.io/kubespray/kubespray:v2.20.0"
 
-	KubesprayInitCMD = "ansible-playbook -i inventory/hosts.yaml --private-key /root/.ssh/id_rsa cluster.yml"
+	KubesprayInitCMD = "ansible-playbook -i inventory/hosts.yaml --private-key /root/.ssh/ssh-privatekey cluster.yml"
 
 	// maybe need reset
 	KubesprayResetCMD      = "ansible-playbook -e reset_confirmation=yes -i inventory/hosts.yaml reset.yml -vvv"
