@@ -6,8 +6,8 @@ metadata:
 spec:
   master:
     - hostName: master1
-      privateIP: 202.170.92.145
-      publicIP: 192.168.3.71
+      publicIP: 202.170.92.145
+      privateIP: 192.168.3.71
       instanceType: node
       sshKey:
         apiVersion: v1
@@ -15,8 +15,8 @@ spec:
         name: ssh-auth
   node:
     - hostName: node1
-      privateIP: 202.170.89.170
-      publicIP: 192.168.3.123
+      publicIP: 202.170.89.170
+      privateIP: 192.168.3.123
       sshKey:
         apiVersion: v1
         kind: Secret
