@@ -61,7 +61,7 @@ const (
 	HostYamlFileName = "hosts.yaml"
 	// VarsYamlFileName varsConfigmap's default name is customCluster.Name + "-" + VarsYamlFileName
 	VarsYamlFileName = "vars.yaml"
-	secreteName      = "ssh-quickstart"
+	secreteName      = "ssh-key-secret"
 
 	// default kubespray init config
 	DefaultFileRepo         = "https://files.m.daocloud.io"
@@ -213,8 +213,7 @@ func (r *CustomClusterController) CreateKubesprayInitClusterJob(ctx context.Cont
 	jobName := customCluster.Name + "-kubespray-init-cluster"
 	namespace := customCluster.Namespace
 	containerName := customCluster.Name + "-container"
-	//DefaultMode := int32(0o600)
-	PrivatekeyMode := int32(0o400)
+	DefaultMode := int32(0o600)
 
 	initJob := &batchv1.Job{
 		TypeMeta: metav1.TypeMeta{
@@ -246,9 +245,8 @@ func (r *CustomClusterController) CreateKubesprayInitClusterJob(ctx context.Cont
 									MountPath: "/kubespray/inventory/group_vars/all",
 								},
 								{
-									Name:      "ssh-auth",
-									MountPath: "/.ssh/ssh-privatekey",
-									SubPath:   "ssh-privatekey",
+									Name:      "secret-volume",
+									MountPath: "/root/.ssh",
 									ReadOnly:  true,
 								},
 							},
@@ -277,13 +275,12 @@ func (r *CustomClusterController) CreateKubesprayInitClusterJob(ctx context.Cont
 							},
 						},
 						{
-							Name: "ssh-auth",
+							Name: "secret-volume",
 							VolumeSource: corev1.VolumeSource{
 								Secret: &corev1.SecretVolumeSource{
 									// todo: read from customMachine
-									SecretName: secreteName,
-									// todo: fix it
-									DefaultMode: &PrivatekeyMode, // fix Permissions 0644 are too open
+									SecretName:  secreteName,
+									DefaultMode: &DefaultMode,
 								},
 							},
 						},
