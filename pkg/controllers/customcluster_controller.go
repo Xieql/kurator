@@ -157,10 +157,16 @@ func (r *CustomClusterController) Reconcile(ctx context.Context, req ctrl.Reques
 func (r *CustomClusterController) RemoveCustomClusterConfigMap(ctx context.Context, customCluster *v1alpha1.CustomCluster) error {
 	log := ctrl.LoggerFrom(ctx)
 	if err := r.ClientSet.CoreV1().ConfigMaps(customCluster.Namespace).Delete(context.Background(), customCluster.Name+"-"+HostYamlFileName, metav1.DeleteOptions{}); err != nil {
+		if apierrors.IsNotFound(err) {
+			return nil
+		}
 		log.Error(err, "failed to  delete hosts configMap")
 		return err
 	}
 	if err := r.ClientSet.CoreV1().ConfigMaps(customCluster.Namespace).Delete(context.Background(), customCluster.Name+"-"+VarsYamlFileName, metav1.DeleteOptions{}); err != nil {
+		if apierrors.IsNotFound(err) {
+			return nil
+		}
 		log.Error(err, "failed to  delete vars configMap")
 		return err
 	}
@@ -174,6 +180,7 @@ func (r *CustomClusterController) reconcile(ctx context.Context, customCluster *
 
 	// 删除cm重新根据当前对象创建新的cm
 	if err := r.RemoveCustomClusterConfigMap(ctx, customCluster); err != nil {
+		// 如果是未找到则
 		log.Error(err, "failed to remove customCluster configMap")
 		return ctrl.Result{RequeueAfter: RequeueAfter}, err
 	}
