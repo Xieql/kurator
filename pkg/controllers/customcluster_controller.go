@@ -443,9 +443,7 @@ docker_image_repo: "docker.m.daocloud.io"
 # quay image repo define
 quay_image_repo: "quay.m.daocloud.io"
 github_image_repo: "ghcr.m.daocloud.io"
-
-file_repo: "{{ .FileRepo }}"
-
+files_repo: "{{ .FileRepo }}"
 kubeadm_download_url: "{{ .FileRepo }}/storage.googleapis.com/kubernetes-release/release/{{ .KubeVersion }}/bin/linux/{{ .HostArchitecture }}/kubeadm"
 kubectl_download_url: "{{ .FileRepo }}/storage.googleapis.com/kubernetes-release/release/{{ .KubeVersion }}/bin/linux/{{ .HostArchitecture }}/kubectl"
 kubelet_download_url: "{{ .FileRepo }}/storage.googleapis.com/kubernetes-release/release/{{ .KubeVersion }}/bin/linux/{{ .HostArchitecture }}/kubelet"
