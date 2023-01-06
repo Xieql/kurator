@@ -1,0 +1,16 @@
+apiVersion: cluster.kurator.dev/v1alpha1
+kind: CustomCluster
+metadata:
+  name: cc-quickstart
+  namespace: default
+spec:
+  clusterRef:
+    apiVersion: cluster.x-k8s.io/v1beta1
+    kind: Cluster
+    name: capi-quickstart
+    namespace: default
+  machineRef:
+    apiVersion: cluster.kurator.dev/v1alpha1
+    kind: CustomMachine
+    name: custom-machine-quickstart
+    namespace: default

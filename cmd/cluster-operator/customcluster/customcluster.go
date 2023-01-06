@@ -18,7 +18,11 @@ package customcluster
 
 import (
 	"context"
+	"os"
 
+	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/rest"
+	"k8s.io/client-go/tools/clientcmd"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 
@@ -28,17 +32,32 @@ import (
 var log = ctrl.Log.WithName("custom_cluster")
 
 func InitControllers(ctx context.Context, mgr ctrl.Manager) error {
+	resetConfig, err := rest.InClusterConfig()
+	if err != nil {
+		resetConfig, err = clientcmd.BuildConfigFromFlags("", os.Getenv("HOME")+"/.kube/config")
+		if err != nil {
+			return err
+		}
+	}
+	ClientSet, err1 := kubernetes.NewForConfig(resetConfig)
+	if err1 != nil {
+		return err
+	}
+
 	if err := (&controllers.CustomClusterController{
-		Client: mgr.GetClient(),
-		Scheme: mgr.GetScheme(),
-	}).SetupWithManager(mgr); err != nil {
+		Client:    mgr.GetClient(),
+		Scheme:    mgr.GetScheme(),
+		ClientSet: ClientSet,
+		APIReader: mgr.GetAPIReader(),
+	}).SetupWithManager(ctx, mgr, controller.Options{}); err != nil {
 		log.Error(err, "unable to create controller", "controller", "CustomCluster")
 		return err
 	}
 
 	if err := (&controllers.CustomMachineController{
-		Client: mgr.GetClient(),
-		Scheme: mgr.GetScheme(),
+		Client:    mgr.GetClient(),
+		Scheme:    mgr.GetScheme(),
+		APIReader: mgr.GetAPIReader(),
 	}).SetupWithManager(ctx, mgr, controller.Options{}); err != nil {
 		log.Error(err, "unable to create controller", "controller", "CustomMachine")
 		return err
