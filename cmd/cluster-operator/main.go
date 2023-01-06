@@ -137,12 +137,9 @@ func run(ctx context.Context, opts *config.Options) error {
 		return fmt.Errorf("capa init fail, %w", err)
 	}
 
-	log.Info("--------~~~~~InitControllers begin~~~~~~~~~")
-
 	if err = customcluster.InitControllers(ctx, mgr); err != nil {
 		return err
 	}
-	log.Info("--------~~~~~InitControllers end~~~~~~~~~")
 
 	if err := mgr.AddReadyzCheck("webhook", mgr.GetWebhookServer().StartedChecker()); err != nil {
 		log.Error(err, "unable to create ready check")
