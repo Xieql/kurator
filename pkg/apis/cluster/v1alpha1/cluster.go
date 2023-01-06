@@ -47,12 +47,42 @@ type CustomClusterSpec struct {
 
 	// MachineRef is the reference of nodes for provisioning a kurator cluster.
 	// +optional
-	MachineRef corev1.ObjectReference `json:"machineRef,omitempty"`
+	MachineRef *corev1.ObjectReference `json:"machineRef,omitempty"`
+
+	// ClusterRef is the reference of the cluster from clusterAPI.
+	// +optional
+	ClusterRef *corev1.ObjectReference `json:"clusterRef,omitempty"`
 }
+
+type CustomClusterPhase string
+
+const (
+	PendingPhase     CustomClusterPhase = "Pending"
+	RunningPhase     CustomClusterPhase = "Running"
+	SucceededPhase   CustomClusterPhase = "Succeeded"
+	TerminatingPhase CustomClusterPhase = "Terminating"
+	FailedPhase      CustomClusterPhase = "Failed"
+)
 
 // CustomClusterStatus represents the current status of the cluster.
 type CustomClusterStatus struct {
-	// TODO add state.
+
+	// Phase represents the current phase of cluster actuation.
+	// E.g.  Running, Succeed, Terminating, Failed etc.
+	// +optional
+	Phase CustomClusterPhase `json:"phase,omitempty"`
+
+	// WorkerRef is the reference of the worker pod when enter the phase of running or terminating.
+	// +optional
+	WorkerRef *corev1.ObjectReference `json:"workerRef,omitempty"`
+
+	// StartTime date and time at which the object was acknowledged by the Kubelet.
+	// +optional
+	StartTime *metav1.Time `json:"startTime"`
+
+	// Message indicating details about why the pod is in this condition.
+	// +optional
+	Message string `json:"message,omitempty"`
 }
 
 // +kubebuilder:object:root=true
