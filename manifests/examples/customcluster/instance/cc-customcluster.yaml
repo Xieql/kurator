@@ -1,0 +1,16 @@
+apiVersion: cluster.kurator.dev/v1alpha1
+kind: CustomCluster
+metadata:
+  name: cc-customcluster
+  namespace: default
+spec:
+  clusterRef:
+    apiVersion: cluster.x-k8s.io/v1beta1
+    kind: Cluster
+    name: cc-cluster
+    namespace: default
+  machineRef:
+    apiVersion: cluster.kurator.dev/v1alpha1
+    kind: CustomMachine
+    name: cc-custommachine
+    namespace: default

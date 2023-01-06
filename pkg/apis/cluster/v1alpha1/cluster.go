@@ -47,12 +47,58 @@ type CustomClusterSpec struct {
 
 	// MachineRef is the reference of nodes for provisioning a kurator cluster.
 	// +optional
-	MachineRef corev1.ObjectReference `json:"machineRef,omitempty"`
+	MachineRef *corev1.ObjectReference `json:"machineRef,omitempty"`
+
+	// ClusterRef is the reference of the cluster from clusterAPI.
+	// +optional
+	ClusterRef *corev1.ObjectReference `json:"clusterRef,omitempty"`
 }
+
+type CustomClusterPhase string
+
+const (
+	// RunningPhase represents the cluster on VMs is creating. In this phase, the worker named ends in "init" is running to initialize the cluster on VMs
+	RunningPhase CustomClusterPhase = "Running"
+
+	// SucceededPhase represents the cluster on VMs is created successful. In this phase, the worker named ends in "init" is completed
+	SucceededPhase CustomClusterPhase = "Succeeded"
+
+	// TerminatingPhase represents the cluster on VMs is being cleared. In this phase, the worker named ends in "terminate" is running to clear the cluster on VMs
+	TerminatingPhase CustomClusterPhase = "Terminating"
+
+	// InitFailedPhase represents something is wrong when creating the cluster on VMs. In this phase, the worker named ends in "init" is in error
+	InitFailedPhase CustomClusterPhase = "InitFailed"
+
+	// TerminateFailedPhase represents something is wrong when clearing the cluster on VMs. In this phase, the worker named ends in "terminate" is in error
+	TerminateFailedPhase CustomClusterPhase = "TerminateFailed"
+)
 
 // CustomClusterStatus represents the current status of the cluster.
 type CustomClusterStatus struct {
-	// TODO add state.
+
+<<<<<<< HEAD
+	// Phase represents the current phase of customCluster actuation.
+=======
+	// Phase represents the current phase of cluster actuation.
+>>>>>>> 6a6a4f9 (Basic implementation of customeCluster controller)
+	// E.g.  Running, Succeed, Terminating, Failed etc.
+	// +optional
+	Phase CustomClusterPhase `json:"phase,omitempty"`
+
+<<<<<<< HEAD
+=======
+	// WorkerRef is the reference of the worker pod when enter the phase of running or terminating.
+	// +optional
+	WorkerRef *corev1.ObjectReference `json:"workerRef,omitempty"`
+
+	// StartTime date and time at which the object was acknowledged by the Kubelet.
+	// +optional
+	StartTime *metav1.Time `json:"startTime"`
+
+>>>>>>> 6a6a4f9 (Basic implementation of customeCluster controller)
+	// Message indicating details about why the pod is in this condition.
+	// +optional
+	Message string `json:"message,omitempty"`
 }
 
 // +kubebuilder:object:root=true
