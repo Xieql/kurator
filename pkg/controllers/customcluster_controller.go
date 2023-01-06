@@ -222,7 +222,6 @@ func (r *CustomClusterController) CreateKubesprayInitClusterJob(customCluster *v
 								ConfigMap: &corev1.ConfigMapVolumeSource{
 									LocalObjectReference: corev1.LocalObjectReference{
 										Name: customCluster.Name + "-" + HostYamlFileName,
-										//Name: "hosts-conf",
 									},
 								},
 							},
@@ -233,7 +232,6 @@ func (r *CustomClusterController) CreateKubesprayInitClusterJob(customCluster *v
 								ConfigMap: &corev1.ConfigMapVolumeSource{
 									LocalObjectReference: corev1.LocalObjectReference{
 										Name: customCluster.Name + "-" + VarsYamlFileName,
-										//Name: "vars-conf",
 									},
 								},
 							},
