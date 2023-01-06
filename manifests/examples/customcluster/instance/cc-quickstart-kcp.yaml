@@ -1,0 +1,21 @@
+apiVersion: controlplane.cluster.x-k8s.io/v1beta1
+kind: KubeadmControlPlane
+metadata:
+  name: cc-quickstart-kcp
+  namespace: default
+spec:
+  kubeadmConfigSpec:
+    clusterConfiguration:
+    initConfiguration:
+      nodeRegistration:
+        name: '{{ ds.meta_data.local_hostname }}'
+    joinConfiguration:
+      nodeRegistration:
+        name: '{{ ds.meta_data.local_hostname }}'
+  machineTemplate:
+    infrastructureRef:
+      apiVersion: cluster.kurator.dev/v1alpha1
+      kind: customMachine
+      name: cc-quickstart-custommachine
+      namespace: default
+  version: v1.23.7
