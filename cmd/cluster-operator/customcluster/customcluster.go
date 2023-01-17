@@ -18,6 +18,7 @@ package customcluster
 
 import (
 	"context"
+
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 
@@ -27,6 +28,18 @@ import (
 var log = ctrl.Log.WithName("custom_cluster")
 
 func InitControllers(ctx context.Context, mgr ctrl.Manager) error {
+	resetConfig, err := rest.InClusterConfig()
+	if err != nil {
+		resetConfig, err = clientcmd.BuildConfigFromFlags("", os.Getenv("HOME")+"/.kube/config")
+		if err != nil {
+			return err
+		}
+	}
+	ClientSet, err1 := kubernetes.NewForConfig(resetConfig)
+	if err1 != nil {
+		return err
+	}
+
 	if err := (&controllers.CustomClusterController{
 		Client:    mgr.GetClient(),
 		Scheme:    mgr.GetScheme(),

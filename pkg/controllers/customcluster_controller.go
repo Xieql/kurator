@@ -61,6 +61,7 @@ const (
 	CustomClusterTerminateAction customClusterManageAction = "terminate"
 	KubesprayTerminateCMD        customClusterManageCMD    = "ansible-playbook -e reset_confirmation=yes -i inventory/" + HostsConfigMapName + " --private-key /root/.ssh/ssh-privatekey reset.yml -vvv"
 	DefaultKubesprayImage                                  = "quay.io/kubespray/kubespray:v2.20.0"
+
 )
 
 // +kubebuilder:rbac:groups=kurator.dev.kurator.dev,resources=customclusters,verbs=get;list;watch;create;update;patch;delete
@@ -100,7 +101,6 @@ func (r *CustomClusterController) Reconcile(ctx context.Context, req ctrl.Reques
 	if phase == v1alpha1.FailedPhase {
 		return ctrl.Result{Requeue: false}, nil
 	}
-
 	if phase == v1alpha1.RunningPhase {
 		return r.reconcileRunningStatusUpdate(ctx, customCluster)
 	}
@@ -110,6 +110,7 @@ func (r *CustomClusterController) Reconcile(ctx context.Context, req ctrl.Reques
 
 	// Fetch the Cluster instance
 	key := client.ObjectKey{
+
 		Namespace: customCluster.Spec.ClusterRef.Namespace,
 		Name:      customCluster.Spec.ClusterRef.Name,
 	}
@@ -122,6 +123,7 @@ func (r *CustomClusterController) Reconcile(ctx context.Context, req ctrl.Reques
 	// handle customCluster termination when the cluster is deleting
 	if cluster.Status.Phase == "Deleting" && phase == v1alpha1.SucceededPhase {
 		return r.reconcileCustomClusterTerminate(ctx, customCluster)
+
 	}
 
 	// If the installation is successful and the cluster has not been deleted,
@@ -531,6 +533,256 @@ func (r *CustomClusterController) UpdateVarsConfigMap(ctx context.Context, custo
 		}
 	}
 	return r.CreateVarsConfigMap(ctx, cluster, kcp, cc)
+}
+
+// CreateKubesprayInitClusterJob create a kubespray init cluster job from configMap
+func (r *CustomClusterController) CreateKubesprayInitClusterJob(customCluster *v1alpha1.CustomCluster) *batchv1.Job {
+	jobName := customCluster.Name + "-kubespray-init-cluster"
+	namespace := customCluster.Namespace
+	containerName := customCluster.Name + "-container"
+	DefaultMode := int32(0o600)
+
+	initJob := &batchv1.Job{
+		TypeMeta: metav1.TypeMeta{
+			APIVersion: "batch/v1",
+			Kind:       "Job",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: namespace,
+			Name:      jobName,
+		},
+
+		Spec: batchv1.JobSpec{
+			Template: corev1.PodTemplateSpec{
+				Spec: corev1.PodSpec{
+					Containers: []corev1.Container{
+						{
+							Name:    containerName,
+							Image:   DefaultKubesprayImage,
+							Command: []string{"/bin/sh", "-c"},
+							Args:    []string{KubesprayInitCMD},
+
+							VolumeMounts: []corev1.VolumeMount{
+								{
+									Name:      "hosts-conf",
+									MountPath: "/kubespray/inventory",
+								},
+								{
+									Name:      "vars-conf",
+									MountPath: "/kubespray/inventory/group_vars/all",
+								},
+								{
+									Name:      "secret-volume",
+									MountPath: "/root/.ssh",
+									ReadOnly:  true,
+								},
+							},
+						},
+					},
+
+					Volumes: []corev1.Volume{
+						{
+							Name: "hosts-conf",
+							VolumeSource: corev1.VolumeSource{
+								ConfigMap: &corev1.ConfigMapVolumeSource{
+									LocalObjectReference: corev1.LocalObjectReference{
+										Name: customCluster.Name + "-" + HostsConfigFileName,
+									},
+								},
+							},
+						},
+						{
+							Name: "vars-conf",
+							VolumeSource: corev1.VolumeSource{
+								ConfigMap: &corev1.ConfigMapVolumeSource{
+									LocalObjectReference: corev1.LocalObjectReference{
+										Name: customCluster.Name + "-" + VarsConfigFileName,
+									},
+								},
+							},
+						},
+						{
+							Name: "secret-volume",
+							VolumeSource: corev1.VolumeSource{
+								Secret: &corev1.SecretVolumeSource{
+									SecretName:  secreteName,
+									DefaultMode: &DefaultMode,
+								},
+							},
+						},
+					},
+					RestartPolicy: corev1.RestartPolicyNever,
+				},
+			},
+		},
+	}
+	return initJob
+}
+
+type HostTemplateContent struct {
+	NodeAndIP    []string
+	MasterName   []string
+	NodeName     []string
+	EtcdNodeName []string // default: NodeName + MasterName
+}
+
+type VarsTemplateContent struct {
+	KubeVersion string
+	PodCIDR     string
+	FileRepo    string
+}
+
+func GetVarContent(c *clusterv1.Cluster, kcp *controlplanev1.KubeadmControlPlane) *VarsTemplateContent {
+	// Add kubespray init config here
+	varContent := &VarsTemplateContent{
+		PodCIDR:     c.Spec.ClusterNetwork.Pods.CIDRBlocks[0],
+		KubeVersion: kcp.Spec.Version,
+		FileRepo:    DefaultFileRepo,
+	}
+	return varContent
+}
+
+func GetHostsContent(customMachine *v1alpha1.CustomMachine) *HostTemplateContent {
+	masterMachine := customMachine.Spec.Master
+	nodeMachine := customMachine.Spec.Nodes
+	hostVar := &HostTemplateContent{
+		NodeAndIP:    make([]string, len(masterMachine)+len(nodeMachine)),
+		MasterName:   make([]string, len(masterMachine)),
+		NodeName:     make([]string, len(nodeMachine)),
+		EtcdNodeName: make([]string, len(masterMachine)+len(nodeMachine)),
+	}
+
+	count := 0
+	for i, machine := range masterMachine {
+		masterName := machine.HostName
+		nodeAndIp := fmt.Sprintf("%s ansible_host=%s ip=%s", machine.HostName, machine.PublicIP, machine.PrivateIP)
+		hostVar.MasterName[i] = masterName
+		hostVar.EtcdNodeName[count] = masterName
+		hostVar.NodeAndIP[count] = nodeAndIp
+		count++
+	}
+	for i, machine := range nodeMachine {
+		nodeName := machine.HostName
+		nodeAndIp := fmt.Sprintf("%s ansible_host=%s ip=%s", machine.HostName, machine.PublicIP, machine.PrivateIP)
+		hostVar.NodeName[i] = nodeName
+		hostVar.NodeAndIP[count] = nodeAndIp
+		count++
+	}
+
+	return hostVar
+}
+
+func (r *CustomClusterController) CreatConfigMapWithTemplate(name, namespace, fileName, configMapData string) error {
+	ConfigMap := &corev1.ConfigMap{
+		TypeMeta: metav1.TypeMeta{
+			Kind:       "ConfigMap",
+			APIVersion: "v1",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      name,
+			Namespace: namespace,
+		},
+		Data: map[string]string{fileName: strings.TrimSpace(configMapData)},
+	}
+	var err error
+	if _, err = r.ClientSet.CoreV1().ConfigMaps(ConfigMap.Namespace).Create(context.Background(), ConfigMap, metav1.CreateOptions{}); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (r *CustomClusterController) CreateHostsConfigMap(customMachine *v1alpha1.CustomMachine, customCluster *v1alpha1.CustomCluster) error {
+	hostsContent := GetHostsContent(customMachine)
+	hostData := &strings.Builder{}
+
+	tmpl := template.Must(template.New("").Parse(`
+[all]
+{{ range $v := .NodeAndIP }}
+{{ $v }}
+{{ end }}
+[kube_control_plane]
+{{ range $v := .MasterName }}
+{{ $v }}
+{{ end }}
+[etcd]
+{{- range $v := .EtcdNodeName }}
+{{ $v }}
+{{ end }}
+[kube_node]
+{{- range $v := .NodeName }}
+{{ $v }}
+{{ end }}
+[k8s-cluster:children]
+kube_node
+kube_control_plane
+`))
+
+	if err := tmpl.Execute(hostData, hostsContent); err != nil {
+		return err
+	}
+	name := fmt.Sprintf("%s-%s", customCluster.Name, HostsConfigFileName)
+	namespace := customCluster.Namespace
+
+	return r.CreatConfigMapWithTemplate(name, namespace, HostsConfigFileName, hostData.String())
+}
+
+func (r *CustomClusterController) CreateVarsConfigMap(c *clusterv1.Cluster, kcp *controlplanev1.KubeadmControlPlane, cc *v1alpha1.CustomCluster) error {
+	VarsContent := GetVarContent(c, kcp)
+	VarsData := &strings.Builder{}
+
+	tmpl := template.Must(template.New("").Parse(`
+kube_version: {{ .KubeVersion}}
+download_run_once: true
+download_container: false
+download_localhost: true
+# network
+kube_pods_subnet: {{ .PodCIDR }}
+# gcr and kubernetes image repo define
+gcr_image_repo: "gcr.m.daocloud.io"
+kube_image_repo: "k8s.m.daocloud.io"
+# docker image repo define
+docker_image_repo: "docker.m.daocloud.io"
+# quay image repo define
+quay_image_repo: "quay.m.daocloud.io"
+github_image_repo: "ghcr.m.daocloud.io"
+files_repo: "{{ .FileRepo }}"
+kubeadm_download_url: "{{ .FileRepo }}/storage.googleapis.com/kubernetes-release/release/{{ .KubeVersion }}/bin/linux/{{ "{{ image_arch }}" }}/kubeadm"
+kubectl_download_url: "{{ .FileRepo }}/storage.googleapis.com/kubernetes-release/release/{{ .KubeVersion }}/bin/linux/{{ "{{ image_arch }}" }}/kubectl"
+kubelet_download_url: "{{ .FileRepo }}/storage.googleapis.com/kubernetes-release/release/{{ .KubeVersion }}/bin/linux/{{ "{{ image_arch }}" }}/kubelet"
+`))
+
+	if err := tmpl.Execute(VarsData, VarsContent); err != nil {
+		return err
+	}
+	name := fmt.Sprintf("%s-%s", cc.Name, VarsConfigFileName)
+	namespace := cc.Namespace
+
+	return r.CreatConfigMapWithTemplate(name, namespace, VarsConfigFileName, VarsData.String())
+}
+
+func (r *CustomClusterController) UpdateHostsConfigMap(ctx context.Context, customCluster *v1alpha1.CustomCluster, customMachine *v1alpha1.CustomMachine) error {
+	log := ctrl.LoggerFrom(ctx)
+	// Delete origin cm
+	if err := r.ClientSet.CoreV1().ConfigMaps(customCluster.Namespace).Delete(context.Background(), customCluster.Name+"-"+HostsConfigFileName, metav1.DeleteOptions{}); err != nil {
+		if !apierrors.IsNotFound(err) {
+			log.Error(err, "failed to  delete hosts configMap")
+			return err
+		}
+	}
+	return r.CreateHostsConfigMap(customMachine, customCluster)
+}
+
+func (r *CustomClusterController) UpdateVarsConfigMap(ctx context.Context, customCluster *v1alpha1.CustomCluster, cc *v1alpha1.CustomCluster, cluster *clusterv1.Cluster, kcp *controlplanev1.KubeadmControlPlane) error {
+	log := ctrl.LoggerFrom(ctx)
+	// Delete origin cm
+	if err := r.ClientSet.CoreV1().ConfigMaps(customCluster.Namespace).Delete(context.Background(), customCluster.Name+"-"+VarsConfigFileName, metav1.DeleteOptions{}); err != nil {
+		if !apierrors.IsNotFound(err) {
+			log.Error(err, "failed to  delete vars configMap")
+			return err
+		}
+	}
+
+	return r.CreateVarsConfigMap(cluster, kcp, cc)
 }
 
 // SetupWithManager sets up the controller with the Manager.
