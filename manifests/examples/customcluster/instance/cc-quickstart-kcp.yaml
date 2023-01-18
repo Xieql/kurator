@@ -7,11 +7,7 @@ spec:
   kubeadmConfigSpec:
     clusterConfiguration:
     initConfiguration:
-      nodeRegistration:
-        name: '{{ ds.meta_data.local_hostname }}'
     joinConfiguration:
-      nodeRegistration:
-        name: '{{ ds.meta_data.local_hostname }}'
   machineTemplate:
     infrastructureRef:
       apiVersion: cluster.kurator.dev/v1alpha1

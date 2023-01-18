@@ -112,7 +112,7 @@ func (r *CustomClusterController) Reconcile(ctx context.Context, req ctrl.Reques
 		return ctrl.Result{RequeueAfter: RequeueAfter}, err
 	}
 
-	// Handle customCluster termination when the cluster is deleting
+	// handle customCluster termination when the cluster is deleting
 	if cluster.Status.Phase == "Deleting" && phase == v1alpha1.SucceededPhase {
 		return r.reconcileCustomClusterTerminate(ctx, customCluster)
 	}
