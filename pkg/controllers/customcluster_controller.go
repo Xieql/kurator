@@ -112,7 +112,7 @@ func (r *CustomClusterController) Reconcile(ctx context.Context, req ctrl.Reques
 		return ctrl.Result{RequeueAfter: RequeueAfter}, err
 	}
 
-	// handle customCluster termination when the cluster is deleting
+	// Handle customCluster termination when the cluster is deleting
 	if cluster.Status.Phase == "Deleting" && phase == v1alpha1.SucceededPhase {
 		return r.reconcileCustomClusterTerminate(ctx, customCluster)
 	}
@@ -275,16 +275,6 @@ func (r *CustomClusterController) reconcileCustomClusterInit(ctx context.Context
 	}
 	customCluster.Status.WorkerRef = podRef
 	log.Info("customCluster's phase changes from Pending to Running")
-	labels := map[string]string{workerLabelKeyName: customCluster.Name}
-	labels["test"] = "test"
-	customCluster.Labels = labels
-	log.Info("~~~~~~~~~~~~~~~~~~~~~add labels test")
-
-	if err := r.Client.Update(context.Background(), customCluster); err != nil {
-		log.Error(err, "~~~~~~~~~~~~~~~failed to init Update")
-
-		return ctrl.Result{RequeueAfter: RequeueAfter}, nil
-	}
 
 	if err := r.Status().Update(ctx, customCluster); err != nil {
 		return ctrl.Result{RequeueAfter: RequeueAfter}, err
