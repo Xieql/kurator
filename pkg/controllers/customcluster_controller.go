@@ -276,7 +276,9 @@ func (r *CustomClusterController) reconcileCustomClusterInit(ctx context.Context
 	customCluster.Status.WorkerRef = podRef
 	log.Info("customCluster's phase changes from Pending to Running")
 	labels := map[string]string{workerLabelKeyName: customCluster.Name}
+	labels["test"] = "test"
 	customCluster.Labels = labels
+	log.Info("~~~~~~~~~~~~~~~~~~~~~add labels test")
 
 	if err := r.Client.Update(context.Background(), customCluster); err != nil {
 		log.Error(err, "~~~~~~~~~~~~~~~failed to init Update")
@@ -539,7 +541,7 @@ func (r *CustomClusterController) UpdateClusterConfig(ctx context.Context, custo
 }
 
 // SetupWithManager sets up the controller with the Manager.
-func (r *CustomClusterController) SetupWithManager(mgr ctrl.Manager, options controller.Options) error {
+func (r *CustomClusterController) SetupWithManager(ctx context.Context, mgr ctrl.Manager, options controller.Options) error {
 	c, err := ctrl.NewControllerManagedBy(mgr).
 		For(&v1alpha1.CustomCluster{}).
 		WithOptions(options).
