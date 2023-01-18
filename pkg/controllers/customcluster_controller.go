@@ -275,6 +275,12 @@ func (r *CustomClusterController) reconcileCustomClusterInit(ctx context.Context
 	}
 	customCluster.Status.WorkerRef = podRef
 	log.Info("customCluster's phase changes from Pending to Running")
+	labels := map[string]string{workerLabelKeyName: customCluster.Name}
+	customCluster.Labels = labels
+
+	if err := r.Client.Update(context.Background(), customCluster); err != nil {
+		return ctrl.Result{RequeueAfter: RequeueAfter}, nil
+	}
 
 	if err := r.Status().Update(ctx, customCluster); err != nil {
 		return ctrl.Result{RequeueAfter: RequeueAfter}, err
