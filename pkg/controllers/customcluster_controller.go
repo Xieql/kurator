@@ -61,20 +61,12 @@ const (
 	CustomClusterTerminateAction customClusterManageAction = "terminate"
 	KubesprayTerminateCMD        customClusterManageCMD    = "ansible-playbook -e reset_confirmation=yes -i inventory/" + HostsConfigMapName + " --private-key /root/.ssh/ssh-privatekey reset.yml -vvv"
 	DefaultKubesprayImage                                  = "quay.io/kubespray/kubespray:v2.20.0"
+
+	workerLabelKeyName = "customClusterName"
 )
 
-// +kubebuilder:rbac:groups=kurator.dev.kurator.dev,resources=customclusters,verbs=get;list;watch;create;update;patch;delete
-// +kubebuilder:rbac:groups=kurator.dev.kurator.dev,resources=customclusters/status,verbs=get;update;patch
-// +kubebuilder:rbac:groups=kurator.dev.kurator.dev,resources=customclusters/finalizers,verbs=update
 // Reconcile is part of the main kubernetes reconciliation loop which aims to
 // move the current state of the cluster closer to the desired state.
-// TODO(user): Modify the Reconcile function to compare the state specified by
-// the CustomCluster object against the actual cluster state, and then
-// perform operations to make the cluster state reflect the state specified by
-// the user.
-//
-// For more details, check Reconcile and its Result here:
-// - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.13.0/pkg/reconcile
 func (r *CustomClusterController) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	log := ctrl.LoggerFrom(ctx)
 
@@ -264,8 +256,8 @@ func (r *CustomClusterController) reconcileCustomClusterInit(ctx context.Context
 		return ctrl.Result{RequeueAfter: RequeueAfter}, err
 	}
 
-	if err := r.UpdateVarsConfigMap(ctx, customCluster, customCluster, cluster, kcp); err != nil {
-		log.Error(err, "failed to create vars configMap")
+	if err := r.UpdateClusterConfig(ctx, customCluster, customCluster, cluster, kcp); err != nil {
+		log.Error(err, "failed to create cluster-config configMap")
 		return ctrl.Result{RequeueAfter: RequeueAfter}, err
 	}
 
@@ -295,13 +287,14 @@ func (r *CustomClusterController) reconcileCustomClusterInit(ctx context.Context
 func (r *CustomClusterController) CreateClusterManageWorker(customCluster *v1alpha1.CustomCluster, manageAction customClusterManageAction, manageCMD customClusterManageCMD) *corev1.Pod {
 	podName := customCluster.Name + "-" + string(manageAction)
 	namespace := customCluster.Namespace
-	containerName := customCluster.Name + "-container"
-	DefaultMode := int32(0o600)
+	defaultMode := int32(0o600)
+	labels := map[string]string{workerLabelKeyName: customCluster.Name}
 
 	initPod := &corev1.Pod{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: namespace,
 			Name:      podName,
+			Labels:    labels,
 		},
 		TypeMeta: metav1.TypeMeta{
 			Kind:       "Pod",
@@ -311,7 +304,7 @@ func (r *CustomClusterController) CreateClusterManageWorker(customCluster *v1alp
 		Spec: corev1.PodSpec{
 			Containers: []corev1.Container{
 				{
-					Name:    containerName,
+					Name:    podName,
 					Image:   DefaultKubesprayImage,
 					Command: []string{"/bin/sh", "-c"},
 					Args:    []string{string(manageCMD)},
@@ -360,7 +353,7 @@ func (r *CustomClusterController) CreateClusterManageWorker(customCluster *v1alp
 					VolumeSource: corev1.VolumeSource{
 						Secret: &corev1.SecretVolumeSource{
 							SecretName:  SecreteName,
-							DefaultMode: &DefaultMode,
+							DefaultMode: &defaultMode,
 						},
 					},
 				},
@@ -378,14 +371,15 @@ type HostTemplateContent struct {
 	EtcdNodeName []string // default: NodeName + MasterName
 }
 
-type VarsTemplateContent struct {
+type ConfigTemplateContent struct {
 	KubeVersion string
 	PodCIDR     string
+	// TODO: support other kubernetes configs
 }
 
-func GetVarContent(c *clusterv1.Cluster, kcp *controlplanev1.KubeadmControlPlane) *VarsTemplateContent {
+func GetVarContent(c *clusterv1.Cluster, kcp *controlplanev1.KubeadmControlPlane) *ConfigTemplateContent {
 	// Add kubespray init config here
-	varContent := &VarsTemplateContent{
+	varContent := &ConfigTemplateContent{
 		PodCIDR:     c.Spec.ClusterNetwork.Pods.CIDRBlocks[0],
 		KubeVersion: kcp.Spec.Version,
 	}
@@ -445,6 +439,7 @@ func (r *CustomClusterController) CreateHostsConfigMap(ctx context.Context, cust
 	hostsContent := GetHostsContent(customMachine)
 	hostData := &strings.Builder{}
 
+	// todo: split this to a separated file
 	tmpl := template.Must(template.New("").Parse(`
 [all]
 {{ range $v := .NodeAndIP }}
@@ -476,10 +471,11 @@ kube_control_plane
 	return r.CreatConfigMapWithTemplate(ctx, name, namespace, HostsConfigMapName, hostData.String())
 }
 
-func (r *CustomClusterController) CreateVarsConfigMap(ctx context.Context, c *clusterv1.Cluster, kcp *controlplanev1.KubeadmControlPlane, cc *v1alpha1.CustomCluster) error {
-	VarsContent := GetVarContent(c, kcp)
-	VarsData := &strings.Builder{}
+func (r *CustomClusterController) CreateClusterConfig(ctx context.Context, c *clusterv1.Cluster, kcp *controlplanev1.KubeadmControlPlane, cc *v1alpha1.CustomCluster) error {
+	configContent := GetVarContent(c, kcp)
+	configData := &strings.Builder{}
 
+	// todo: split this to a separated file
 	tmpl := template.Must(template.New("").Parse(`
 kube_version: {{ .KubeVersion}}
 download_run_once: true
@@ -489,13 +485,13 @@ download_localhost: true
 kube_pods_subnet: {{ .PodCIDR }}
 `))
 
-	if err := tmpl.Execute(VarsData, VarsContent); err != nil {
+	if err := tmpl.Execute(configData, configContent); err != nil {
 		return err
 	}
 	name := fmt.Sprintf("%s-%s", cc.Name, ParamsConfigMapName)
 	namespace := cc.Namespace
 
-	return r.CreatConfigMapWithTemplate(ctx, name, namespace, ParamsConfigMapName, VarsData.String())
+	return r.CreatConfigMapWithTemplate(ctx, name, namespace, ParamsConfigMapName, configData.String())
 }
 
 func (r *CustomClusterController) UpdateHostsConfigMap(ctx context.Context, customCluster *v1alpha1.CustomCluster, customMachine *v1alpha1.CustomMachine) error {
@@ -516,7 +512,7 @@ func (r *CustomClusterController) UpdateHostsConfigMap(ctx context.Context, cust
 	return r.CreateHostsConfigMap(ctx, customMachine, customCluster)
 }
 
-func (r *CustomClusterController) UpdateVarsConfigMap(ctx context.Context, customCluster *v1alpha1.CustomCluster, cc *v1alpha1.CustomCluster, cluster *clusterv1.Cluster, kcp *controlplanev1.KubeadmControlPlane) error {
+func (r *CustomClusterController) UpdateClusterConfig(ctx context.Context, customCluster *v1alpha1.CustomCluster, cc *v1alpha1.CustomCluster, cluster *clusterv1.Cluster, kcp *controlplanev1.KubeadmControlPlane) error {
 	log := ctrl.LoggerFrom(ctx)
 	ConfigMap := &corev1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{
@@ -531,11 +527,11 @@ func (r *CustomClusterController) UpdateVarsConfigMap(ctx context.Context, custo
 			return err
 		}
 	}
-	return r.CreateVarsConfigMap(ctx, cluster, kcp, cc)
+	return r.CreateClusterConfig(ctx, cluster, kcp, cc)
 }
 
 // SetupWithManager sets up the controller with the Manager.
-func (r *CustomClusterController) SetupWithManager(ctx context.Context, mgr ctrl.Manager, options controller.Options) error {
+func (r *CustomClusterController) SetupWithManager(mgr ctrl.Manager, options controller.Options) error {
 	c, err := ctrl.NewControllerManagedBy(mgr).
 		For(&v1alpha1.CustomCluster{}).
 		WithOptions(options).
@@ -552,10 +548,10 @@ func (r *CustomClusterController) SetupWithManager(ctx context.Context, mgr ctrl
 	}
 
 	if err := c.Watch(
-		&source.Kind{Type: &v1alpha1.CustomMachine{}},
-		handler.EnqueueRequestsFromMapFunc(r.CustomMachineToCustomCluster),
+		&source.Kind{Type: &corev1.Pod{}},
+		handler.EnqueueRequestsFromMapFunc(r.WorkerToCustomCluster),
 	); err != nil {
-		return fmt.Errorf("failed adding Watch for CustomMachine to controller manager: %v", err)
+		return fmt.Errorf("failed adding Watch for worker to controller manager: %v", err)
 	}
 
 	return nil
@@ -575,15 +571,14 @@ func (r *CustomClusterController) ClusterToCustomCluster(o client.Object) []ctrl
 	return nil
 }
 
-func (r *CustomClusterController) CustomMachineToCustomCluster(o client.Object) []ctrl.Request {
-	c, ok := o.(*v1alpha1.CustomMachine)
+func (r *CustomClusterController) WorkerToCustomCluster(o client.Object) []ctrl.Request {
+	c, ok := o.(*corev1.Pod)
 	if !ok {
-		panic(fmt.Sprintf("Expected a CustomMachine but got a %T", o))
+		panic(fmt.Sprintf("Expected a Cluster but got a %T", o))
 	}
 
-	machineOwner := c.Spec.MachineOwner
-	if machineOwner != nil && machineOwner.Kind == "CustomCluster" {
-		return []ctrl.Request{{NamespacedName: client.ObjectKey{Namespace: machineOwner.Namespace, Name: machineOwner.Name}}}
+	if len(c.Labels[workerLabelKeyName]) != 0 {
+		return []ctrl.Request{{NamespacedName: client.ObjectKey{Namespace: c.Namespace, Name: c.Labels[workerLabelKeyName]}}}
 	}
 
 	return nil
