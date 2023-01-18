@@ -279,6 +279,8 @@ func (r *CustomClusterController) reconcileCustomClusterInit(ctx context.Context
 	customCluster.Labels = labels
 
 	if err := r.Client.Update(context.Background(), customCluster); err != nil {
+		log.Error(err, "~~~~~~~~~~~~~~~failed to init Update")
+
 		return ctrl.Result{RequeueAfter: RequeueAfter}, nil
 	}
 
