@@ -50,17 +50,19 @@ type customClusterManageCMD string
 type customClusterManageAction string
 
 const (
-	RequeueAfter        = time.Second * 5
-	HostsConfigMapName  = "cluster-hosts"
-	ParamsConfigMapName = "cluster-config"
-	SecreteName         = "cluster-secret"
+	RequeueAfter      = time.Second * 5
+	ClusterHostsName  = "cluster-hosts"
+	ClusterConfigName = "cluster-config"
+	SecreteName       = "cluster-secret"
 
 	CustomClusterInitAction customClusterManageAction = "init"
-	KubesprayInitCMD        customClusterManageCMD    = "ansible-playbook -i inventory/" + HostsConfigMapName + " --private-key /root/.ssh/ssh-privatekey cluster.yml -vvv"
+	KubesprayInitCMD        customClusterManageCMD    = "ansible-playbook -i inventory/" + ClusterHostsName + " --private-key /root/.ssh/ssh-privatekey cluster.yml -vvv"
 
 	CustomClusterTerminateAction customClusterManageAction = "terminate"
-	KubesprayTerminateCMD        customClusterManageCMD    = "ansible-playbook -e reset_confirmation=yes -i inventory/" + HostsConfigMapName + " --private-key /root/.ssh/ssh-privatekey reset.yml -vvv"
-	DefaultKubesprayImage                                  = "quay.io/kubespray/kubespray:v2.20.0"
+	KubesprayTerminateCMD        customClusterManageCMD    = "ansible-playbook -e reset_confirmation=yes -i inventory/" + ClusterHostsName + " --private-key /root/.ssh/ssh-privatekey reset.yml -vvv"
+
+	// TODO: support custom this in CustomCluster/CustomMachine
+	DefaultKubesprayImage = "quay.io/kubespray/kubespray:v2.20.0"
 
 	workerLabelKeyName = "customClusterName"
 )
@@ -108,7 +110,7 @@ func (r *CustomClusterController) Reconcile(ctx context.Context, req ctrl.Reques
 	}
 	cluster := &clusterv1.Cluster{}
 	if err := r.Client.Get(ctx, key, cluster); err != nil {
-		log.Error(err, "can not get cluster")
+		log.Error(err, "can not get cluster", "cluster name", key.Name)
 		return ctrl.Result{RequeueAfter: RequeueAfter}, err
 	}
 
@@ -143,7 +145,6 @@ func (r *CustomClusterController) reconcileRunningStatusUpdate(ctx context.Conte
 
 	if worker.Status.Phase == "Succeeded" {
 		customCluster.Status.Phase = v1alpha1.SucceededPhase
-		customCluster.Status.StartTime = &metav1.Time{Time: time.Now()}
 		log.Info("customCluster's phase changes from Running to Succeeded")
 		if err := r.Status().Update(ctx, customCluster); err != nil {
 			return ctrl.Result{RequeueAfter: RequeueAfter}, err
@@ -153,7 +154,6 @@ func (r *CustomClusterController) reconcileRunningStatusUpdate(ctx context.Conte
 
 	if worker.Status.Phase == "Failed" {
 		customCluster.Status.Phase = v1alpha1.FailedPhase
-		customCluster.Status.StartTime = &metav1.Time{Time: time.Now()}
 		log.Info("customCluster's phase changes from Running to Failed")
 		if err := r.Status().Update(ctx, customCluster); err != nil {
 			return ctrl.Result{RequeueAfter: RequeueAfter}, err
@@ -179,7 +179,6 @@ func (r *CustomClusterController) reconcileTerminatingStatusUpdate(ctx context.C
 
 	if worker.Status.Phase == "Succeeded" {
 		customCluster.Status.Phase = v1alpha1.PendingPhase
-		customCluster.Status.StartTime = &metav1.Time{Time: time.Now()}
 		log.Info("customCluster's phase changes from Terminating to Succeeded")
 
 		if err := r.Status().Update(ctx, customCluster); err != nil {
@@ -190,7 +189,6 @@ func (r *CustomClusterController) reconcileTerminatingStatusUpdate(ctx context.C
 
 	if worker.Status.Phase == "Failed" {
 		customCluster.Status.Phase = v1alpha1.FailedPhase
-		customCluster.Status.StartTime = &metav1.Time{Time: time.Now()}
 		log.Info("customCluster's phase changes from Terminating to Failed")
 
 		if err := r.Status().Update(ctx, customCluster); err != nil {
@@ -204,19 +202,13 @@ func (r *CustomClusterController) reconcileTerminatingStatusUpdate(ctx context.C
 func (r *CustomClusterController) reconcileCustomClusterTerminate(ctx context.Context, customCluster *v1alpha1.CustomCluster) (ctrl.Result, error) {
 	log := ctrl.LoggerFrom(ctx)
 
-	terminateClusterPod := r.CreateClusterManageWorker(customCluster, CustomClusterTerminateAction, KubesprayTerminateCMD)
+	terminateClusterPod := r.generateClusterManageWorker(customCluster, CustomClusterTerminateAction, KubesprayTerminateCMD)
 	if err := r.Client.Create(ctx, terminateClusterPod); err != nil {
 		log.Error(err, "failed to create customCluster terminate worker")
 		return ctrl.Result{RequeueAfter: RequeueAfter}, err
 	}
 	customCluster.Status.Phase = v1alpha1.TerminatingPhase
-	customCluster.Status.StartTime = &metav1.Time{Time: time.Now()}
 
-	podRef := &corev1.ObjectReference{
-		Namespace: terminateClusterPod.Namespace,
-		Name:      terminateClusterPod.Name,
-	}
-	customCluster.Status.WorkerRef = podRef
 	log.Info("customCluster's phase changes from Succeed to Failed")
 	if err := r.Status().Update(ctx, customCluster); err != nil {
 		return ctrl.Result{RequeueAfter: RequeueAfter}, err
@@ -251,7 +243,7 @@ func (r *CustomClusterController) reconcileCustomClusterInit(ctx context.Context
 	}
 
 	// Delete current cm and create new cm using current object
-	if err := r.UpdateHostsConfigMap(ctx, customCluster, customMachine); err != nil {
+	if err := r.UpdateClusterHosts(ctx, customCluster, customMachine); err != nil {
 		log.Error(err, "failed to create hosts configMap")
 		return ctrl.Result{RequeueAfter: RequeueAfter}, err
 	}
@@ -261,19 +253,14 @@ func (r *CustomClusterController) reconcileCustomClusterInit(ctx context.Context
 		return ctrl.Result{RequeueAfter: RequeueAfter}, err
 	}
 
-	initClusterPod := r.CreateClusterManageWorker(customCluster, CustomClusterInitAction, KubesprayInitCMD)
+	initClusterPod := r.generateClusterManageWorker(customCluster, CustomClusterInitAction, KubesprayInitCMD)
 
 	if err := r.Client.Create(ctx, initClusterPod); err != nil {
 		log.Error(err, "failed to init Worker")
 		return ctrl.Result{RequeueAfter: RequeueAfter}, err
 	}
 	customCluster.Status.Phase = v1alpha1.RunningPhase
-	customCluster.Status.StartTime = &metav1.Time{Time: time.Now()}
-	podRef := &corev1.ObjectReference{
-		Namespace: initClusterPod.Namespace,
-		Name:      initClusterPod.Name,
-	}
-	customCluster.Status.WorkerRef = podRef
+
 	log.Info("customCluster's phase changes from Pending to Running")
 
 	if err := r.Status().Update(ctx, customCluster); err != nil {
@@ -283,8 +270,8 @@ func (r *CustomClusterController) reconcileCustomClusterInit(ctx context.Context
 	return ctrl.Result{RequeueAfter: RequeueAfter}, nil
 }
 
-// CreateClusterManageWorker create a kubespray init cluster pod from configMap
-func (r *CustomClusterController) CreateClusterManageWorker(customCluster *v1alpha1.CustomCluster, manageAction customClusterManageAction, manageCMD customClusterManageCMD) *corev1.Pod {
+// generateClusterManageWorker create a kubespray init cluster pod from configMap
+func (r *CustomClusterController) generateClusterManageWorker(customCluster *v1alpha1.CustomCluster, manageAction customClusterManageAction, manageCMD customClusterManageCMD) *corev1.Pod {
 	podName := customCluster.Name + "-" + string(manageAction)
 	namespace := customCluster.Namespace
 	defaultMode := int32(0o600)
@@ -311,11 +298,11 @@ func (r *CustomClusterController) CreateClusterManageWorker(customCluster *v1alp
 
 					VolumeMounts: []corev1.VolumeMount{
 						{
-							Name:      HostsConfigMapName,
+							Name:      ClusterHostsName,
 							MountPath: "/kubespray/inventory",
 						},
 						{
-							Name:      ParamsConfigMapName,
+							Name:      ClusterConfigName,
 							MountPath: "/kubespray/inventory/group_vars/all",
 						},
 						{
@@ -329,21 +316,21 @@ func (r *CustomClusterController) CreateClusterManageWorker(customCluster *v1alp
 
 			Volumes: []corev1.Volume{
 				{
-					Name: HostsConfigMapName,
+					Name: ClusterHostsName,
 					VolumeSource: corev1.VolumeSource{
 						ConfigMap: &corev1.ConfigMapVolumeSource{
 							LocalObjectReference: corev1.LocalObjectReference{
-								Name: customCluster.Name + "-" + HostsConfigMapName,
+								Name: customCluster.Name + "-" + ClusterHostsName,
 							},
 						},
 					},
 				},
 				{
-					Name: ParamsConfigMapName,
+					Name: ClusterConfigName,
 					VolumeSource: corev1.VolumeSource{
 						ConfigMap: &corev1.ConfigMapVolumeSource{
 							LocalObjectReference: corev1.LocalObjectReference{
-								Name: customCluster.Name + "-" + ParamsConfigMapName,
+								Name: customCluster.Name + "-" + ClusterConfigName,
 							},
 						},
 					},
@@ -377,13 +364,13 @@ type ConfigTemplateContent struct {
 	// TODO: support other kubernetes configs
 }
 
-func GetVarContent(c *clusterv1.Cluster, kcp *controlplanev1.KubeadmControlPlane) *ConfigTemplateContent {
+func GetConfigContent(c *clusterv1.Cluster, kcp *controlplanev1.KubeadmControlPlane) *ConfigTemplateContent {
 	// Add kubespray init config here
-	varContent := &ConfigTemplateContent{
+	configContent := &ConfigTemplateContent{
 		PodCIDR:     c.Spec.ClusterNetwork.Pods.CIDRBlocks[0],
 		KubeVersion: kcp.Spec.Version,
 	}
-	return varContent
+	return configContent
 }
 
 func GetHostsContent(customMachine *v1alpha1.CustomMachine) *HostTemplateContent {
@@ -417,7 +404,7 @@ func GetHostsContent(customMachine *v1alpha1.CustomMachine) *HostTemplateContent
 }
 
 func (r *CustomClusterController) CreatConfigMapWithTemplate(ctx context.Context, name, namespace, fileName, configMapData string) error {
-	ConfigMap := &corev1.ConfigMap{
+	cm := &corev1.ConfigMap{
 		TypeMeta: metav1.TypeMeta{
 			Kind:       "ConfigMap",
 			APIVersion: "v1",
@@ -429,13 +416,13 @@ func (r *CustomClusterController) CreatConfigMapWithTemplate(ctx context.Context
 		Data: map[string]string{fileName: strings.TrimSpace(configMapData)},
 	}
 
-	if err := r.Client.Create(ctx, ConfigMap); err != nil {
+	if err := r.Client.Create(ctx, cm); err != nil {
 		return err
 	}
 	return nil
 }
 
-func (r *CustomClusterController) CreateHostsConfigMap(ctx context.Context, customMachine *v1alpha1.CustomMachine, customCluster *v1alpha1.CustomCluster) error {
+func (r *CustomClusterController) CreateClusterHosts(ctx context.Context, customMachine *v1alpha1.CustomMachine, customCluster *v1alpha1.CustomCluster) error {
 	hostsContent := GetHostsContent(customMachine)
 	hostData := &strings.Builder{}
 
@@ -465,14 +452,14 @@ kube_control_plane
 	if err := tmpl.Execute(hostData, hostsContent); err != nil {
 		return err
 	}
-	name := fmt.Sprintf("%s-%s", customCluster.Name, HostsConfigMapName)
+	name := fmt.Sprintf("%s-%s", customCluster.Name, ClusterHostsName)
 	namespace := customCluster.Namespace
 
-	return r.CreatConfigMapWithTemplate(ctx, name, namespace, HostsConfigMapName, hostData.String())
+	return r.CreatConfigMapWithTemplate(ctx, name, namespace, ClusterHostsName, hostData.String())
 }
 
 func (r *CustomClusterController) CreateClusterConfig(ctx context.Context, c *clusterv1.Cluster, kcp *controlplanev1.KubeadmControlPlane, cc *v1alpha1.CustomCluster) error {
-	configContent := GetVarContent(c, kcp)
+	configContent := GetConfigContent(c, kcp)
 	configData := &strings.Builder{}
 
 	// todo: split this to a separated file
@@ -488,40 +475,40 @@ kube_pods_subnet: {{ .PodCIDR }}
 	if err := tmpl.Execute(configData, configContent); err != nil {
 		return err
 	}
-	name := fmt.Sprintf("%s-%s", cc.Name, ParamsConfigMapName)
+	name := fmt.Sprintf("%s-%s", cc.Name, ClusterConfigName)
 	namespace := cc.Namespace
 
-	return r.CreatConfigMapWithTemplate(ctx, name, namespace, ParamsConfigMapName, configData.String())
+	return r.CreatConfigMapWithTemplate(ctx, name, namespace, ClusterConfigName, configData.String())
 }
 
-func (r *CustomClusterController) UpdateHostsConfigMap(ctx context.Context, customCluster *v1alpha1.CustomCluster, customMachine *v1alpha1.CustomMachine) error {
+func (r *CustomClusterController) UpdateClusterHosts(ctx context.Context, customCluster *v1alpha1.CustomCluster, customMachine *v1alpha1.CustomMachine) error {
 	log := ctrl.LoggerFrom(ctx)
-	ConfigMap := &corev1.ConfigMap{
+	cm := &corev1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      customCluster.Name + "-" + HostsConfigMapName,
+			Name:      customCluster.Name + "-" + ClusterHostsName,
 			Namespace: customCluster.Namespace,
 		},
 	}
 
-	if err := r.Client.Delete(ctx, ConfigMap); err != nil {
+	if err := r.Client.Delete(ctx, cm); err != nil {
 		if !apierrors.IsNotFound(err) {
 			log.Error(err, "failed to delete cluster-hosts configMap")
 			return err
 		}
 	}
-	return r.CreateHostsConfigMap(ctx, customMachine, customCluster)
+	return r.CreateClusterHosts(ctx, customMachine, customCluster)
 }
 
 func (r *CustomClusterController) UpdateClusterConfig(ctx context.Context, customCluster *v1alpha1.CustomCluster, cc *v1alpha1.CustomCluster, cluster *clusterv1.Cluster, kcp *controlplanev1.KubeadmControlPlane) error {
 	log := ctrl.LoggerFrom(ctx)
-	ConfigMap := &corev1.ConfigMap{
+	cm := &corev1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      customCluster.Name + "-" + ParamsConfigMapName,
+			Name:      customCluster.Name + "-" + ClusterConfigName,
 			Namespace: customCluster.Namespace,
 		},
 	}
 
-	if err := r.Client.Delete(ctx, ConfigMap); err != nil {
+	if err := r.Client.Delete(ctx, cm); err != nil {
 		if !apierrors.IsNotFound(err) {
 			log.Error(err, "failed to delete cluster-config configMap")
 			return err

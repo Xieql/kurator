@@ -1,7 +1,7 @@
 apiVersion: cluster.kurator.dev/v1alpha1
 kind: CustomMachine
 metadata:
-  name: cc-quickstart-custommachine
+  name: cc-custommachine
   namespace: default
 spec:
   master:

@@ -61,7 +61,11 @@ const (
 	RunningPhase     CustomClusterPhase = "Running"
 	SucceededPhase   CustomClusterPhase = "Succeeded"
 	TerminatingPhase CustomClusterPhase = "Terminating"
-	FailedPhase      CustomClusterPhase = "Failed"
+
+	InitFailedPhase      CustomClusterPhase = "InitFailed"
+	TerminateFailedPhase CustomClusterPhase = "TerminateFailed"
+
+	FailedPhase CustomClusterPhase = "Failed"
 )
 
 // CustomClusterStatus represents the current status of the cluster.
@@ -71,14 +75,6 @@ type CustomClusterStatus struct {
 	// E.g.  Running, Succeed, Terminating, Failed etc.
 	// +optional
 	Phase CustomClusterPhase `json:"phase,omitempty"`
-
-	// WorkerRef is the reference of the worker pod when enter the phase of running or terminating.
-	// +optional
-	WorkerRef *corev1.ObjectReference `json:"workerRef,omitempty"`
-
-	// StartTime date and time at which the object was acknowledged by the Kubelet.
-	// +optional
-	StartTime *metav1.Time `json:"startTime"`
 
 	// Message indicating details about why the pod is in this condition.
 	// +optional
