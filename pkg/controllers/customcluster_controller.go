@@ -234,6 +234,8 @@ func (r *CustomClusterController) reconcileCustomClusterInit(ctx context.Context
 		return ctrl.Result{RequeueAfter: RequeueAfter}, err
 	}
 
+	log.Info("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~set owner ref succeed")
+
 	// Fetch the KubeadmControlPlane instance.
 	kcpKey := client.ObjectKey{
 		Namespace: cluster.Spec.ControlPlaneRef.Namespace,
