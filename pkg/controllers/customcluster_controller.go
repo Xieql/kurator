@@ -72,7 +72,7 @@ const (
 func (r *CustomClusterController) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	log := ctrl.LoggerFrom(ctx)
 
-	log.Info("new commit!!!!")
+	log.Info("new commit 1 !!!!")
 
 	// Fetch the customCluster instance.
 	customCluster := &v1alpha1.CustomCluster{}
@@ -82,6 +82,8 @@ func (r *CustomClusterController) Reconcile(ctx context.Context, req ctrl.Reques
 
 	log = log.WithValues("customCluster", klog.KObj(customCluster))
 	ctx = ctrl.LoggerInto(ctx, log)
+
+	log.Info("new commit 2 !!!!")
 
 	phase := customCluster.Status.Phase
 
