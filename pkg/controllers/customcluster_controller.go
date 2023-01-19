@@ -72,6 +72,8 @@ const (
 func (r *CustomClusterController) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	log := ctrl.LoggerFrom(ctx)
 
+	log.Info("new commit!!!!")
+
 	// Fetch the customCluster instance.
 	customCluster := &v1alpha1.CustomCluster{}
 	if err := r.Client.Get(ctx, req.NamespacedName, customCluster); err != nil {
@@ -83,13 +85,19 @@ func (r *CustomClusterController) Reconcile(ctx context.Context, req ctrl.Reques
 
 	phase := customCluster.Status.Phase
 
+	// Fetch the Cluster instance
+	key := client.ObjectKey{
+		Namespace: customCluster.Spec.ClusterRef.Namespace,
+		Name:      customCluster.Spec.ClusterRef.Name,
+	}
+	cluster := &clusterv1.Cluster{}
+	if err := r.Client.Get(ctx, key, cluster); err != nil {
+		log.Error(err, "can not get cluster", "cluster name", key.Name)
+		return ctrl.Result{RequeueAfter: RequeueAfter}, err
+	}
+
 	if len(phase) == 0 {
-		customCluster.Status.Phase = v1alpha1.PendingPhase
-		log.Info("customCluster's phase changes from nil to Pending")
-		if err := r.Status().Update(ctx, customCluster); err != nil {
-			log.Error(err, "phase can not update")
-			return ctrl.Result{RequeueAfter: RequeueAfter}, err
-		}
+		return r.reconcileCustomClusterInit(ctx, customCluster, cluster)
 	}
 
 	if phase == v1alpha1.FailedPhase {
@@ -101,17 +109,6 @@ func (r *CustomClusterController) Reconcile(ctx context.Context, req ctrl.Reques
 	}
 	if phase == v1alpha1.TerminatingPhase {
 		return r.reconcileTerminatingStatusUpdate(ctx, customCluster)
-	}
-
-	// Fetch the Cluster instance
-	key := client.ObjectKey{
-		Namespace: customCluster.Spec.ClusterRef.Namespace,
-		Name:      customCluster.Spec.ClusterRef.Name,
-	}
-	cluster := &clusterv1.Cluster{}
-	if err := r.Client.Get(ctx, key, cluster); err != nil {
-		log.Error(err, "can not get cluster", "cluster name", key.Name)
-		return ctrl.Result{RequeueAfter: RequeueAfter}, err
 	}
 
 	// Handle customCluster termination when the cluster is deleting
@@ -126,7 +123,7 @@ func (r *CustomClusterController) Reconcile(ctx context.Context, req ctrl.Reques
 	}
 
 	// Handle the rest of the phase "pending"
-	return r.reconcileCustomClusterInit(ctx, customCluster, cluster)
+	return ctrl.Result{RequeueAfter: RequeueAfter}, nil
 }
 
 // reconcileRunningStatusUpdate decide whether it needs to be converted to succeed or failed
