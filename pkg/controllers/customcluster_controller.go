@@ -232,7 +232,7 @@ func (r *CustomClusterController) reconcileCustomClusterInit(ctx context.Context
 	}
 
 	// Set the ownerRefs of customCluster and customMachine
-	if err := r.setOwnerRef(cluster, customCluster, customMachine); err != nil {
+	if err := r.setOwnerRef(ctx, cluster, customCluster, customMachine); err != nil {
 		log.Error(err, "can not set ownerRefs")
 		return ctrl.Result{RequeueAfter: RequeueAfter}, err
 	}
@@ -297,7 +297,7 @@ func (r *CustomClusterController) reconcileCustomClusterInit(ctx context.Context
 //}
 
 // setOwnerRef set customCluster's ownerRefs with cluster, set customMachine ownerRefs with customCluster
-func (r *CustomClusterController) setOwnerRef(cluster *clusterv1.Cluster, customCluster *v1alpha1.CustomCluster, customMachine *v1alpha1.CustomMachine) error {
+func (r *CustomClusterController) setOwnerRef(ctx context.Context, cluster *clusterv1.Cluster, customCluster *v1alpha1.CustomCluster, customMachine *v1alpha1.CustomMachine) error {
 
 	customClusterRefs := metav1.OwnerReference{
 		APIVersion: cluster.APIVersion,
@@ -314,6 +314,14 @@ func (r *CustomClusterController) setOwnerRef(cluster *clusterv1.Cluster, custom
 		UID:        customCluster.UID,
 	}
 	customMachine.OwnerReferences = []metav1.OwnerReference{customMachineRefs}
+
+	if err := r.Client.Update(ctx, customCluster); err != nil {
+		return err
+	}
+
+	if err := r.Client.Update(ctx, customMachine); err != nil {
+		return err
+	}
 
 	return nil
 }
