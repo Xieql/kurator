@@ -114,7 +114,7 @@ func (r *CustomClusterController) Reconcile(ctx context.Context, req ctrl.Reques
 		return ctrl.Result{RequeueAfter: RequeueAfter}, err
 	}
 
-	// handle customCluster termination when the cluster is deleting
+	// Handle customCluster termination when the cluster is deleting
 	if cluster.Status.Phase == "Deleting" && phase == v1alpha1.SucceededPhase {
 		return r.reconcileCustomClusterTerminate(ctx, customCluster)
 	}
@@ -231,6 +231,12 @@ func (r *CustomClusterController) reconcileCustomClusterInit(ctx context.Context
 		return ctrl.Result{RequeueAfter: RequeueAfter}, err
 	}
 
+	// Set the ownerRefs of customCluster and customMachine
+	if err := r.setOwnerRef(cluster, customCluster, customMachine); err != nil {
+		log.Error(err, "can not set ownerRefs")
+		return ctrl.Result{RequeueAfter: RequeueAfter}, err
+	}
+
 	// Fetch the KubeadmControlPlane instance.
 	kcpKey := client.ObjectKey{
 		Namespace: cluster.Spec.ControlPlaneRef.Namespace,
@@ -268,6 +274,48 @@ func (r *CustomClusterController) reconcileCustomClusterInit(ctx context.Context
 	}
 
 	return ctrl.Result{RequeueAfter: RequeueAfter}, nil
+}
+
+//ensureOwnerRefs ensures Cluster and ClusterResourceSet owner references are set on the ClusterResourceSetBinding.
+//func ensureOwnerRefs(clusterResourceSetBinding *addonsv1.ClusterResourceSetBinding, clusterResourceSet *addonsv1.ClusterResourceSet, cluster *clusterv1.Cluster) []metav1.OwnerReference {
+//	ownerRefs := make([]metav1.OwnerReference, len(clusterResourceSetBinding.GetOwnerReferences()))
+//	copy(ownerRefs, clusterResourceSetBinding.GetOwnerReferences())
+//	ownerRefs = util.EnsureOwnerRef(ownerRefs, metav1.OwnerReference{
+//		APIVersion: clusterv1.GroupVersion.String(),
+//		Kind:       "Cluster",
+//		Name:       cluster.Name,
+//		UID:        cluster.UID,
+//	})
+//	ownerRefs = util.EnsureOwnerRef(ownerRefs,
+//		metav1.OwnerReference{
+//			APIVersion: clusterResourceSet.GroupVersionKind().GroupVersion().String(),
+//			Kind:       clusterResourceSet.GroupVersionKind().Kind,
+//			Name:       clusterResourceSet.Name,
+//			UID:        clusterResourceSet.UID,
+//		})
+//	return ownerRefs
+//}
+
+// setOwnerRef set customCluster's ownerRefs with cluster, set customMachine ownerRefs with customCluster
+func (r *CustomClusterController) setOwnerRef(cluster *clusterv1.Cluster, customCluster *v1alpha1.CustomCluster, customMachine *v1alpha1.CustomMachine) error {
+
+	customClusterRefs := metav1.OwnerReference{
+		APIVersion: cluster.APIVersion,
+		Kind:       "Cluster",
+		Name:       cluster.Name,
+		UID:        cluster.UID,
+	}
+	customCluster.OwnerReferences = []metav1.OwnerReference{customClusterRefs}
+
+	customMachineRefs := metav1.OwnerReference{
+		APIVersion: cluster.APIVersion,
+		Kind:       "CustomCluster",
+		Name:       customCluster.Name,
+		UID:        customCluster.UID,
+	}
+	customMachine.OwnerReferences = []metav1.OwnerReference{customMachineRefs}
+
+	return nil
 }
 
 // generateClusterManageWorker create a kubespray init cluster pod from configMap
@@ -544,29 +592,97 @@ func (r *CustomClusterController) SetupWithManager(ctx context.Context, mgr ctrl
 	return nil
 }
 
-func (r *CustomClusterController) ClusterToCustomCluster(o client.Object) []ctrl.Request {
-	c, ok := o.(*clusterv1.Cluster)
-	if !ok {
-		panic(fmt.Sprintf("Expected a Cluster but got a %T", o))
-	}
-
-	infrastructureRef := c.Spec.InfrastructureRef
-	if infrastructureRef != nil && infrastructureRef.Kind == "CustomCluster" {
-		return []ctrl.Request{{NamespacedName: client.ObjectKey{Namespace: infrastructureRef.Namespace, Name: infrastructureRef.Name}}}
-	}
-
-	return nil
-}
-
 func (r *CustomClusterController) WorkerToCustomCluster(o client.Object) []ctrl.Request {
 	c, ok := o.(*corev1.Pod)
 	if !ok {
 		panic(fmt.Sprintf("Expected a Cluster but got a %T", o))
 	}
 
+	var log = ctrl.Log.WithName("cluster-operator")
+	log.Info("catch a event: pod %s", "pod-name", c.Name)
+
 	if len(c.Labels[workerLabelKeyName]) != 0 {
+		log.Info("catch a event: target is  %s", "infrastructureRef.Name", c.Labels[workerLabelKeyName])
+
 		return []ctrl.Request{{NamespacedName: client.ObjectKey{Namespace: c.Namespace, Name: c.Labels[workerLabelKeyName]}}}
 	}
 
 	return nil
+}
+
+func (r *CustomClusterController) CustomMachineToCustomCluster(o client.Object) []ctrl.Request {
+	c, ok := o.(*v1alpha1.CustomMachine)
+	if !ok {
+		panic(fmt.Sprintf("Expected a CustomMachine but got a %T", o))
+	}
+	var result []ctrl.Request
+
+	var log = ctrl.Log.WithName("CustomCluster-operator")
+	log.Info("catch a event: CustomMachine %s", "CustomMachine-name", c.Name)
+
+	// Add all CustomMachine owners.
+	for _, owner := range c.GetOwnerReferences() {
+		if owner.Kind == "CustomCluster" {
+			name := client.ObjectKey{Namespace: c.GetNamespace(), Name: owner.Name}
+			result = append(result, ctrl.Request{NamespacedName: name})
+			log.Info("catch a event: target is  %s", "infrastructureRef.Name", owner.Name)
+
+			break
+		}
+	}
+
+	return result
+}
+
+func (r *CustomClusterController) ClusterToCustomCluster(o client.Object) []ctrl.Request {
+	c, ok := o.(*clusterv1.Cluster)
+	if !ok {
+		panic(fmt.Sprintf("Expected a Cluster but got a %T", o))
+	}
+
+	var log = ctrl.Log.WithName("cluster-operator")
+	log.Info("catch a event: Cluster %s", "Cluster-name", c.Name)
+
+	infrastructureRef := c.Spec.InfrastructureRef
+	if infrastructureRef != nil && infrastructureRef.Kind == "CustomCluster" {
+		log.Info("catch a event: target is  %s", "infrastructureRef.Name", infrastructureRef.Name)
+
+		return []ctrl.Request{{NamespacedName: client.ObjectKey{Namespace: infrastructureRef.Namespace, Name: infrastructureRef.Name}}}
+	}
+
+	return nil
+}
+
+func (r *CustomClusterController) KcpToCustomCluster(o client.Object) []ctrl.Request {
+	c, ok := o.(*controlplanev1.KubeadmControlPlane)
+	if !ok {
+		panic(fmt.Sprintf("Expected a KubeadmControlPlane but got a %T", o))
+	}
+	var result []ctrl.Request
+
+	var log = ctrl.Log.WithName("CustomCluster-operator")
+	log.Info("catch a event: KubeadmControlPlane %s", "KubeadmControlPlane-name", c.Name)
+
+	// Find the cluster, that is the owner of kcp, from kcp
+	clusterKey := client.ObjectKey{}
+	for _, owner := range c.GetOwnerReferences() {
+		if owner.Kind == "CustomCluster" {
+			clusterKey = client.ObjectKey{Namespace: c.GetNamespace(), Name: owner.Name}
+			break
+		}
+	}
+	ownerCluster := &clusterv1.Cluster{}
+	if err := r.Client.Get(context.TODO(), clusterKey, ownerCluster); err != nil {
+		return nil
+	}
+
+	// Find the customCluster from cluster
+	infrastructureRef := ownerCluster.Spec.InfrastructureRef
+	if infrastructureRef != nil && infrastructureRef.Kind == "CustomCluster" {
+		log.Info("catch a event: target is  %s", "infrastructureRef.Name", infrastructureRef.Name)
+
+		return []ctrl.Request{{NamespacedName: client.ObjectKey{Namespace: infrastructureRef.Namespace, Name: infrastructureRef.Name}}}
+	}
+
+	return result
 }
