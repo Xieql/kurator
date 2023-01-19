@@ -266,8 +266,10 @@ rules:
   resources:
   - customclusters
   - customclusters/status
+  - customclusters/finalizers
   - custommachines
   - custommachines/status
+  - custommachines/finalizers
   verbs:
   - create
   - get

@@ -98,6 +98,11 @@ func (r *CustomClusterController) Reconcile(ctx context.Context, req ctrl.Reques
 		return ctrl.Result{RequeueAfter: RequeueAfter}, err
 	}
 
+	// if the cluster is pre-delete, handle terminal reconcile
+	if cluster.DeletionTimestamp.IsZero() {
+		return r.reconcileCustomClusterTerminate(ctx, customCluster)
+	}
+
 	if len(phase) == 0 {
 		return r.reconcileCustomClusterInit(ctx, customCluster, cluster)
 	}
@@ -111,11 +116,6 @@ func (r *CustomClusterController) Reconcile(ctx context.Context, req ctrl.Reques
 	}
 	if phase == v1alpha1.TerminatingPhase {
 		return r.reconcileTerminatingStatusUpdate(ctx, customCluster)
-	}
-
-	// Handle customCluster termination when the cluster is deleting
-	if cluster.Status.Phase == "Deleting" && phase == v1alpha1.SucceededPhase {
-		return r.reconcileCustomClusterTerminate(ctx, customCluster)
 	}
 
 	// If the installation is successful and the cluster has not been deleted,
@@ -198,6 +198,15 @@ func (r *CustomClusterController) reconcileTerminatingStatusUpdate(ctx context.C
 	return ctrl.Result{RequeueAfter: RequeueAfter}, nil
 }
 
+// reconcileCustomClusterTerminate, if k8s cluster has been installed on VMs, we should uninstall it first. Or we just should delete related CRD
+func (r *CustomClusterController) reconcileDelete(ctx context.Context, customCluster *v1alpha1.CustomCluster) (ctrl.Result, error) {
+	if customCluster.Status.Phase == v1alpha1.RunningPhase || customCluster.Status.Phase == v1alpha1.SucceededPhase {
+		return r.reconcileCustomClusterTerminate(ctx, customCluster)
+	}
+	return r.reconcileDeleteCRD(ctx, customCluster)
+}
+
+// reconcileCustomClusterTerminate uninstall the k8s cluster on VMs
 func (r *CustomClusterController) reconcileCustomClusterTerminate(ctx context.Context, customCluster *v1alpha1.CustomCluster) (ctrl.Result, error) {
 	log := ctrl.LoggerFrom(ctx)
 
@@ -212,6 +221,12 @@ func (r *CustomClusterController) reconcileCustomClusterTerminate(ctx context.Co
 	if err := r.Status().Update(ctx, customCluster); err != nil {
 		return ctrl.Result{RequeueAfter: RequeueAfter}, err
 	}
+
+	return ctrl.Result{RequeueAfter: RequeueAfter}, nil
+}
+
+// reconcileDeleteCRD delete resource related to customCluster: customMachine, worker etc.
+func (r *CustomClusterController) reconcileDeleteCRD(ctx context.Context, customCluster *v1alpha1.CustomCluster) (ctrl.Result, error) {
 
 	return ctrl.Result{RequeueAfter: RequeueAfter}, nil
 }
