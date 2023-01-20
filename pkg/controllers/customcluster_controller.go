@@ -19,6 +19,7 @@ package controllers
 import (
 	"context"
 	"fmt"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"strings"
 	"text/template"
 	"time"
@@ -64,7 +65,11 @@ const (
 	// TODO: support custom this in CustomCluster/CustomMachine
 	DefaultKubesprayImage = "quay.io/kubespray/kubespray:v2.20.0"
 
-	workerLabelKeyName = "customClusterName"
+	WorkerLabelKey = "customClusterName"
+
+	// CustomClusterFinalizer is the finalizer applied to CustomClusterFinalizer resources
+	// by its managing controller.
+	CustomClusterFinalizer = "customcluster.cluster.kurator.dev"
 )
 
 // Reconcile is part of the main kubernetes reconciliation loop which aims to
@@ -246,7 +251,7 @@ func (r *CustomClusterController) reconcileCustomClusterInit(ctx context.Context
 	}
 
 	// Set the ownerRefs of customCluster and customMachine
-	if err := r.setOwnerRef(ctx, cluster, customCluster, customMachine); err != nil {
+	if err := r.setFinalizerAndOwnerRef(ctx, cluster, customCluster, customMachine); err != nil {
 		log.Error(err, "can not set ownerRefs")
 		return ctrl.Result{RequeueAfter: RequeueAfter}, err
 	}
@@ -292,29 +297,36 @@ func (r *CustomClusterController) reconcileCustomClusterInit(ctx context.Context
 	return ctrl.Result{RequeueAfter: RequeueAfter}, nil
 }
 
-//ensureOwnerRefs ensures Cluster and ClusterResourceSet owner references are set on the ClusterResourceSetBinding.
-//func ensureOwnerRefs(clusterResourceSetBinding *addonsv1.ClusterResourceSetBinding, clusterResourceSet *addonsv1.ClusterResourceSet, cluster *clusterv1.Cluster) []metav1.OwnerReference {
-//	ownerRefs := make([]metav1.OwnerReference, len(clusterResourceSetBinding.GetOwnerReferences()))
-//	copy(ownerRefs, clusterResourceSetBinding.GetOwnerReferences())
-//	ownerRefs = util.EnsureOwnerRef(ownerRefs, metav1.OwnerReference{
-//		APIVersion: clusterv1.GroupVersion.String(),
-//		Kind:       "Cluster",
-//		Name:       cluster.Name,
-//		UID:        cluster.UID,
-//	})
-//	ownerRefs = util.EnsureOwnerRef(ownerRefs,
-//		metav1.OwnerReference{
-//			APIVersion: clusterResourceSet.GroupVersionKind().GroupVersion().String(),
-//			Kind:       clusterResourceSet.GroupVersionKind().Kind,
-//			Name:       clusterResourceSet.Name,
-//			UID:        clusterResourceSet.UID,
-//		})
-//	return ownerRefs
-//}
+func (r *CustomClusterController) setFinalizerAndOwnerRef(ctx context.Context, cluster *clusterv1.Cluster, customCluster *v1alpha1.CustomCluster, customMachine *v1alpha1.CustomMachine) error {
+	log := ctrl.LoggerFrom(ctx)
+
+	r.setFinalizer(customCluster, customMachine)
+	r.setOwnerRef(cluster, customCluster, customMachine)
+	if err := r.Client.Update(ctx, customCluster); err != nil {
+		log.Error(err, "can not set finalizer or ownerRef of customCluster")
+		return err
+	}
+
+	if err := r.Client.Update(ctx, customMachine); err != nil {
+		log.Error(err, "can not set finalizer or ownerRef of customMachine")
+		return err
+	}
+	return nil
+}
+
+// setFinalizer set customCluster's and customMachine's finalizer with CustomClusterFinalizer to avoid the race condition between init and delete
+func (r *CustomClusterController) setFinalizer(customCluster *v1alpha1.CustomCluster, customMachine *v1alpha1.CustomMachine) {
+	if !controllerutil.ContainsFinalizer(customCluster, CustomClusterFinalizer) {
+		controllerutil.AddFinalizer(customCluster, CustomClusterFinalizer)
+	}
+
+	if !controllerutil.ContainsFinalizer(customMachine, CustomClusterFinalizer) {
+		controllerutil.AddFinalizer(customMachine, CustomClusterFinalizer)
+	}
+}
 
 // setOwnerRef set customCluster's ownerRefs with cluster, set customMachine ownerRefs with customCluster
-func (r *CustomClusterController) setOwnerRef(ctx context.Context, cluster *clusterv1.Cluster, customCluster *v1alpha1.CustomCluster, customMachine *v1alpha1.CustomMachine) error {
-
+func (r *CustomClusterController) setOwnerRef(cluster *clusterv1.Cluster, customCluster *v1alpha1.CustomCluster, customMachine *v1alpha1.CustomMachine) {
 	customClusterRefs := metav1.OwnerReference{
 		APIVersion: cluster.APIVersion,
 		Kind:       "Cluster",
@@ -322,7 +334,6 @@ func (r *CustomClusterController) setOwnerRef(ctx context.Context, cluster *clus
 		UID:        cluster.UID,
 	}
 	customCluster.OwnerReferences = []metav1.OwnerReference{customClusterRefs}
-
 	customMachineRefs := metav1.OwnerReference{
 		APIVersion: cluster.APIVersion,
 		Kind:       "CustomCluster",
@@ -330,16 +341,6 @@ func (r *CustomClusterController) setOwnerRef(ctx context.Context, cluster *clus
 		UID:        customCluster.UID,
 	}
 	customMachine.OwnerReferences = []metav1.OwnerReference{customMachineRefs}
-
-	if err := r.Client.Update(ctx, customCluster); err != nil {
-		return err
-	}
-
-	if err := r.Client.Update(ctx, customMachine); err != nil {
-		return err
-	}
-
-	return nil
 }
 
 // generateClusterManageWorker create a kubespray init cluster pod from configMap
@@ -347,7 +348,7 @@ func (r *CustomClusterController) generateClusterManageWorker(customCluster *v1a
 	podName := customCluster.Name + "-" + string(manageAction)
 	namespace := customCluster.Namespace
 	defaultMode := int32(0o600)
-	labels := map[string]string{workerLabelKeyName: customCluster.Name}
+	labels := map[string]string{WorkerLabelKey: customCluster.Name}
 
 	initPod := &corev1.Pod{
 		ObjectMeta: metav1.ObjectMeta{
@@ -625,10 +626,10 @@ func (r *CustomClusterController) WorkerToCustomCluster(o client.Object) []ctrl.
 	var log = ctrl.Log.WithName("cluster-operator")
 	log.Info("catch a event: pod %s", "pod-name", c.Name)
 
-	if len(c.Labels[workerLabelKeyName]) != 0 {
-		log.Info("catch a event: target is  %s", "infrastructureRef.Name", c.Labels[workerLabelKeyName])
+	if len(c.Labels[WorkerLabelKey]) != 0 {
+		log.Info("catch a event: target is  %s", "infrastructureRef.Name", c.Labels[WorkerLabelKey])
 
-		return []ctrl.Request{{NamespacedName: client.ObjectKey{Namespace: c.Namespace, Name: c.Labels[workerLabelKeyName]}}}
+		return []ctrl.Request{{NamespacedName: client.ObjectKey{Namespace: c.Namespace, Name: c.Labels[WorkerLabelKey]}}}
 	}
 
 	return nil
