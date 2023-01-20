@@ -4,7 +4,7 @@ metadata:
   name: cc-custommachine
   namespace: default
   finalizers:
-    custommcluster
+    - custommcluster
 spec:
   master:
     - hostName: master1
