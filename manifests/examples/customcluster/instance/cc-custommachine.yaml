@@ -3,8 +3,6 @@ kind: CustomMachine
 metadata:
   name: cc-custommachine
   namespace: default
-  finalizers:
-    - custommcluster
 spec:
   master:
     - hostName: master1
