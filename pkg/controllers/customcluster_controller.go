@@ -258,8 +258,6 @@ func (r *CustomClusterController) reconcileCustomClusterInit(ctx context.Context
 		return ctrl.Result{RequeueAfter: RequeueAfter}, err
 	}
 
-	log.Info("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~set owner ref succeed")
-
 	// Fetch the KubeadmControlPlane instance.
 	kcpKey := client.ObjectKey{
 		Namespace: cluster.Spec.ControlPlaneRef.Namespace,
@@ -603,6 +601,20 @@ func (r *CustomClusterController) SetupWithManager(ctx context.Context, mgr ctrl
 	}
 
 	if err := c.Watch(
+		&source.Kind{Type: &corev1.Pod{}},
+		handler.EnqueueRequestsFromMapFunc(r.WorkerToCustomCluster),
+	); err != nil {
+		return fmt.Errorf("failed adding Watch for worker to controller manager: %v", err)
+	}
+
+	if err := c.Watch(
+		&source.Kind{Type: &v1alpha1.CustomMachine{}},
+		handler.EnqueueRequestsFromMapFunc(r.CustomMachineToCustomCluster),
+	); err != nil {
+		return fmt.Errorf("failed adding Watch for CustomMachine to controller manager: %v", err)
+	}
+
+	if err := c.Watch(
 		&source.Kind{Type: &clusterv1.Cluster{}},
 		handler.EnqueueRequestsFromMapFunc(r.ClusterToCustomCluster),
 	); err != nil {
@@ -610,10 +622,10 @@ func (r *CustomClusterController) SetupWithManager(ctx context.Context, mgr ctrl
 	}
 
 	if err := c.Watch(
-		&source.Kind{Type: &corev1.Pod{}},
-		handler.EnqueueRequestsFromMapFunc(r.WorkerToCustomCluster),
+		&source.Kind{Type: &controlplanev1.KubeadmControlPlane{}},
+		handler.EnqueueRequestsFromMapFunc(r.KcpToCustomCluster),
 	); err != nil {
-		return fmt.Errorf("failed adding Watch for worker to controller manager: %v", err)
+		return fmt.Errorf("failed adding Watch for KubeadmControlPlan to controller manager: %v", err)
 	}
 
 	return nil
