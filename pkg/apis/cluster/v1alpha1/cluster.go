@@ -57,15 +57,12 @@ type CustomClusterSpec struct {
 type CustomClusterPhase string
 
 const (
-	PendingPhase     CustomClusterPhase = "Pending"
 	RunningPhase     CustomClusterPhase = "Running"
 	SucceededPhase   CustomClusterPhase = "Succeeded"
 	TerminatingPhase CustomClusterPhase = "Terminating"
 
 	InitFailedPhase      CustomClusterPhase = "InitFailed"
 	TerminateFailedPhase CustomClusterPhase = "TerminateFailed"
-
-	FailedPhase CustomClusterPhase = "Failed"
 )
 
 // CustomClusterStatus represents the current status of the cluster.

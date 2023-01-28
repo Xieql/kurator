@@ -81,20 +81,27 @@ func (r *CustomClusterController) Reconcile(ctx context.Context, req ctrl.Reques
 	// Fetch the customCluster instance.
 	customCluster := &v1alpha1.CustomCluster{}
 	if err := r.Client.Get(ctx, req.NamespacedName, customCluster); err != nil {
-		log.Error(err, "can not get customCluster", "customCluster name", req.Name)
+		if apierrors.IsNotFound(err) {
+			log.Info("Could not find customCluster ", req.NamespacedName, "maybe deleted")
+			return ctrl.Result{}, nil
+		}
+		// Error reading the object - requeue the request.
 		return ctrl.Result{RequeueAfter: RequeueAfter}, err
 	}
 	log = log.WithValues("customCluster", klog.KObj(customCluster))
 	ctx = ctrl.LoggerInto(ctx, log)
 
 	// Fetch the Cluster instance
-	key := client.ObjectKey{
+	clusterKey := client.ObjectKey{
 		Namespace: customCluster.Spec.ClusterRef.Namespace,
 		Name:      customCluster.Spec.ClusterRef.Name,
 	}
 	cluster := &clusterv1.Cluster{}
-	if err := r.Client.Get(ctx, key, cluster); err != nil {
-		log.Error(err, "can not get cluster", "cluster name", key.Name)
+	if err := r.Client.Get(ctx, clusterKey, cluster); err != nil {
+		if apierrors.IsNotFound(err) {
+			log.Info("Could not find cluster ", clusterKey, "maybe deleted")
+			return ctrl.Result{}, nil
+		}
 		return ctrl.Result{RequeueAfter: RequeueAfter}, err
 	}
 
@@ -105,7 +112,10 @@ func (r *CustomClusterController) Reconcile(ctx context.Context, req ctrl.Reques
 	}
 	customMachine := &v1alpha1.CustomMachine{}
 	if err := r.Client.Get(ctx, customMachinekey, customMachine); err != nil {
-		log.Error(err, "can not get customMachine")
+		if apierrors.IsNotFound(err) {
+			log.Info("Could not find customMachine ", customMachinekey, "maybe deleted")
+			return ctrl.Result{}, nil
+		}
 		return ctrl.Result{RequeueAfter: RequeueAfter}, err
 	}
 
@@ -116,26 +126,26 @@ func (r *CustomClusterController) Reconcile(ctx context.Context, req ctrl.Reques
 func (r *CustomClusterController) reconcile(ctx context.Context, customCluster *v1alpha1.CustomCluster, customMachine *v1alpha1.CustomMachine, cluster *clusterv1.Cluster) (ctrl.Result, error) {
 	phase := customCluster.Status.Phase
 
-	// if upstream cluster at pre-delete status and customCluster not in terminate phase, the customCluster will try to terminate/uninstall/reset installed k8s cluster on VMs. In addition, the related crd needs to be deleted
-	if cluster.DeletionTimestamp.IsZero() && phase != v1alpha1.TerminatingPhase {
+	// if upstream cluster at pre-delete the customCluster need to be deleted
+	if !cluster.DeletionTimestamp.IsZero() {
+		// if customCluster is already in phase Terminating, the controller will check the terminating worker status to handle terminating status
+		if phase == v1alpha1.TerminatingPhase {
+			return r.reconcileHandleTerminating(ctx, customCluster, customMachine)
+		}
 		return r.reconcileDelete(ctx, customCluster, customMachine)
 	}
 
-	// customCluster in phase nil or initFailed will try to enter running phase by creating an init worker successful
+	// customCluster in phase nil or initFailed will try to enter running phase by creating an init worker successfully
 	if len(phase) == 0 || phase == v1alpha1.InitFailedPhase {
 		return r.reconcileCustomClusterInit(ctx, customCluster, customMachine, cluster)
 	}
 
-	// customCluster in phase running will wait worker event to enter succeed phase or initFailed phase
+	// if customCluster is in phase running, the controller will check the init worker status to handle Running status
 	if phase == v1alpha1.RunningPhase {
 		return r.reconcileHandleRunning(ctx, customCluster)
 	}
 
-	// customCluster in phase Terminating will wait worker event to finish terminal or enter terminalFailed phase
-	if phase == v1alpha1.TerminatingPhase {
-		return r.reconcileHandleTerminating(ctx, customCluster, customMachine)
-	}
-
+	//
 	return ctrl.Result{Requeue: false}, nil
 }
 
@@ -149,7 +159,11 @@ func (r *CustomClusterController) reconcileHandleRunning(ctx context.Context, cu
 		Name:      customCluster.Name + "-" + string(CustomClusterInitAction),
 	}
 	if err := r.Client.Get(ctx, key, worker); err != nil {
-		log.Error(err, "can not get init worker. maybe it has been deleted.", "worker", key.Name)
+		if apierrors.IsNotFound(err) {
+			log.Error(err, "Could not find  init worker", "worker", key)
+			return ctrl.Result{}, nil
+		}
+		log.Error(err, "can not get init worker. maybe it has been deleted.", "worker", key)
 		return ctrl.Result{RequeueAfter: RequeueAfter}, err
 	}
 
@@ -159,63 +173,75 @@ func (r *CustomClusterController) reconcileHandleRunning(ctx context.Context, cu
 		if err := r.Status().Update(ctx, customCluster); err != nil {
 			return ctrl.Result{RequeueAfter: RequeueAfter}, err
 		}
-		return ctrl.Result{RequeueAfter: RequeueAfter}, nil
+		return ctrl.Result{}, nil
 	}
 
 	if worker.Status.Phase == "Failed" {
-		customCluster.Status.Phase = v1alpha1.FailedPhase
-		log.Info("customCluster's phase changes from Running to Failed")
+		customCluster.Status.Phase = v1alpha1.InitFailedPhase
+		log.Info("customCluster's phase changes from Running to InitFailedPhase")
 		if err := r.Status().Update(ctx, customCluster); err != nil {
 			return ctrl.Result{RequeueAfter: RequeueAfter}, err
 		}
-		return ctrl.Result{RequeueAfter: RequeueAfter}, nil
+		return ctrl.Result{}, nil
 	}
-	return ctrl.Result{RequeueAfter: RequeueAfter}, nil
+	return ctrl.Result{}, nil
 }
 
 // reconcileHandleTerminating determine whether customCluster enter terminateFailed phase or not
 func (r *CustomClusterController) reconcileHandleTerminating(ctx context.Context, customCluster *v1alpha1.CustomCluster, customMachine *v1alpha1.CustomMachine) (ctrl.Result, error) {
 	log := ctrl.LoggerFrom(ctx)
 	worker := &corev1.Pod{}
-
 	key := client.ObjectKey{
 		Namespace: customCluster.Namespace,
 		Name:      customCluster.Name + "-" + string(CustomClusterTerminateAction),
 	}
 	if err := r.Client.Get(ctx, key, worker); err != nil {
-		log.Error(err, "can not get init worker. maybe it has been deleted.", "worker", key.Name)
+		if apierrors.IsNotFound(err) {
+			log.Error(err, "Could not find terminate worker", "worker", key)
+			return ctrl.Result{}, nil
+		}
+		log.Error(err, "can not get terminate worker. maybe it has been deleted.", "worker", key)
 		return ctrl.Result{RequeueAfter: RequeueAfter}, err
 	}
 
 	if worker.Status.Phase == "Succeeded" {
-		// the k8s on VMs has been reset successful, what should we do is just to delete the related CRD
+		// after k8s on VMs has been reset successful, we need delete the related CRD
 		return r.reconcileDeleteCRD(ctx, customCluster, customMachine)
 	}
 
 	if worker.Status.Phase == "Failed" {
 		customCluster.Status.Phase = v1alpha1.TerminateFailedPhase
 		log.Info("customCluster's phase changes from Terminating to TerminateFailed")
-
 		if err := r.Status().Update(ctx, customCluster); err != nil {
 			return ctrl.Result{RequeueAfter: RequeueAfter}, err
 		}
+		return ctrl.Result{}, nil
 	}
-	return ctrl.Result{Requeue: false}, nil
+	return ctrl.Result{}, nil
 }
 
-// reconcileCustomClusterTerminate, if k8s cluster has been installed on VMs, we should uninstall it first. Or we just should delete related CRD
+// reconcileCustomClusterTerminate. If k8s cluster has been installed on VMs then we should uninstall it first, otherwise we just should delete related CRD
 func (r *CustomClusterController) reconcileDelete(ctx context.Context, customCluster *v1alpha1.CustomCluster, customMachine *v1alpha1.CustomMachine) (ctrl.Result, error) {
-
-	if customCluster.Status.Phase == v1alpha1.RunningPhase || customCluster.Status.Phase == v1alpha1.SucceededPhase {
-		return r.reconcileCustomClusterTerminate(ctx, customCluster, customMachine)
+	if vmsClusterIsAlreadyInstalled(customCluster) {
+		return r.reconcileVMsTerminate(ctx, customCluster, customMachine)
 	}
 	return r.reconcileDeleteCRD(ctx, customCluster, customMachine)
 }
 
+// vmsClusterIsAlreadyInstalled determine whether a complete or partial k8s cluster has been installed on the VMs
+func vmsClusterIsAlreadyInstalled(customCluster *v1alpha1.CustomCluster) bool {
+	if len(customCluster.Status.Phase) != 0 {
+		return true
+	}
+	return false
+}
+
 // reconcileCustomClusterTerminate uninstall the k8s cluster on VMs
-func (r *CustomClusterController) reconcileCustomClusterTerminate(ctx context.Context, customCluster *v1alpha1.CustomCluster, customMachine *v1alpha1.CustomMachine) (ctrl.Result, error) {
+func (r *CustomClusterController) reconcileVMsTerminate(ctx context.Context, customCluster *v1alpha1.CustomCluster, customMachine *v1alpha1.CustomMachine) (ctrl.Result, error) {
 	log := ctrl.LoggerFrom(ctx)
 
+	// check if worker already exist. if exist and running, just change status
+	// todo: check if worker already exist
 	terminateClusterPod := r.generateClusterManageWorker(customCluster, CustomClusterTerminateAction, KubesprayTerminateCMD)
 	if err := r.Client.Create(ctx, terminateClusterPod); err != nil {
 		log.Error(err, "failed to create customCluster terminate worker")
@@ -223,30 +249,31 @@ func (r *CustomClusterController) reconcileCustomClusterTerminate(ctx context.Co
 	}
 	customCluster.Status.Phase = v1alpha1.TerminatingPhase
 
-	log.Info("customCluster's phase changes from Succeed to Failed")
+	log.Info("customCluster's phase changes to Terminating")
 	if err := r.Status().Update(ctx, customCluster); err != nil {
 		return ctrl.Result{RequeueAfter: RequeueAfter}, err
 	}
 
-	return ctrl.Result{RequeueAfter: RequeueAfter}, nil
+	return ctrl.Result{}, nil
 }
 
 // reconcileDeleteCRD delete resource related to customCluster: customMachine, worker etc.
 func (r *CustomClusterController) reconcileDeleteCRD(ctx context.Context, customCluster *v1alpha1.CustomCluster, customMachine *v1alpha1.CustomMachine) (ctrl.Result, error) {
 	log := ctrl.LoggerFrom(ctx)
 
-	controllerutil.RemoveFinalizer(customCluster, addonsv1.ClusterResourceSetFinalizer)
-	controllerutil.RemoveFinalizer(customMachine, addonsv1.ClusterResourceSetFinalizer)
-	if err := r.Client.Update(ctx, customCluster); err != nil {
-		log.Error(err, "can not remove finalizer of customCluster", "customCluster", customCluster.Name)
-		return ctrl.Result{RequeueAfter: RequeueAfter}, err
-	}
-	if err := r.Client.Update(ctx, customMachine); err != nil {
-		log.Error(err, "can not remove finalizer of customMachine", "customMachine", customMachine.Name)
-		return ctrl.Result{RequeueAfter: RequeueAfter}, err
+	if controllerutil.RemoveFinalizer(customCluster, addonsv1.ClusterResourceSetFinalizer) {
+		log.Info("can not remove finalizer of customCluster", "customCluster", customCluster.Name)
+		return ctrl.Result{RequeueAfter: RequeueAfter}, nil
 	}
 
-	return ctrl.Result{RequeueAfter: RequeueAfter}, nil
+	if controllerutil.RemoveFinalizer(customMachine, addonsv1.ClusterResourceSetFinalizer) {
+		log.Info("can not remove finalizer of customCluster", "customMachine", customMachine.Name)
+		return ctrl.Result{RequeueAfter: RequeueAfter}, nil
+	}
+
+	// TODO: delete related crd and worker
+
+	return ctrl.Result{}, nil
 }
 
 func (r *CustomClusterController) reconcileCustomClusterInit(ctx context.Context, customCluster *v1alpha1.CustomCluster, customMachine *v1alpha1.CustomMachine, cluster *clusterv1.Cluster) (ctrl.Result, error) {
@@ -265,17 +292,18 @@ func (r *CustomClusterController) reconcileCustomClusterInit(ctx context.Context
 	}
 	kcp := &controlplanev1.KubeadmControlPlane{}
 	if err := r.Client.Get(ctx, kcpKey, kcp); err != nil {
-		log.Error(err, "can not get kcp")
+		if apierrors.IsNotFound(err) {
+			log.Info("Could not find cluster ", kcpKey, "maybe deleted")
+			return ctrl.Result{}, nil
+		}
 		return ctrl.Result{RequeueAfter: RequeueAfter}, err
 	}
 
-	// Delete current cm and create new cm using current object
-	if err := r.UpdateClusterHosts(ctx, customCluster, customMachine); err != nil {
-		log.Error(err, "failed to create hosts configMap")
+	if err := r.updateClusterHosts(ctx, customCluster, customMachine); err != nil {
+		log.Error(err, "failed to create cluster-hosts configMap")
 		return ctrl.Result{RequeueAfter: RequeueAfter}, err
 	}
-
-	if err := r.UpdateClusterConfig(ctx, customCluster, customCluster, cluster, kcp); err != nil {
+	if err := r.updateClusterConfig(ctx, customCluster, customCluster, cluster, kcp); err != nil {
 		log.Error(err, "failed to create cluster-config configMap")
 		return ctrl.Result{RequeueAfter: RequeueAfter}, err
 	}
@@ -288,7 +316,7 @@ func (r *CustomClusterController) reconcileCustomClusterInit(ctx context.Context
 	}
 	customCluster.Status.Phase = v1alpha1.RunningPhase
 
-	log.Info("customCluster's phase changes from Pending to Running")
+	log.Info("customCluster's phase changes to Running")
 
 	if err := r.Status().Update(ctx, customCluster); err != nil {
 		return ctrl.Result{RequeueAfter: RequeueAfter}, err
@@ -302,15 +330,18 @@ func (r *CustomClusterController) setFinalizerAndOwnerRef(ctx context.Context, c
 
 	r.setFinalizer(customCluster, customMachine)
 	r.setOwnerRef(cluster, customCluster, customMachine)
-	if err := r.Client.Update(ctx, customCluster); err != nil {
-		log.Error(err, "can not set finalizer or ownerRef of customCluster")
-		return err
-	}
 
-	if err := r.Client.Update(ctx, customMachine); err != nil {
-		log.Error(err, "can not set finalizer or ownerRef of customMachine")
-		return err
-	}
+	log.Info("not update ownerRef and finalizer !!")
+
+	//if err := r.Client.Update(ctx, customCluster); err != nil {
+	//	log.Error(err, "can not set finalizer or ownerRef of customCluster")
+	//	return err
+	//}
+	//
+	//if err := r.Client.Update(ctx, customMachine); err != nil {
+	//	log.Error(err, "can not set finalizer or ownerRef of customMachine")
+	//	return err
+	//}
 	return nil
 }
 
@@ -350,11 +381,12 @@ func (r *CustomClusterController) generateClusterManageWorker(customCluster *v1a
 	defaultMode := int32(0o600)
 	labels := map[string]string{WorkerLabelKey: customCluster.Name}
 
-	initPod := &corev1.Pod{
+	managerWorker := &corev1.Pod{
 		ObjectMeta: metav1.ObjectMeta{
-			Namespace: namespace,
-			Name:      podName,
-			Labels:    labels,
+			Namespace:  namespace,
+			Name:       podName,
+			Labels:     labels,
+			Finalizers: []string{CustomClusterFinalizer},
 		},
 		TypeMeta: metav1.TypeMeta{
 			Kind:       "Pod",
@@ -421,7 +453,7 @@ func (r *CustomClusterController) generateClusterManageWorker(customCluster *v1a
 			RestartPolicy: corev1.RestartPolicyNever,
 		},
 	}
-	return initPod
+	return managerWorker
 }
 
 type HostTemplateContent struct {
@@ -554,7 +586,8 @@ kube_pods_subnet: {{ .PodCIDR }}
 	return r.CreatConfigMapWithTemplate(ctx, name, namespace, ClusterConfigName, configData.String())
 }
 
-func (r *CustomClusterController) UpdateClusterHosts(ctx context.Context, customCluster *v1alpha1.CustomCluster, customMachine *v1alpha1.CustomMachine) error {
+// updateClusterHosts update cluster-hosts configmap
+func (r *CustomClusterController) updateClusterHosts(ctx context.Context, customCluster *v1alpha1.CustomCluster, customMachine *v1alpha1.CustomMachine) error {
 	log := ctrl.LoggerFrom(ctx)
 	cm := &corev1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{
@@ -563,6 +596,7 @@ func (r *CustomClusterController) UpdateClusterHosts(ctx context.Context, custom
 		},
 	}
 
+	// todo : change to update
 	if err := r.Client.Delete(ctx, cm); err != nil {
 		if !apierrors.IsNotFound(err) {
 			log.Error(err, "failed to delete cluster-hosts configMap")
@@ -572,7 +606,8 @@ func (r *CustomClusterController) UpdateClusterHosts(ctx context.Context, custom
 	return r.CreateClusterHosts(ctx, customMachine, customCluster)
 }
 
-func (r *CustomClusterController) UpdateClusterConfig(ctx context.Context, customCluster *v1alpha1.CustomCluster, cc *v1alpha1.CustomCluster, cluster *clusterv1.Cluster, kcp *controlplanev1.KubeadmControlPlane) error {
+// updateClusterConfig update cluster-config configmap
+func (r *CustomClusterController) updateClusterConfig(ctx context.Context, customCluster *v1alpha1.CustomCluster, cc *v1alpha1.CustomCluster, cluster *clusterv1.Cluster, kcp *controlplanev1.KubeadmControlPlane) error {
 	log := ctrl.LoggerFrom(ctx)
 	cm := &corev1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{
@@ -581,6 +616,7 @@ func (r *CustomClusterController) UpdateClusterConfig(ctx context.Context, custo
 		},
 	}
 
+	// todo : change to update
 	if err := r.Client.Delete(ctx, cm); err != nil {
 		if !apierrors.IsNotFound(err) {
 			log.Error(err, "failed to delete cluster-config configMap")
@@ -665,7 +701,6 @@ func (r *CustomClusterController) CustomMachineToCustomCluster(o client.Object) 
 			name := client.ObjectKey{Namespace: c.GetNamespace(), Name: owner.Name}
 			result = append(result, ctrl.Request{NamespacedName: name})
 			log.Info("catch a event: target is  %s", "infrastructureRef.Name", owner.Name)
-
 			break
 		}
 	}

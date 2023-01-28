@@ -50,10 +50,4 @@ func TestGetHostsContent(t *testing.T) {
 		EtcdNodeName: []string{"master1"},
 	}
 	assert.Equal(t, expectHost, GetHostsContent(curCustomMachine))
-
-	labels2 := map[string]string{}
-	num := len(labels2[workerLabelKeyName])
-
-	assert.Equal(t, 0, num)
-
 }
