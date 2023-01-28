@@ -333,15 +333,15 @@ func (r *CustomClusterController) setFinalizerAndOwnerRef(ctx context.Context, c
 
 	log.Info("not update ownerRef and finalizer !!")
 
-	//if err := r.Client.Update(ctx, customCluster); err != nil {
-	//	log.Error(err, "can not set finalizer or ownerRef of customCluster")
-	//	return err
-	//}
-	//
-	//if err := r.Client.Update(ctx, customMachine); err != nil {
-	//	log.Error(err, "can not set finalizer or ownerRef of customMachine")
-	//	return err
-	//}
+	if err := r.Client.Update(ctx, customCluster); err != nil {
+		log.Error(err, "can not set finalizer or ownerRef of customCluster")
+		return err
+	}
+
+	if err := r.Client.Update(ctx, customMachine); err != nil {
+		log.Error(err, "can not set finalizer or ownerRef of customMachine")
+		return err
+	}
 	return nil
 }
 
