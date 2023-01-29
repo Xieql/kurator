@@ -472,7 +472,7 @@ func (r *CustomClusterController) generateClusterManageWorker(customCluster *v1a
 			Namespace:  namespace,
 			Name:       podName,
 			Labels:     labels,
-			Finalizers: []string{"\"" + CustomClusterFinalizer + "\""},
+			Finalizers: []string{CustomClusterFinalizer},
 		},
 		TypeMeta: metav1.TypeMeta{
 			Kind:       "Pod",
