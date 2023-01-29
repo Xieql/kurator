@@ -83,7 +83,7 @@ func (r *CustomClusterController) Reconcile(ctx context.Context, req ctrl.Reques
 	customCluster := &v1alpha1.CustomCluster{}
 	if err := r.Client.Get(ctx, req.NamespacedName, customCluster); err != nil {
 		if apierrors.IsNotFound(err) {
-			log.Info("Could not find customCluster", req.NamespacedName, "maybe deleted")
+			log.Info("Could not find customCluster", "customCluster", req)
 			return ctrl.Result{}, nil
 		}
 		// Error reading the object - requeue the request.
@@ -100,7 +100,7 @@ func (r *CustomClusterController) Reconcile(ctx context.Context, req ctrl.Reques
 	cluster := &clusterv1.Cluster{}
 	if err := r.Client.Get(ctx, clusterKey, cluster); err != nil {
 		if apierrors.IsNotFound(err) {
-			log.Info("Could not find cluster ", clusterKey, "maybe deleted")
+			log.Info("Could not find cluster", "cluster", clusterKey)
 			return ctrl.Result{}, nil
 		}
 		return ctrl.Result{RequeueAfter: RequeueAfter}, err
@@ -114,7 +114,7 @@ func (r *CustomClusterController) Reconcile(ctx context.Context, req ctrl.Reques
 	customMachine := &v1alpha1.CustomMachine{}
 	if err := r.Client.Get(ctx, customMachinekey, customMachine); err != nil {
 		if apierrors.IsNotFound(err) {
-			log.Info("Could not find customMachine ", customMachinekey, "maybe deleted")
+			log.Info("Could not find customMachine", "customMachine", customMachinekey)
 			return ctrl.Result{}, nil
 		}
 		return ctrl.Result{RequeueAfter: RequeueAfter}, err
@@ -128,7 +128,7 @@ func (r *CustomClusterController) Reconcile(ctx context.Context, req ctrl.Reques
 	kcp := &controlplanev1.KubeadmControlPlane{}
 	if err := r.Client.Get(ctx, kcpKey, kcp); err != nil {
 		if apierrors.IsNotFound(err) {
-			log.Info("Could not find cluster ", kcpKey, "maybe deleted")
+			log.Info("Could not find kcp", "kcp", kcpKey)
 			return ctrl.Result{}, nil
 		}
 		return ctrl.Result{RequeueAfter: RequeueAfter}, err
@@ -184,7 +184,7 @@ func (r *CustomClusterController) reconcileHandleRunning(ctx context.Context, cu
 	}
 	if err := r.Client.Get(ctx, key, worker); err != nil {
 		if apierrors.IsNotFound(err) {
-			log.Error(err, "Could not find  init worker", "worker", key)
+			log.Info("Could not find worker", "worker", key)
 			return ctrl.Result{}, nil
 		}
 		log.Error(err, "can not get init worker. maybe it has been deleted.", "worker", key)
@@ -373,8 +373,6 @@ func (r *CustomClusterController) reconcileCustomClusterInit(ctx context.Context
 	}
 
 	log.Info("~~~~~~~~reconcileCustomClusterInit finish set")
-
-	log.Info("~~~~~~~~reconcileCustomClusterInit finish get kcp")
 
 	if err := r.updateClusterHosts(ctx, customCluster, customMachine); err != nil {
 		log.Error(err, "failed to update cluster-hosts configMap")
