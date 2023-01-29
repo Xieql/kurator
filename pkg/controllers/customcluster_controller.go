@@ -467,10 +467,10 @@ func (r *CustomClusterController) generateClusterManageWorker(customCluster *v1a
 
 	managerWorker := &corev1.Pod{
 		ObjectMeta: metav1.ObjectMeta{
-			Namespace: namespace,
-			Name:      podName,
-			Labels:    labels,
-			//Finalizers: []string{CustomClusterFinalizer},
+			Namespace:  namespace,
+			Name:       podName,
+			Labels:     labels,
+			Finalizers: []string{CustomClusterFinalizer},
 		},
 		TypeMeta: metav1.TypeMeta{
 			Kind:       "Pod",
@@ -690,7 +690,7 @@ func (r *CustomClusterController) updateClusterHosts(ctx context.Context, custom
 func (r *CustomClusterController) updateClusterConfig(ctx context.Context, customCluster *v1alpha1.CustomCluster, cc *v1alpha1.CustomCluster, cluster *clusterv1.Cluster, kcp *controlplanev1.KubeadmControlPlane) error {
 	cmKey := client.ObjectKey{
 		Namespace: customCluster.Namespace,
-		Name:      customCluster.Name + "-" + ClusterHostsName,
+		Name:      customCluster.Name + "-" + ClusterConfigName,
 	}
 	cm := &corev1.ConfigMap{}
 	if err := r.Client.Get(ctx, cmKey, cm); err != nil {
