@@ -19,7 +19,6 @@ package controllers
 import (
 	"context"
 	"fmt"
-	addonsv1 "sigs.k8s.io/cluster-api/exp/addons/api/v1beta1"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"strings"
 	"text/template"
@@ -286,17 +285,18 @@ func (r *CustomClusterController) reconcileVMsTerminate(ctx context.Context, cus
 func (r *CustomClusterController) reconcileDeleteResource(ctx context.Context, customCluster *v1alpha1.CustomCluster, customMachine *v1alpha1.CustomMachine) (ctrl.Result, error) {
 	log := ctrl.LoggerFrom(ctx)
 
-	if controllerutil.RemoveFinalizer(customCluster, addonsv1.ClusterResourceSetFinalizer) {
+	controllerutil.RemoveFinalizer(customCluster, CustomClusterFinalizer)
+	if err := r.Client.Update(ctx, customCluster); err != nil {
 		log.Info("can not remove finalizer of customCluster", "customCluster", customCluster.Name)
 		return ctrl.Result{RequeueAfter: RequeueAfter}, nil
 	}
-
-	if controllerutil.RemoveFinalizer(customMachine, addonsv1.ClusterResourceSetFinalizer) {
-		log.Info("can not remove finalizer of customCluster", "customMachine", customMachine.Name)
+	controllerutil.RemoveFinalizer(customMachine, CustomClusterFinalizer)
+	if err := r.Client.Update(ctx, customMachine); err != nil {
+		log.Info("can not remove finalizer of customMachine", "customMachine", customMachine.Name)
 		return ctrl.Result{RequeueAfter: RequeueAfter}, nil
 	}
 
-	// delete cluster-hosts, if not found, just ignore err and go to the next step
+	// delete cluster-hosts. If not found, just ignore err and go to the next step
 	clusterHostsKey := client.ObjectKey{
 		Namespace: customCluster.Namespace,
 		Name:      customCluster.Name + "-" + ClusterHostsName,
@@ -309,7 +309,7 @@ func (r *CustomClusterController) reconcileDeleteResource(ctx context.Context, c
 		return ctrl.Result{RequeueAfter: RequeueAfter}, nil
 	}
 
-	// delete cluster-config, if not found, just ignore err and go to the next step
+	// delete cluster-config. If not found, just ignore err and go to the next step
 	clusterConfigKey := client.ObjectKey{
 		Namespace: customCluster.Namespace,
 		Name:      customCluster.Name + "-" + ClusterConfigName,
