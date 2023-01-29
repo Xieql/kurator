@@ -467,10 +467,10 @@ func (r *CustomClusterController) generateClusterManageWorker(customCluster *v1a
 
 	managerWorker := &corev1.Pod{
 		ObjectMeta: metav1.ObjectMeta{
-			Namespace:  namespace,
-			Name:       podName,
-			Labels:     labels,
-			Finalizers: []string{CustomClusterFinalizer},
+			Namespace: namespace,
+			Name:      podName,
+			Labels:    labels,
+			//Finalizers: []string{CustomClusterFinalizer},
 		},
 		TypeMeta: metav1.TypeMeta{
 			Kind:       "Pod",
