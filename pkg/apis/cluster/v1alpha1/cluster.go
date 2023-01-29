@@ -57,18 +57,26 @@ type CustomClusterSpec struct {
 type CustomClusterPhase string
 
 const (
-	RunningPhase     CustomClusterPhase = "Running"
-	SucceededPhase   CustomClusterPhase = "Succeeded"
+	// RunningPhase represents the cluster on VMs is creating. In this phase, the worker named ends in "init" is running to initialize the cluster on VMs
+	RunningPhase CustomClusterPhase = "Running"
+
+	// SucceededPhase represents the cluster on VMs is created successful. In this phase, the worker named ends in "init" is completed
+	SucceededPhase CustomClusterPhase = "Succeeded"
+
+	// TerminatingPhase represents the cluster on VMs is being cleared. In this phase, the worker named ends in "terminate" is running to clear the cluster on VMs
 	TerminatingPhase CustomClusterPhase = "Terminating"
 
-	InitFailedPhase      CustomClusterPhase = "InitFailed"
+	// InitFailedPhase represents something is wrong when creating the cluster on VMs. In this phase, the worker named ends in "init" is in error
+	InitFailedPhase CustomClusterPhase = "InitFailed"
+
+	// TerminateFailedPhase represents something is wrong when clearing the cluster on VMs. In this phase, the worker named ends in "terminate" is in error
 	TerminateFailedPhase CustomClusterPhase = "TerminateFailed"
 )
 
 // CustomClusterStatus represents the current status of the cluster.
 type CustomClusterStatus struct {
 
-	// Phase represents the current phase of cluster actuation.
+	// Phase represents the current phase of customCluster actuation.
 	// E.g.  Running, Succeed, Terminating, Failed etc.
 	// +optional
 	Phase CustomClusterPhase `json:"phase,omitempty"`
