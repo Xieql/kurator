@@ -120,11 +120,25 @@ func (r *CustomClusterController) Reconcile(ctx context.Context, req ctrl.Reques
 		return ctrl.Result{RequeueAfter: RequeueAfter}, err
 	}
 
-	return r.reconcile(ctx, customCluster, customMachine, cluster)
+	// Fetch the KubeadmControlPlane instance.
+	kcpKey := client.ObjectKey{
+		Namespace: cluster.Spec.ControlPlaneRef.Namespace,
+		Name:      cluster.Spec.ControlPlaneRef.Name,
+	}
+	kcp := &controlplanev1.KubeadmControlPlane{}
+	if err := r.Client.Get(ctx, kcpKey, kcp); err != nil {
+		if apierrors.IsNotFound(err) {
+			log.Info("Could not find cluster ", kcpKey, "maybe deleted")
+			return ctrl.Result{}, nil
+		}
+		return ctrl.Result{RequeueAfter: RequeueAfter}, err
+	}
+
+	return r.reconcile(ctx, customCluster, customMachine, cluster, kcp)
 }
 
 // reconcile handles CustomCluster reconciliation.
-func (r *CustomClusterController) reconcile(ctx context.Context, customCluster *v1alpha1.CustomCluster, customMachine *v1alpha1.CustomMachine, cluster *clusterv1.Cluster) (ctrl.Result, error) {
+func (r *CustomClusterController) reconcile(ctx context.Context, customCluster *v1alpha1.CustomCluster, customMachine *v1alpha1.CustomMachine, cluster *clusterv1.Cluster, kcp *controlplanev1.KubeadmControlPlane) (ctrl.Result, error) {
 	log := ctrl.LoggerFrom(ctx)
 	log.Info("~~~~~~~~reconcile start")
 
@@ -147,7 +161,7 @@ func (r *CustomClusterController) reconcile(ctx context.Context, customCluster *
 
 	// customCluster in phase nil or initFailed will try to enter running phase by creating an init worker successfully
 	if len(phase) == 0 || phase == v1alpha1.InitFailedPhase {
-		return r.reconcileCustomClusterInit(ctx, customCluster, customMachine, cluster)
+		return r.reconcileCustomClusterInit(ctx, customCluster, customMachine, cluster, kcp)
 	}
 
 	// if customCluster is in phase running, the controller will check the init worker status to handle Running status
@@ -348,7 +362,7 @@ func (r *CustomClusterController) reconcileDeleteResource(ctx context.Context, c
 	return ctrl.Result{}, nil
 }
 
-func (r *CustomClusterController) reconcileCustomClusterInit(ctx context.Context, customCluster *v1alpha1.CustomCluster, customMachine *v1alpha1.CustomMachine, cluster *clusterv1.Cluster) (ctrl.Result, error) {
+func (r *CustomClusterController) reconcileCustomClusterInit(ctx context.Context, customCluster *v1alpha1.CustomCluster, customMachine *v1alpha1.CustomMachine, cluster *clusterv1.Cluster, kcp *controlplanev1.KubeadmControlPlane) (ctrl.Result, error) {
 	log := ctrl.LoggerFrom(ctx)
 	log.Info("~~~~~~~~current is reconcileCustomClusterInit")
 
@@ -359,20 +373,6 @@ func (r *CustomClusterController) reconcileCustomClusterInit(ctx context.Context
 	}
 
 	log.Info("~~~~~~~~reconcileCustomClusterInit finish set")
-
-	// Fetch the KubeadmControlPlane instance.
-	kcpKey := client.ObjectKey{
-		Namespace: cluster.Spec.ControlPlaneRef.Namespace,
-		Name:      cluster.Spec.ControlPlaneRef.Name,
-	}
-	kcp := &controlplanev1.KubeadmControlPlane{}
-	if err := r.Client.Get(ctx, kcpKey, kcp); err != nil {
-		if apierrors.IsNotFound(err) {
-			log.Info("Could not find cluster ", kcpKey, "maybe deleted")
-			return ctrl.Result{}, nil
-		}
-		return ctrl.Result{RequeueAfter: RequeueAfter}, err
-	}
 
 	log.Info("~~~~~~~~reconcileCustomClusterInit finish get kcp")
 
