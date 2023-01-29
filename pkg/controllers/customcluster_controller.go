@@ -354,9 +354,11 @@ func (r *CustomClusterController) reconcileCustomClusterInit(ctx context.Context
 
 	// Set the ownerRefs of customCluster and customMachine
 	if err := r.setFinalizerAndOwnerRef(ctx, cluster, customCluster, customMachine); err != nil {
-		log.Error(err, "can not set ownerRefs")
+		log.Error(err, "can not set finalizer or ownerRefs")
 		return ctrl.Result{RequeueAfter: RequeueAfter}, err
 	}
+
+	log.Info("~~~~~~~~reconcileCustomClusterInit finish set")
 
 	// Fetch the KubeadmControlPlane instance.
 	kcpKey := client.ObjectKey{
@@ -372,6 +374,8 @@ func (r *CustomClusterController) reconcileCustomClusterInit(ctx context.Context
 		return ctrl.Result{RequeueAfter: RequeueAfter}, err
 	}
 
+	log.Info("~~~~~~~~reconcileCustomClusterInit finish get kcp")
+
 	if err := r.updateClusterHosts(ctx, customCluster, customMachine); err != nil {
 		log.Error(err, "failed to update cluster-hosts configMap")
 		return ctrl.Result{RequeueAfter: RequeueAfter}, err
@@ -380,6 +384,8 @@ func (r *CustomClusterController) reconcileCustomClusterInit(ctx context.Context
 		log.Error(err, "failed to update cluster-config configMap")
 		return ctrl.Result{RequeueAfter: RequeueAfter}, err
 	}
+
+	log.Info("~~~~~~~~reconcileCustomClusterInit finish update cm")
 
 	// check if worker already exist. if not, create it
 	exist, err := r.workerPodExist(ctx, customCluster, CustomClusterInitAction)
@@ -395,8 +401,11 @@ func (r *CustomClusterController) reconcileCustomClusterInit(ctx context.Context
 		}
 	}
 
+	log.Info("~~~~~~~~reconcileCustomClusterInit finish create worker")
+
 	customCluster.Status.Phase = v1alpha1.RunningPhase
 	if err1 := r.Status().Update(ctx, customCluster); err1 != nil {
+		log.Error(err1, "failed to update customCluster", "customCluster", customCluster.Name)
 		return ctrl.Result{RequeueAfter: RequeueAfter}, err1
 	}
 	log.Info("customCluster's phase changes to Running")
