@@ -229,6 +229,7 @@ func (r *CustomClusterController) reconcileHandleTerminating(ctx context.Context
 		log.Error(err, "can not get terminate worker. maybe it has been deleted.", "worker", key)
 		return ctrl.Result{RequeueAfter: RequeueAfter}, err
 	}
+	log.Info("~~~~~~~~current reconcileHandleTerminating current worker phase is ", "worker.phase", worker.Status.Phase)
 
 	if worker.Status.Phase == "Succeeded" {
 		// after k8s on VMs has been reset successful, we need delete the related CRD
@@ -439,6 +440,16 @@ func (r *CustomClusterController) setFinalizer(customCluster *v1alpha1.CustomClu
 		controllerutil.AddFinalizer(customMachine, CustomClusterFinalizer)
 	}
 }
+
+//func (r *CustomClusterController) setOwnerReferencesAndFinalizer(objectMetaData *metav1.ObjectMeta, clusterOps *clusteroperationv1alpha1.ClusterOperation) {
+//	objectMetaData.Finalizers = []string{CustomClusterFinalizer}
+//	objectMetaData.OwnerReferences = []metav1.OwnerReference{*metav1.NewControllerRef(clusterOps, clusteroperationv1alpha1.SchemeGroupVersion.WithKind("ClusterOperation"))}
+//}
+//
+//func (r *CustomClusterController) setOwnerReferencesAndFinalizer(objectMetaData *metav1.ObjectMeta, clusterOps *clusteroperationv1alpha1.ClusterOperation) {
+//	objectMetaData.Finalizers = []string{CustomClusterFinalizer}
+//	objectMetaData.OwnerReferences = []metav1.OwnerReference{*metav1.NewControllerRef(clusterOps, clusteroperationv1alpha1.SchemeGroupVersion.WithKind("ClusterOperation"))}
+//}
 
 // setOwnerRef set customCluster's ownerRefs with cluster, set customMachine ownerRefs with customCluster
 func (r *CustomClusterController) setOwnerRef(cluster *clusterv1.Cluster, customCluster *v1alpha1.CustomCluster, customMachine *v1alpha1.CustomMachine) {
