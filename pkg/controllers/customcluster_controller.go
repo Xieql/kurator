@@ -68,11 +68,12 @@ const (
 
 	WorkerLabelKey = "customClusterName"
 
-	// CustomClusterFinalizer is the finalizer applied to CustomClusterFinalizer resources
-	// by its managing controller.
-	CustomClusterFinalizer          = "customcluster.cluster.kurator.dev"
+	// CustomClusterFinalizer is the finalizer applied to crd
+	CustomClusterFinalizer = "customcluster.cluster.kurator.dev"
+	// custom configmap finalizer requires at least one slash
 	CustomClusterConfigMapFinalizer = CustomClusterFinalizer + "/configmap"
-	CustomClusterWorkerFinalizer    = CustomClusterFinalizer + "/pod"
+	// custom pod finalizer requires at least one slash
+	CustomClusterWorkerFinalizer = CustomClusterFinalizer + "/pod"
 )
 
 // Reconcile is part of the main kubernetes reconciliation loop which aims to
@@ -224,6 +225,7 @@ func (r *CustomClusterController) reconcileHandleTerminating(ctx context.Context
 		Name:      customCluster.Name + "-" + string(CustomClusterTerminateAction),
 	}
 	log.Info("~~~~~~~~current reconcileHandleTerminating get worker key ")
+	log.Info("~~~~~~~~start current reconcileHandleTerminating current worker phase is ", "worker.phase", worker.Status.Phase)
 
 	if err := r.Client.Get(ctx, key, worker); err != nil {
 		if apierrors.IsNotFound(err) {
@@ -235,7 +237,7 @@ func (r *CustomClusterController) reconcileHandleTerminating(ctx context.Context
 	}
 	log.Info("~~~~~~~~current reconcileHandleTerminating get worker")
 
-	log.Info("~~~~~~~~current reconcileHandleTerminating current worker phase is ", "worker.phase", worker.Status.Phase)
+	log.Info("~~~~~~~~end current reconcileHandleTerminating current worker phase is ", "worker.phase", worker.Status.Phase)
 
 	if worker.Status.Phase == "Succeeded" {
 		// after k8s on VMs has been reset successful, we need delete the related CRD
@@ -304,8 +306,11 @@ func (r *CustomClusterController) reconcileVMsTerminate(ctx context.Context, cus
 				log.Error(err1, "failed to create customCluster terminate worker")
 				return ctrl.Result{RequeueAfter: RequeueAfter}, err1
 			}
+		} else {
+			return ctrl.Result{RequeueAfter: RequeueAfter}, err
 		}
 	}
+	log.Info("~~~~~~~~current reconcileHandleTerminating current worker phase~~~~~start worker reconcileVMsTerminate ", "worker.phase", workerPod.Status.Phase)
 
 	customCluster.Status.Phase = v1alpha1.TerminatingPhase
 	if err1 := r.Status().Update(ctx, customCluster); err1 != nil {
