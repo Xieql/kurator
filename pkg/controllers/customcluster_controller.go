@@ -313,17 +313,7 @@ func (r *CustomClusterController) reconcileDeleteResource(ctx context.Context, c
 	log := ctrl.LoggerFrom(ctx)
 	log.Info("~~~~~~~~current reconcileDeleteResource")
 
-	controllerutil.RemoveFinalizer(customCluster, CustomClusterFinalizer)
-	if err := r.Client.Update(ctx, customCluster); err != nil {
-		log.Info("can not remove finalizer of customCluster", "customCluster", customCluster.Name)
-		return ctrl.Result{RequeueAfter: RequeueAfter}, nil
-	}
-	controllerutil.RemoveFinalizer(customMachine, CustomClusterFinalizer)
-	if err := r.Client.Update(ctx, customMachine); err != nil {
-		log.Info("can not remove finalizer of customMachine", "customMachine", customMachine.Name)
-		return ctrl.Result{RequeueAfter: RequeueAfter}, nil
-	}
-
+	log.Info("~~~~~~~~current delete cluster-hosts")
 	// delete cluster-hosts. If not found, just ignore err and go to the next step
 	clusterHostsKey := client.ObjectKey{
 		Namespace: customCluster.Namespace,
@@ -333,10 +323,16 @@ func (r *CustomClusterController) reconcileDeleteResource(ctx context.Context, c
 	if err := r.Client.Get(ctx, clusterHostsKey, clusterHosts); err != nil && !apierrors.IsNotFound(err) {
 		return ctrl.Result{RequeueAfter: RequeueAfter}, nil
 	}
+	controllerutil.RemoveFinalizer(clusterHosts, CustomClusterFinalizer)
+	if err := r.Client.Update(ctx, clusterHosts); err != nil && !apierrors.IsNotFound(err) {
+		log.Info("can not remove finalizer of clusterHosts", "clusterHosts", clusterHosts.Name)
+		return ctrl.Result{RequeueAfter: RequeueAfter}, nil
+	}
 	if err := r.Client.Delete(ctx, clusterHosts); err != nil && !apierrors.IsNotFound(err) {
 		return ctrl.Result{RequeueAfter: RequeueAfter}, nil
 	}
 
+	log.Info("~~~~~~~~current delete cluster-config")
 	// delete cluster-config. If not found, just ignore err and go to the next step
 	clusterConfigKey := client.ObjectKey{
 		Namespace: customCluster.Namespace,
@@ -346,16 +342,33 @@ func (r *CustomClusterController) reconcileDeleteResource(ctx context.Context, c
 	if err := r.Client.Get(ctx, clusterConfigKey, clusterConfig); err != nil && !apierrors.IsNotFound(err) {
 		return ctrl.Result{RequeueAfter: RequeueAfter}, nil
 	}
+	controllerutil.RemoveFinalizer(clusterConfig, CustomClusterFinalizer)
+	if err := r.Client.Update(ctx, clusterConfig); err != nil && !apierrors.IsNotFound(err) {
+		log.Info("can not remove finalizer of clusterHosts", "clusterHosts", clusterConfig.Name)
+		return ctrl.Result{RequeueAfter: RequeueAfter}, nil
+	}
 	if err := r.Client.Delete(ctx, clusterConfig); err != nil && !apierrors.IsNotFound(err) {
 		return ctrl.Result{RequeueAfter: RequeueAfter}, nil
 	}
 
+	log.Info("~~~~~~~~current  delete customMachine")
 	// delete customMachine
+	controllerutil.RemoveFinalizer(customMachine, CustomClusterFinalizer)
+	if err := r.Client.Update(ctx, customMachine); err != nil && !apierrors.IsNotFound(err) {
+		log.Info("can not remove finalizer of customMachine", "customMachine", customMachine.Name)
+		return ctrl.Result{RequeueAfter: RequeueAfter}, nil
+	}
 	if err := r.Client.Delete(ctx, customMachine); err != nil && !apierrors.IsNotFound(err) {
 		return ctrl.Result{RequeueAfter: RequeueAfter}, nil
 	}
 
+	log.Info("~~~~~~~~current  delete customCluster")
 	// delete customCluster
+	controllerutil.RemoveFinalizer(customCluster, CustomClusterFinalizer)
+	if err := r.Client.Update(ctx, customCluster); err != nil && !apierrors.IsNotFound(err) {
+		log.Info("can not remove finalizer of customCluster", "customCluster", customCluster.Name)
+		return ctrl.Result{RequeueAfter: RequeueAfter}, nil
+	}
 	if err := r.Client.Delete(ctx, customCluster); err != nil && !apierrors.IsNotFound(err) {
 		return ctrl.Result{RequeueAfter: RequeueAfter}, nil
 	}
