@@ -193,6 +193,8 @@ func (r *CustomClusterController) reconcileHandleRunning(ctx context.Context, cu
 		log.Error(err, "can not get init worker. maybe it has been deleted.", "worker", key)
 		return ctrl.Result{RequeueAfter: RequeueAfter}, err
 	}
+	log.Info("~~~~~~~~current reconcileHandleRunning workername", "workername", worker.Name)
+	log.Info("~~~~~~~~current reconcileHandleRunning worker phase", "worker.phase", worker.Status.Phase)
 
 	if worker.Status.Phase == "Succeeded" {
 		customCluster.Status.Phase = v1alpha1.SucceededPhase
@@ -235,7 +237,8 @@ func (r *CustomClusterController) reconcileHandleTerminating(ctx context.Context
 		log.Error(err, "can not get terminate worker. maybe it has been deleted.", "worker", key)
 		return ctrl.Result{RequeueAfter: RequeueAfter}, err
 	}
-	log.Info("~~~~~~~~current reconcileHandleTerminating get worker")
+	log.Info("~~~~~~~~current reconcileHandleTerminating get worker", "workername", worker.Name)
+
 	log.Info("~~~~~~~~end current reconcileHandleTerminating current worker labels is ", "worker.label", worker.ObjectMeta.Labels["customClusterName"])
 	log.Info("~~~~~~~~end current reconcileHandleTerminating current worker startTime is ", "worker.StartTime", worker.Status.StartTime)
 
