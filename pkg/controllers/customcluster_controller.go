@@ -72,7 +72,7 @@ const (
 	// by its managing controller.
 	CustomClusterFinalizer          = "customcluster.cluster.kurator.dev"
 	CustomClusterConfigMapFinalizer = CustomClusterFinalizer + "/configmap"
-	CustomClusterWorkerFinalizer    = CustomClusterFinalizer + "/pod"
+	CustomClusterWorkerFinalizer    = CustomClusterFinalizer + "/ pod"
 )
 
 // Reconcile is part of the main kubernetes reconciliation loop which aims to
@@ -459,8 +459,8 @@ func (r *CustomClusterController) ensureFinalizerAndOwnerRef(ctx context.Context
 
 	controllerutil.AddFinalizer(res.customCluster, CustomClusterFinalizer)
 	controllerutil.AddFinalizer(res.customMachine, CustomClusterFinalizer)
-	controllerutil.AddFinalizer(res.clusterHosts, CustomClusterConfigMapFinalizer)
-	controllerutil.AddFinalizer(res.clusterConfig, CustomClusterConfigMapFinalizer)
+	//controllerutil.AddFinalizer(res.clusterHosts, CustomClusterConfigMapFinalizer)
+	//controllerutil.AddFinalizer(res.clusterConfig, CustomClusterConfigMapFinalizer)
 	controllerutil.AddFinalizer(res.worker, CustomClusterWorkerFinalizer)
 
 	ownerRefs := metav1.OwnerReference{
