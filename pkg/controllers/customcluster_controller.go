@@ -221,6 +221,8 @@ func (r *CustomClusterController) reconcileHandleTerminating(ctx context.Context
 		Namespace: customCluster.Namespace,
 		Name:      customCluster.Name + "-" + string(CustomClusterTerminateAction),
 	}
+	log.Info("~~~~~~~~current reconcileHandleTerminating get worker key ")
+
 	if err := r.Client.Get(ctx, key, worker); err != nil {
 		if apierrors.IsNotFound(err) {
 			log.Error(err, "Could not find terminate worker", "worker", key)
@@ -229,6 +231,8 @@ func (r *CustomClusterController) reconcileHandleTerminating(ctx context.Context
 		log.Error(err, "can not get terminate worker. maybe it has been deleted.", "worker", key)
 		return ctrl.Result{RequeueAfter: RequeueAfter}, err
 	}
+	log.Info("~~~~~~~~current reconcileHandleTerminating get worker")
+
 	log.Info("~~~~~~~~current reconcileHandleTerminating current worker phase is ", "worker.phase", worker.Status.Phase)
 
 	if worker.Status.Phase == "Succeeded" {
@@ -293,9 +297,9 @@ func (r *CustomClusterController) reconcileVMsTerminate(ctx context.Context, cus
 	}
 	if !exist {
 		terminateClusterPod := r.generateClusterManageWorker(customCluster, CustomClusterTerminateAction, KubesprayTerminateCMD)
-		if err := r.Client.Create(ctx, terminateClusterPod); err != nil {
-			log.Error(err, "failed to create customCluster terminate worker")
-			return ctrl.Result{RequeueAfter: RequeueAfter}, err
+		if err1 := r.Client.Create(ctx, terminateClusterPod); err1 != nil {
+			log.Error(err1, "failed to create customCluster terminate worker")
+			return ctrl.Result{RequeueAfter: RequeueAfter}, err1
 		}
 	}
 
@@ -314,6 +318,7 @@ func (r *CustomClusterController) reconcileDeleteResource(ctx context.Context, c
 	log.Info("~~~~~~~~current reconcileDeleteResource")
 
 	log.Info("~~~~~~~~current delete cluster-hosts")
+
 	// delete cluster-hosts. If not found, just ignore err and go to the next step
 	clusterHostsKey := client.ObjectKey{
 		Namespace: customCluster.Namespace,
