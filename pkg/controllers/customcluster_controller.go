@@ -110,6 +110,9 @@ func (r *CustomClusterController) Reconcile(ctx context.Context, req ctrl.Reques
 			log.Error(err, "Could not find terminate worker", "worker", key)
 		}
 		log.Error(err, "####################### check terminal worker, found is err ")
+	} else {
+		log.Info("$$$$$$$$$$$$$$$$$$$$$$$ check terminal worker current worker phase is ", "worker.phase", worker.Status.Phase)
+
 	}
 	log.Info("#######################  check terminal worker current worker phase is ", "worker.phase", worker.Status.Phase)
 
