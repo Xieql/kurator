@@ -120,7 +120,7 @@ spec:
                   condition.
                 type: string
               phase:
-                description: Phase represents the current phase of cluster actuation.
+                description: Phase represents the current phase of customCluster actuation.
                   E.g.  Running, Succeed, Terminating, Failed etc.
                 type: string
             type: object
