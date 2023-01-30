@@ -236,6 +236,8 @@ func (r *CustomClusterController) reconcileHandleTerminating(ctx context.Context
 		return ctrl.Result{RequeueAfter: RequeueAfter}, err
 	}
 	log.Info("~~~~~~~~current reconcileHandleTerminating get worker")
+	log.Info("~~~~~~~~end current reconcileHandleTerminating current worker labels is ", "worker.label", worker.ObjectMeta.Labels["customClusterName"])
+	log.Info("~~~~~~~~end current reconcileHandleTerminating current worker startTime is ", "worker.StartTime", worker.Status.StartTime)
 
 	log.Info("~~~~~~~~end current reconcileHandleTerminating current worker phase is ", "worker.phase", worker.Status.Phase)
 
@@ -430,6 +432,8 @@ func (r *CustomClusterController) reconcileCustomClusterInit(ctx context.Context
 				log.Error(err1, "failed to create customCluster init worker")
 				return ctrl.Result{RequeueAfter: RequeueAfter}, err1
 			}
+		} else {
+			return ctrl.Result{RequeueAfter: RequeueAfter}, err
 		}
 	}
 	log.Info("~~~~~~~~reconcileCustomClusterInit finish create worker")
