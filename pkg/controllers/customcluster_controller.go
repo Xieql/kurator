@@ -72,7 +72,7 @@ const (
 	// by its managing controller.
 	CustomClusterFinalizer          = "customcluster.cluster.kurator.dev"
 	CustomClusterConfigMapFinalizer = CustomClusterFinalizer + "/configmap"
-	CustomClusterWorkerFinalizer    = CustomClusterFinalizer + "/ pod"
+	CustomClusterWorkerFinalizer    = CustomClusterFinalizer + "/pod"
 )
 
 // Reconcile is part of the main kubernetes reconciliation loop which aims to
