@@ -95,6 +95,26 @@ func (r *CustomClusterController) Reconcile(ctx context.Context, req ctrl.Reques
 	log = log.WithValues("customCluster", klog.KObj(customCluster))
 	ctx = ctrl.LoggerInto(ctx, log)
 
+	log.Info("####################### check terminal worker start ")
+
+	worker := &corev1.Pod{}
+	key := client.ObjectKey{
+		Namespace: customCluster.Namespace,
+		Name:      customCluster.Name + "-" + string(CustomClusterTerminateAction),
+	}
+
+	if err := r.Client.Get(ctx, key, worker); err != nil {
+		if apierrors.IsNotFound(err) {
+			log.Info("####################### check terminal worker, not found!!!!!!!!!!!!!!")
+
+			log.Error(err, "Could not find terminate worker", "worker", key)
+		}
+		log.Error(err, "####################### check terminal worker, found is err ")
+	}
+	log.Info("#######################  check terminal worker current worker phase is ", "worker.phase", worker.Status.Phase)
+
+	log.Info("####################### check terminal worker end")
+
 	// Fetch the Cluster instance
 	clusterKey := client.ObjectKey{
 		Namespace: customCluster.Spec.ClusterRef.Namespace,
@@ -237,7 +257,7 @@ func (r *CustomClusterController) reconcileHandleTerminating(ctx context.Context
 		log.Error(err, "can not get terminate worker. maybe it has been deleted.", "worker", key)
 		return ctrl.Result{RequeueAfter: RequeueAfter}, err
 	}
-	log.Info("~~~~~~~~current reconcileHandleTerminating get worker", "workername", worker.Name)
+	log.Info("~~~~~~~~current reconcileHandleTerminating get worker", "worker.name", worker.Name)
 
 	log.Info("~~~~~~~~end current reconcileHandleTerminating current worker labels is ", "worker.label", worker.ObjectMeta.Labels["customClusterName"])
 	log.Info("~~~~~~~~end current reconcileHandleTerminating current worker startTime is ", "worker.StartTime", worker.Status.StartTime)
