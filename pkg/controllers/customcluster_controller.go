@@ -276,65 +276,65 @@ func (r *CustomClusterController) reconcileDeleteResource(ctx context.Context, c
 	log := ctrl.LoggerFrom(ctx)
 	log.Info("~~~~~~~~current reconcileDeleteResource")
 
-	log.Info("~~~~~~~~current delete cluster-hosts")
-	// delete cluster-hosts. If not found, just ignore err and go to the next step
-	clusterHostsKey := getClusterHostsKey(customCluster)
-	clusterHosts := &corev1.ConfigMap{}
-	if err := r.Client.Get(ctx, clusterHostsKey, clusterHosts); err != nil && !apierrors.IsNotFound(err) {
-		log.Error(err, "failed to get clusterHosts when it should be deleted", "clusterHosts", clusterHostsKey)
-		return ctrl.Result{RequeueAfter: RequeueAfter}, err
-	}
-	controllerutil.RemoveFinalizer(clusterHosts, CustomClusterConfigMapFinalizer)
-	if err := r.Client.Update(ctx, clusterHosts); err != nil && !apierrors.IsNotFound(err) {
-		log.Error(err, "failed to remove finalizer of clusterHosts when it should be deleted", "clusterHosts", clusterHostsKey)
-		return ctrl.Result{RequeueAfter: RequeueAfter}, err
-	}
-	if err := r.Client.Delete(ctx, clusterHosts); err != nil && !apierrors.IsNotFound(err) {
-		log.Error(err, "failed to delete clusterHosts", "clusterHosts", clusterHostsKey)
-		return ctrl.Result{RequeueAfter: RequeueAfter}, err
-	}
-
-	log.Info("~~~~~~~~current delete cluster-config")
-	// delete cluster-config. If not found, just ignore err and go to the next step
-	clusterConfigKey := getClusterConfigKey(customCluster)
-	clusterConfig := &corev1.ConfigMap{}
-	if err := r.Client.Get(ctx, clusterConfigKey, clusterConfig); err != nil && !apierrors.IsNotFound(err) {
-		log.Error(err, "failed to get clusterConfig when it should be deleted", "clusterConfig", clusterConfigKey)
-		return ctrl.Result{RequeueAfter: RequeueAfter}, err
-	}
-	controllerutil.RemoveFinalizer(clusterConfig, CustomClusterConfigMapFinalizer)
-	if err := r.Client.Update(ctx, clusterConfig); err != nil && !apierrors.IsNotFound(err) {
-		log.Error(err, "failed to remove finalizer of clusterConfig  when it should be deleted", "clusterConfig", clusterConfigKey)
-		return ctrl.Result{RequeueAfter: RequeueAfter}, err
-	}
-	if err := r.Client.Delete(ctx, clusterConfig); err != nil && !apierrors.IsNotFound(err) {
-		log.Error(err, "failed to delete clusterConfig", "clusterConfig", clusterConfigKey)
-		return ctrl.Result{RequeueAfter: RequeueAfter}, err
-	}
-
-	// delete init worker
-	initWorker := &corev1.Pod{}
-	initWorkerKey := getWorkerKey(customCluster, CustomClusterInitAction)
-	if err := r.Client.Get(ctx, initWorkerKey, initWorker); err != nil && !apierrors.IsNotFound(err) {
-		log.Error(err, "failed to get worker when it should be deleted", "worker", initWorkerKey)
-		return ctrl.Result{RequeueAfter: RequeueAfter}, err
-	}
-	if err := r.Client.Delete(ctx, initWorker); err != nil && !apierrors.IsNotFound(err) {
-		log.Error(err, "failed to delete worker ", "worker", initWorkerKey)
-		return ctrl.Result{RequeueAfter: RequeueAfter}, err
-	}
-
-	// delete terminal worker
-	terminateWorker := &corev1.Pod{}
-	terminateWorkerKey := getWorkerKey(customCluster, CustomClusterTerminateAction)
-	if err := r.Client.Get(ctx, terminateWorkerKey, terminateWorker); err != nil && !apierrors.IsNotFound(err) {
-		log.Error(err, "failed to delete worker when it should be deleted", "worker", terminateWorkerKey)
-		return ctrl.Result{RequeueAfter: RequeueAfter}, err
-	}
-	if err := r.Client.Delete(ctx, terminateWorker); err != nil && !apierrors.IsNotFound(err) {
-		log.Error(err, "failed to delete worker", "worker", terminateWorkerKey)
-		return ctrl.Result{RequeueAfter: RequeueAfter}, err
-	}
+	//log.Info("~~~~~~~~current delete cluster-hosts")
+	//// delete cluster-hosts. If not found, just ignore err and go to the next step
+	//clusterHostsKey := getClusterHostsKey(customCluster)
+	//clusterHosts := &corev1.ConfigMap{}
+	//if err := r.Client.Get(ctx, clusterHostsKey, clusterHosts); err != nil && !apierrors.IsNotFound(err) {
+	//	log.Error(err, "failed to get clusterHosts when it should be deleted", "clusterHosts", clusterHostsKey)
+	//	return ctrl.Result{RequeueAfter: RequeueAfter}, err
+	//}
+	//controllerutil.RemoveFinalizer(clusterHosts, CustomClusterConfigMapFinalizer)
+	//if err := r.Client.Update(ctx, clusterHosts); err != nil && !apierrors.IsNotFound(err) {
+	//	log.Error(err, "failed to remove finalizer of clusterHosts when it should be deleted", "clusterHosts", clusterHostsKey)
+	//	return ctrl.Result{RequeueAfter: RequeueAfter}, err
+	//}
+	//if err := r.Client.Delete(ctx, clusterHosts); err != nil && !apierrors.IsNotFound(err) {
+	//	log.Error(err, "failed to delete clusterHosts", "clusterHosts", clusterHostsKey)
+	//	return ctrl.Result{RequeueAfter: RequeueAfter}, err
+	//}
+	//
+	//log.Info("~~~~~~~~current delete cluster-config")
+	//// delete cluster-config. If not found, just ignore err and go to the next step
+	//clusterConfigKey := getClusterConfigKey(customCluster)
+	//clusterConfig := &corev1.ConfigMap{}
+	//if err := r.Client.Get(ctx, clusterConfigKey, clusterConfig); err != nil && !apierrors.IsNotFound(err) {
+	//	log.Error(err, "failed to get clusterConfig when it should be deleted", "clusterConfig", clusterConfigKey)
+	//	return ctrl.Result{RequeueAfter: RequeueAfter}, err
+	//}
+	//controllerutil.RemoveFinalizer(clusterConfig, CustomClusterConfigMapFinalizer)
+	//if err := r.Client.Update(ctx, clusterConfig); err != nil && !apierrors.IsNotFound(err) {
+	//	log.Error(err, "failed to remove finalizer of clusterConfig  when it should be deleted", "clusterConfig", clusterConfigKey)
+	//	return ctrl.Result{RequeueAfter: RequeueAfter}, err
+	//}
+	//if err := r.Client.Delete(ctx, clusterConfig); err != nil && !apierrors.IsNotFound(err) {
+	//	log.Error(err, "failed to delete clusterConfig", "clusterConfig", clusterConfigKey)
+	//	return ctrl.Result{RequeueAfter: RequeueAfter}, err
+	//}
+	//
+	//// delete init worker
+	//initWorker := &corev1.Pod{}
+	//initWorkerKey := getWorkerKey(customCluster, CustomClusterInitAction)
+	//if err := r.Client.Get(ctx, initWorkerKey, initWorker); err != nil && !apierrors.IsNotFound(err) {
+	//	log.Error(err, "failed to get worker when it should be deleted", "worker", initWorkerKey)
+	//	return ctrl.Result{RequeueAfter: RequeueAfter}, err
+	//}
+	//if err := r.Client.Delete(ctx, initWorker); err != nil && !apierrors.IsNotFound(err) {
+	//	log.Error(err, "failed to delete worker ", "worker", initWorkerKey)
+	//	return ctrl.Result{RequeueAfter: RequeueAfter}, err
+	//}
+	//
+	//// delete terminal worker
+	//terminateWorker := &corev1.Pod{}
+	//terminateWorkerKey := getWorkerKey(customCluster, CustomClusterTerminateAction)
+	//if err := r.Client.Get(ctx, terminateWorkerKey, terminateWorker); err != nil && !apierrors.IsNotFound(err) {
+	//	log.Error(err, "failed to delete worker when it should be deleted", "worker", terminateWorkerKey)
+	//	return ctrl.Result{RequeueAfter: RequeueAfter}, err
+	//}
+	//if err := r.Client.Delete(ctx, terminateWorker); err != nil && !apierrors.IsNotFound(err) {
+	//	log.Error(err, "failed to delete worker", "worker", terminateWorkerKey)
+	//	return ctrl.Result{RequeueAfter: RequeueAfter}, err
+	//}
 
 	log.Info("~~~~~~~~current  delete customMachine")
 	// delete customMachine
