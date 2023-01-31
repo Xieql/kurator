@@ -72,8 +72,6 @@ const (
 	CustomClusterFinalizer = "customcluster.cluster.kurator.dev"
 	// custom configmap finalizer requires at least one slash
 	CustomClusterConfigMapFinalizer = CustomClusterFinalizer + "/configmap"
-	// custom pod finalizer requires at least one slash
-	CustomClusterWorkerFinalizer = CustomClusterFinalizer + "/pod"
 )
 
 // Reconcile is part of the main kubernetes reconciliation loop which aims to
@@ -131,12 +129,6 @@ func (r *CustomClusterController) reconcile(ctx context.Context, customCluster *
 	log.Info("~~~~~~~~reconcile start")
 
 	phase := customCluster.Status.Phase
-	log.Info("~~~~~~~~current phase is", "phase", phase)
-
-	// if the termination has been attempted and failed, then return directly
-	if phase == v1alpha1.TerminateFailedPhase {
-		return ctrl.Result{}, nil
-	}
 
 	// if upstream cluster at pre-delete the customCluster need to be deleted
 	if !cluster.DeletionTimestamp.IsZero() {
@@ -459,7 +451,6 @@ func (r *CustomClusterController) ensureFinalizerAndOwnerRef(ctx context.Context
 	controllerutil.AddFinalizer(res.customMachine, CustomClusterFinalizer)
 	controllerutil.AddFinalizer(res.clusterHosts, CustomClusterConfigMapFinalizer)
 	controllerutil.AddFinalizer(res.clusterConfig, CustomClusterConfigMapFinalizer)
-	controllerutil.AddFinalizer(res.worker, CustomClusterWorkerFinalizer)
 
 	ownerRefs := metav1.OwnerReference{
 		APIVersion: res.customCluster.APIVersion,
