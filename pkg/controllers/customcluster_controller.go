@@ -95,8 +95,6 @@ func (r *CustomClusterController) Reconcile(ctx context.Context, req ctrl.Reques
 	log = log.WithValues("customCluster", klog.KObj(customCluster))
 	ctx = ctrl.LoggerInto(ctx, log)
 
-	log.Info("####################### check terminal worker start ")
-
 	worker := &corev1.Pod{}
 	key := client.ObjectKey{
 		Namespace: customCluster.Namespace,
@@ -108,15 +106,12 @@ func (r *CustomClusterController) Reconcile(ctx context.Context, req ctrl.Reques
 			log.Info("####################### check terminal worker, not found!!!!!!!!!!!!!!")
 
 			log.Error(err, "Could not find terminate worker", "worker", key)
+		} else {
+			log.Error(err, "####################### check terminal worker, found is err ")
 		}
-		log.Error(err, "####################### check terminal worker, found is err ")
 	} else {
-		log.Info("$$$$$$$$$$$$$$$$$$$$$$$ check terminal worker current worker phase is ", "worker.phase", worker.Status.Phase)
-
+		log.Info("$$$$$$$$$$$$$$$$$$$$$$$  check terminal worker current worker phase is ", "worker.phase", worker.Status.Phase)
 	}
-	log.Info("#######################  check terminal worker current worker phase is ", "worker.phase", worker.Status.Phase)
-
-	log.Info("####################### check terminal worker end")
 
 	// Fetch the Cluster instance
 	clusterKey := client.ObjectKey{
