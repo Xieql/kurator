@@ -353,7 +353,6 @@ type RelatedResource struct {
 	clusterConfig *corev1.ConfigMap
 	customCluster *v1alpha1.CustomCluster
 	customMachine *v1alpha1.CustomMachine
-	worker        *corev1.Pod
 }
 
 // reconcileCustomClusterInit create an init worker for installing cluster on VMs
@@ -409,7 +408,6 @@ func (r *CustomClusterController) reconcileCustomClusterInit(ctx context.Context
 		clusterConfig: clusterConfig,
 		customCluster: customCluster,
 		customMachine: customMachine,
-		worker:        initWorker,
 	}
 	// when all related object is ready, we need ensure object's finalizer and ownerRef is set appropriately
 	if err := r.ensureFinalizerAndOwnerRef(ctx, initRelatedResource); err != nil {
@@ -418,6 +416,7 @@ func (r *CustomClusterController) reconcileCustomClusterInit(ctx context.Context
 	}
 	log.Info("~~~~~~~~ensureFinalizerAndOwnerRef done")
 
+	controllerutil.AddFinalizer(customCluster, CustomClusterFinalizer)
 	customCluster.Status.Phase = v1alpha1.RunningPhase
 	if err1 := r.Status().Update(ctx, customCluster); err1 != nil {
 		log.Error(err1, "failed to update customCluster", "customCluster", customCluster.Name)
@@ -444,10 +443,8 @@ func (r *CustomClusterController) ensureFinalizerAndOwnerRef(ctx context.Context
 		UID:        res.customCluster.UID,
 	}
 	res.customMachine.OwnerReferences = []metav1.OwnerReference{ownerRefs}
-	res.customCluster.OwnerReferences = []metav1.OwnerReference{ownerRefs}
 	res.clusterHosts.OwnerReferences = []metav1.OwnerReference{ownerRefs}
 	res.clusterConfig.OwnerReferences = []metav1.OwnerReference{ownerRefs}
-	res.worker.OwnerReferences = []metav1.OwnerReference{ownerRefs}
 
 	if err := r.Client.Update(ctx, res.customCluster); err != nil {
 		log.Error(err, "failed to set finalizer or ownerRef of customCluster")
@@ -466,11 +463,6 @@ func (r *CustomClusterController) ensureFinalizerAndOwnerRef(ctx context.Context
 
 	if err := r.Client.Update(ctx, res.clusterConfig); err != nil {
 		log.Error(err, "failed to set finalizer or ownerRef of clusterConfig")
-		return err
-	}
-
-	if err := r.Client.Update(ctx, res.worker); err != nil {
-		log.Error(err, "failed to set finalizer or ownerRef of worker")
 		return err
 	}
 
