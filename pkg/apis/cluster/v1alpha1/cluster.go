@@ -76,26 +76,11 @@ const (
 // CustomClusterStatus represents the current status of the cluster.
 type CustomClusterStatus struct {
 
-<<<<<<< HEAD
 	// Phase represents the current phase of customCluster actuation.
-=======
-	// Phase represents the current phase of cluster actuation.
->>>>>>> 6a6a4f9 (Basic implementation of customeCluster controller)
 	// E.g.  Running, Succeed, Terminating, Failed etc.
 	// +optional
 	Phase CustomClusterPhase `json:"phase,omitempty"`
 
-<<<<<<< HEAD
-=======
-	// WorkerRef is the reference of the worker pod when enter the phase of running or terminating.
-	// +optional
-	WorkerRef *corev1.ObjectReference `json:"workerRef,omitempty"`
-
-	// StartTime date and time at which the object was acknowledged by the Kubelet.
-	// +optional
-	StartTime *metav1.Time `json:"startTime"`
-
->>>>>>> 6a6a4f9 (Basic implementation of customeCluster controller)
 	// Message indicating details about why the pod is in this condition.
 	// +optional
 	Message string `json:"message,omitempty"`
