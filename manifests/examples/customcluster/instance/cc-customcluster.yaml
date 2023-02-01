@@ -4,7 +4,8 @@ metadata:
   name: cc-customcluster
   namespace: default
   labels:
-    cluster.x-k8s.io/v1beta1: v1beta1_v1beta2
+    cluster.x-k8s.io/provider: control-plane-kubeadm
+    cluster.x-k8s.io/v1beta1: v1beta1
 spec:
   clusterRef:
     apiVersion: cluster.x-k8s.io/v1beta1
