@@ -1,12 +1,10 @@
 apiVersion: cluster.kurator.dev/v1alpha1
 kind: CustomCluster
-commonLabels:
-  cluster.x-k8s.io/v1alpha2: v1alpha1
-  cluster.x-k8s.io/v1alpha3: v1alpha2
-  cluster.x-k8s.io/v1beta1: v1beta1
 metadata:
   name: cc-customcluster
   namespace: default
+  labels:
+    cluster.x-k8s.io/v1alpha2: v1alpha1
 spec:
   clusterRef:
     apiVersion: cluster.x-k8s.io/v1beta1
