@@ -205,7 +205,7 @@ func (r *CustomClusterController) reconcileHandleTerminating(ctx context.Context
 		return ctrl.Result{RequeueAfter: RequeueAfter}, err
 	}
 
-	log.Info("~~~~~~~~current terminate worker phase", "woker.phase", terminateWorker.Status.Phase)
+	log.Info("~~~~~~~~current terminate worker phase", "worker.phase", terminateWorker.Status.Phase)
 
 	if terminateWorker.Status.Phase == "Succeeded" {
 		// after k8s on VMs has been reset successful, we need delete the related CRD
