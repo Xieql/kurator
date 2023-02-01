@@ -23,7 +23,6 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/cluster-api/controllers/external"
-	utilconversion "sigs.k8s.io/cluster-api/util/conversion"
 	"sigs.k8s.io/cluster-api/util/patch"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -70,9 +69,6 @@ func (r *CustomMachineController) Reconcile(ctx context.Context, req ctrl.Reques
 func (r *CustomMachineController) reconcile(ctx context.Context, customMachine *clusterv1alpha1.CustomMachine) (ctrl.Result, error) {
 	log := ctrl.LoggerFrom(ctx)
 	keyRef := customMachine.Spec.Master[0].SSHKey
-	if err := utilconversion.UpdateReferenceAPIContract(ctx, r.Client, r.APIReader, keyRef); err != nil {
-		return ctrl.Result{}, err
-	}
 	obj, err := external.Get(ctx, r.Client, keyRef, customMachine.Namespace)
 	if err != nil {
 		if apierrors.IsNotFound(err) {
