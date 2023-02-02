@@ -386,7 +386,7 @@ func (r *CustomClusterController) reconcileCustomClusterInit(ctx context.Context
 
 	// check if init worker already exist. If not, create it
 	initWorkerKey := getWorkerKey(customCluster, CustomClusterInitAction)
-	var initWorker *corev1.Pod
+	initWorker := &corev1.Pod{}
 	if err := r.Client.Get(ctx, initWorkerKey, initWorker); err != nil {
 		if apierrors.IsNotFound(err) {
 			initClusterPod := r.generateClusterManageWorker(customCluster, CustomClusterInitAction, KubesprayInitCMD)
