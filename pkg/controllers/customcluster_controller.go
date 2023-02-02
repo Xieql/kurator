@@ -125,6 +125,9 @@ func (r *CustomClusterController) Reconcile(ctx context.Context, req ctrl.Reques
 // reconcile handles CustomCluster reconciliation.
 func (r *CustomClusterController) reconcile(ctx context.Context, customCluster *v1alpha1.CustomCluster, customMachine *v1alpha1.CustomMachine, cluster *clusterv1.Cluster) (ctrl.Result, error) {
 	phase := customCluster.Status.Phase
+	log := ctrl.LoggerFrom(ctx)
+
+	log.Info("~~~~~~~~~~~~~~~~start reconcile")
 
 	// if upstream cluster at pre-delete, the customCluster need to be deleted.
 	if !cluster.DeletionTimestamp.IsZero() {
@@ -151,6 +154,7 @@ func (r *CustomClusterController) reconcile(ctx context.Context, customCluster *
 // reconcileHandleRunning determine whether customCluster enter succeed phase or initFailed phase by checking the status of the worker
 func (r *CustomClusterController) reconcileHandleRunning(ctx context.Context, customCluster *v1alpha1.CustomCluster) (ctrl.Result, error) {
 	log := ctrl.LoggerFrom(ctx)
+	log.Info("~~~~~~~~~~~~~~~~start reconcileHandleRunning")
 
 	initWorker := &corev1.Pod{}
 	initWorkerKey := getWorkerKey(customCluster, CustomClusterInitAction)
@@ -186,6 +190,7 @@ func (r *CustomClusterController) reconcileHandleRunning(ctx context.Context, cu
 // reconcileHandleTerminating determine whether customCluster enter terminateFailed phase or not
 func (r *CustomClusterController) reconcileHandleTerminating(ctx context.Context, customCluster *v1alpha1.CustomCluster, customMachine *v1alpha1.CustomMachine) (ctrl.Result, error) {
 	log := ctrl.LoggerFrom(ctx)
+	log.Info("~~~~~~~~~~~~~~~~start reconcileHandleTerminating")
 
 	terminateWorker := &corev1.Pod{}
 	terminateWorkerKey := getWorkerKey(customCluster, CustomClusterTerminateAction)
@@ -233,6 +238,7 @@ func vmsClusterIsAlreadyInstalled(customCluster *v1alpha1.CustomCluster) bool {
 // reconcileVMsTerminate uninstall the k8s cluster on VMs.
 func (r *CustomClusterController) reconcileVMsTerminate(ctx context.Context, customCluster *v1alpha1.CustomCluster) (ctrl.Result, error) {
 	log := ctrl.LoggerFrom(ctx)
+	log.Info("~~~~~~~~~~~~~~~~start reconcileHandleRunning")
 
 	// delete init worker.
 	initWorker := &corev1.Pod{}
@@ -273,6 +279,7 @@ func (r *CustomClusterController) reconcileVMsTerminate(ctx context.Context, cus
 // reconcileDeleteResource delete resource related to customCluster: configmap, pod, customMachine customCluster etc.
 func (r *CustomClusterController) reconcileDeleteResource(ctx context.Context, customCluster *v1alpha1.CustomCluster, customMachine *v1alpha1.CustomMachine) (ctrl.Result, error) {
 	log := ctrl.LoggerFrom(ctx)
+	log.Info("~~~~~~~~~~~~~~~~start reconcileHandleRunning")
 
 	// delete cluster-hosts. Due to the existence of ownerReferences, just need to remove finalizer.
 	clusterHostsKey := getClusterHostsKey(customCluster)
@@ -343,6 +350,7 @@ type RelatedResource struct {
 // reconcileCustomClusterInit create an init worker for installing cluster on VMs
 func (r *CustomClusterController) reconcileCustomClusterInit(ctx context.Context, customCluster *v1alpha1.CustomCluster, customMachine *v1alpha1.CustomMachine, cluster *clusterv1.Cluster) (ctrl.Result, error) {
 	log := ctrl.LoggerFrom(ctx)
+	log.Info("~~~~~~~~~~~~~~~~start reconcileHandleRunning")
 
 	// Fetch the KubeadmControlPlane instance.
 	kcpKey := client.ObjectKey{
@@ -385,11 +393,6 @@ func (r *CustomClusterController) reconcileCustomClusterInit(ctx context.Context
 		} else {
 			return ctrl.Result{RequeueAfter: RequeueAfter}, err
 		}
-	}
-
-	// if the err worker is existed, just return nil.
-	if initWorker.Status.Phase == "Failed" {
-		return ctrl.Result{}, nil
 	}
 
 	initRelatedResource := &RelatedResource{
