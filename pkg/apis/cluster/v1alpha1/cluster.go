@@ -26,7 +26,6 @@ import (
 // +kubebuilder:object:root=true
 // +kubebuilder:resource:path=customclusters,shortName=cc
 // +kubebuilder:subresource:status
-// +kubebuilder:printcolumn:name="Cluster",type="string",JSONPath=".metadata.labels['cluster\\.x-k8s\\.io/cluster-name']",description="Cluster"
 
 // CustomCluster is the schema for existing node based Kubernetes Cluster API.
 type CustomCluster struct {
