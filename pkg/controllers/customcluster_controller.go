@@ -238,7 +238,7 @@ func vmsClusterIsAlreadyInstalled(customCluster *v1alpha1.CustomCluster) bool {
 // reconcileVMsTerminate uninstall the k8s cluster on VMs.
 func (r *CustomClusterController) reconcileVMsTerminate(ctx context.Context, customCluster *v1alpha1.CustomCluster) (ctrl.Result, error) {
 	log := ctrl.LoggerFrom(ctx)
-	log.Info("~~~~~~~~~~~~~~~~start reconcileHandleRunning")
+	log.Info("~~~~~~~~~~~~~~~~start reconcileVMsTerminate")
 
 	// delete init worker.
 	initWorker := &corev1.Pod{}
@@ -279,7 +279,7 @@ func (r *CustomClusterController) reconcileVMsTerminate(ctx context.Context, cus
 // reconcileDeleteResource delete resource related to customCluster: configmap, pod, customMachine customCluster etc.
 func (r *CustomClusterController) reconcileDeleteResource(ctx context.Context, customCluster *v1alpha1.CustomCluster, customMachine *v1alpha1.CustomMachine) (ctrl.Result, error) {
 	log := ctrl.LoggerFrom(ctx)
-	log.Info("~~~~~~~~~~~~~~~~start reconcileHandleRunning")
+	log.Info("~~~~~~~~~~~~~~~~start reconcileDeleteResource")
 
 	// delete cluster-hosts. Due to the existence of ownerReferences, just need to remove finalizer.
 	clusterHostsKey := getClusterHostsKey(customCluster)
@@ -350,7 +350,7 @@ type RelatedResource struct {
 // reconcileCustomClusterInit create an init worker for installing cluster on VMs
 func (r *CustomClusterController) reconcileCustomClusterInit(ctx context.Context, customCluster *v1alpha1.CustomCluster, customMachine *v1alpha1.CustomMachine, cluster *clusterv1.Cluster) (ctrl.Result, error) {
 	log := ctrl.LoggerFrom(ctx)
-	log.Info("~~~~~~~~~~~~~~~~start reconcileHandleRunning")
+	log.Info("~~~~~~~~~~~~~~~~start reconcileCustomClusterInit")
 
 	// Fetch the KubeadmControlPlane instance.
 	kcpKey := client.ObjectKey{
