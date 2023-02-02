@@ -365,6 +365,7 @@ func (r *CustomClusterController) reconcileCustomClusterInit(ctx context.Context
 		}
 		return ctrl.Result{RequeueAfter: RequeueAfter}, err
 	}
+	log.Info("~~~~~~~~~~~~~~~~start reconcileCustomClusterInit1")
 
 	var clusterHost *corev1.ConfigMap
 	var errorHost error
@@ -372,6 +373,7 @@ func (r *CustomClusterController) reconcileCustomClusterInit(ctx context.Context
 		log.Error(errorHost, "failed to update cluster-hosts configMap")
 		return ctrl.Result{RequeueAfter: RequeueAfter}, errorHost
 	}
+	log.Info("~~~~~~~~~~~~~~~~start reconcileCustomClusterInit2")
 
 	var clusterConfig *corev1.ConfigMap
 	var errorConfig error
@@ -379,6 +381,7 @@ func (r *CustomClusterController) reconcileCustomClusterInit(ctx context.Context
 		log.Error(errorConfig, "failed to update cluster-config configMap")
 		return ctrl.Result{RequeueAfter: RequeueAfter}, errorConfig
 	}
+	log.Info("~~~~~~~~~~~~~~~~start reconcileCustomClusterInit3")
 
 	// check if init worker already exist. If not, create it
 	initWorkerKey := getWorkerKey(customCluster, CustomClusterInitAction)
@@ -394,6 +397,7 @@ func (r *CustomClusterController) reconcileCustomClusterInit(ctx context.Context
 			return ctrl.Result{RequeueAfter: RequeueAfter}, err
 		}
 	}
+	log.Info("~~~~~~~~~~~~~~~~start reconcileCustomClusterInit4")
 
 	initRelatedResource := &RelatedResource{
 		clusterHosts:  clusterHost,
@@ -407,6 +411,7 @@ func (r *CustomClusterController) reconcileCustomClusterInit(ctx context.Context
 		log.Error(err, "failed to set finalizer or ownerRefs")
 		return ctrl.Result{RequeueAfter: RequeueAfter}, err
 	}
+	log.Info("~~~~~~~~~~~~~~~~start reconcileCustomClusterInit")
 
 	controllerutil.AddFinalizer(customCluster, CustomClusterFinalizer)
 	customCluster.Status.Phase = v1alpha1.RunningPhase
