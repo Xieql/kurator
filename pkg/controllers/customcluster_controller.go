@@ -363,6 +363,7 @@ func (r *CustomClusterController) reconcileCustomClusterInit(ctx context.Context
 			log.Info("Could not find kcp", "kcp", kcpKey)
 			return ctrl.Result{}, nil
 		}
+		log.Error(err, "failed to get kcp", "kcp", kcpKey)
 		return ctrl.Result{RequeueAfter: RequeueAfter}, err
 	}
 	log.Info("~~~~~~~~~~~~~~~~start reconcileCustomClusterInit1")
