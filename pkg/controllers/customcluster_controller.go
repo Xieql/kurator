@@ -410,6 +410,13 @@ func (r *CustomClusterController) reconcileCustomClusterInit(ctx context.Context
 		return ctrl.Result{RequeueAfter: RequeueAfter}, err
 	}
 
+	ownerRefs := metav1.OwnerReference{
+		APIVersion: cluster.APIVersion,
+		Kind:       cluster.Kind,
+		Name:       cluster.Name,
+		UID:        cluster.UID,
+	}
+	customCluster.OwnerReferences = []metav1.OwnerReference{ownerRefs}
 	controllerutil.AddFinalizer(customCluster, CustomClusterFinalizer)
 	customCluster.Status.Phase = v1alpha1.RunningPhase
 	if err1 := r.Status().Update(ctx, customCluster); err1 != nil {
