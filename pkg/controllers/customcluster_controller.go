@@ -224,19 +224,17 @@ func (r *CustomClusterController) reconcileDelete(ctx context.Context, customClu
 	return r.reconcileDeleteResource(ctx, customCluster, customMachine)
 }
 
-// vmsClusterIsAlreadyInstalled determine whether a complete or partial k8s cluster has been installed on the VMs
+// vmsClusterIsAlreadyInstalled determine whether a complete or partial k8s cluster has been installed on the VMs.
 func vmsClusterIsAlreadyInstalled(customCluster *v1alpha1.CustomCluster) bool {
-	if len(customCluster.Status.Phase) != 0 {
-		return true
-	}
-	return false
+	// if an init-worker is created, then it is possible that cluster is already partially installed on VMs.
+	return len(customCluster.Status.Phase) != 0
 }
 
-// reconcileVMsTerminate uninstall the k8s cluster on VMs
+// reconcileVMsTerminate uninstall the k8s cluster on VMs.
 func (r *CustomClusterController) reconcileVMsTerminate(ctx context.Context, customCluster *v1alpha1.CustomCluster) (ctrl.Result, error) {
 	log := ctrl.LoggerFrom(ctx)
 
-	// check if worker already exist. if not, create it
+	// check if worker already exist. if not, create it.
 	terminateWorkerKey := getWorkerKey(customCluster, CustomClusterTerminateAction)
 	workerPod := &corev1.Pod{}
 	if err := r.Client.Get(ctx, terminateWorkerKey, workerPod); err != nil {
@@ -266,7 +264,7 @@ func (r *CustomClusterController) reconcileDeleteResource(ctx context.Context, c
 
 	// delete cluster-hosts. Due to the existence of ownerReferences, just need to remove finalizer.
 	clusterHostsKey := getClusterHostsKey(customCluster)
-	clusterHosts := &corev1.ConfigMap{}
+	var clusterHosts *corev1.ConfigMap
 	if err := r.Client.Get(ctx, clusterHostsKey, clusterHosts); err != nil && !apierrors.IsNotFound(err) {
 		log.Error(err, "failed to get clusterHosts when it should be deleted", "clusterHosts", clusterHostsKey)
 		return ctrl.Result{RequeueAfter: RequeueAfter}, err
@@ -279,7 +277,7 @@ func (r *CustomClusterController) reconcileDeleteResource(ctx context.Context, c
 
 	// delete cluster-config. Due to the existence of  ownerReferences, just need to remove finalizer.
 	clusterConfigKey := getClusterConfigKey(customCluster)
-	clusterConfig := &corev1.ConfigMap{}
+	var clusterConfig *corev1.ConfigMap
 	if err := r.Client.Get(ctx, clusterConfigKey, clusterConfig); err != nil && !apierrors.IsNotFound(err) {
 		log.Error(err, "failed to get clusterConfig when it should be deleted", "clusterConfig", clusterConfigKey)
 		return ctrl.Result{RequeueAfter: RequeueAfter}, err
@@ -360,13 +358,14 @@ func (r *CustomClusterController) reconcileCustomClusterInit(ctx context.Context
 		return ctrl.Result{RequeueAfter: RequeueAfter}, err
 	}
 
-	clusterHost := &corev1.ConfigMap{}
+	var clusterHost *corev1.ConfigMap
 	var errorHost error
 	if clusterHost, errorHost = r.updateClusterHosts(ctx, customCluster, customMachine); errorHost != nil {
 		log.Error(errorHost, "failed to update cluster-hosts configMap")
 		return ctrl.Result{RequeueAfter: RequeueAfter}, errorHost
 	}
-	clusterConfig := &corev1.ConfigMap{}
+
+	var clusterConfig *corev1.ConfigMap
 	var errorConfig error
 	if clusterConfig, errorConfig = r.updateClusterConfig(ctx, customCluster, customCluster, cluster, kcp); errorConfig != nil {
 		log.Error(errorConfig, "failed to update cluster-config configMap")
@@ -375,7 +374,7 @@ func (r *CustomClusterController) reconcileCustomClusterInit(ctx context.Context
 
 	// check if init worker already exist. If not, create it
 	initWorkerKey := getWorkerKey(customCluster, CustomClusterInitAction)
-	initWorker := &corev1.Pod{}
+	var initWorker *corev1.Pod
 	if err := r.Client.Get(ctx, initWorkerKey, initWorker); err != nil {
 		if apierrors.IsNotFound(err) {
 			initClusterPod := r.generateClusterManageWorker(customCluster, CustomClusterInitAction, KubesprayInitCMD)
