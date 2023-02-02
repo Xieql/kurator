@@ -22,6 +22,7 @@ import (
 
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
+	clusterv1alpha1 "kurator.dev/kurator/pkg/apis/cluster/v1alpha1"
 	"sigs.k8s.io/cluster-api/controllers/external"
 	"sigs.k8s.io/cluster-api/util/patch"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -29,9 +30,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
-	"sigs.k8s.io/controller-runtime/pkg/log"
-
-	clusterv1alpha1 "kurator.dev/kurator/pkg/apis/cluster/v1alpha1"
 )
 
 // CustomMachineController reconciles a CustomMachine object
@@ -51,7 +49,7 @@ func (r *CustomMachineController) SetupWithManager(ctx context.Context, mgr ctrl
 }
 
 func (r *CustomMachineController) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
-	log := log.FromContext(ctx)
+	log := ctrl.LoggerFrom(ctx)
 	// Fetch the CustomMachine instance.
 	customMachine := &clusterv1alpha1.CustomMachine{}
 	if err := r.Client.Get(ctx, req.NamespacedName, customMachine); err != nil {
