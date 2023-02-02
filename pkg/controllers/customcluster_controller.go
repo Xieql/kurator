@@ -242,7 +242,7 @@ func (r *CustomClusterController) reconcileVMsTerminate(ctx context.Context, cus
 
 	// delete init worker.
 	initWorker := &corev1.Pod{}
-	initWorkerKey := getWorkerKey(customCluster, CustomClusterTerminateAction)
+	initWorkerKey := getWorkerKey(customCluster, CustomClusterInitAction)
 	if err := r.Client.Get(ctx, initWorkerKey, initWorker); err != nil && !apierrors.IsNotFound(err) {
 		log.Error(err, "failed to get worker when it should be deleted", "worker", initWorkerKey)
 		return ctrl.Result{RequeueAfter: RequeueAfter}, err
