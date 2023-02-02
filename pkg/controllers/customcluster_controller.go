@@ -234,10 +234,22 @@ func vmsClusterIsAlreadyInstalled(customCluster *v1alpha1.CustomCluster) bool {
 func (r *CustomClusterController) reconcileVMsTerminate(ctx context.Context, customCluster *v1alpha1.CustomCluster) (ctrl.Result, error) {
 	log := ctrl.LoggerFrom(ctx)
 
-	// check if worker already exist. if not, create it.
+	// delete init worker.
+	initWorker := &corev1.Pod{}
+	initWorkerKey := getWorkerKey(customCluster, CustomClusterTerminateAction)
+	if err := r.Client.Get(ctx, initWorkerKey, initWorker); err != nil && !apierrors.IsNotFound(err) {
+		log.Error(err, "failed to get worker when it should be deleted", "worker", initWorkerKey)
+		return ctrl.Result{RequeueAfter: RequeueAfter}, err
+	}
+	if err := r.Client.Delete(ctx, initWorker); err != nil && !apierrors.IsNotFound(err) {
+		log.Error(err, "failed to delete worker", "worker", initWorkerKey)
+		return ctrl.Result{RequeueAfter: RequeueAfter}, err
+	}
+
+	// check if terminate-worker already exist. if not, create it.
 	terminateWorkerKey := getWorkerKey(customCluster, CustomClusterTerminateAction)
-	workerPod := &corev1.Pod{}
-	if err := r.Client.Get(ctx, terminateWorkerKey, workerPod); err != nil {
+	terminateWorkerPod := &corev1.Pod{}
+	if err := r.Client.Get(ctx, terminateWorkerKey, terminateWorkerPod); err != nil {
 		if apierrors.IsNotFound(err) {
 			terminateClusterPod := r.generateClusterManageWorker(customCluster, CustomClusterTerminateAction, KubesprayTerminateCMD)
 			if err1 := r.Client.Create(ctx, terminateClusterPod); err1 != nil {
@@ -285,18 +297,6 @@ func (r *CustomClusterController) reconcileDeleteResource(ctx context.Context, c
 	controllerutil.RemoveFinalizer(clusterConfig, CustomClusterConfigMapFinalizer)
 	if err := r.Client.Update(ctx, clusterConfig); err != nil && !apierrors.IsNotFound(err) {
 		log.Error(err, "failed to remove finalizer of clusterConfig  when it should be deleted", "clusterConfig", clusterConfigKey)
-		return ctrl.Result{RequeueAfter: RequeueAfter}, err
-	}
-
-	// delete init worker.
-	initWorker := &corev1.Pod{}
-	initWorkerKey := getWorkerKey(customCluster, CustomClusterTerminateAction)
-	if err := r.Client.Get(ctx, initWorkerKey, initWorker); err != nil && !apierrors.IsNotFound(err) {
-		log.Error(err, "failed to get worker when it should be deleted", "worker", initWorkerKey)
-		return ctrl.Result{RequeueAfter: RequeueAfter}, err
-	}
-	if err := r.Client.Delete(ctx, initWorker); err != nil && !apierrors.IsNotFound(err) {
-		log.Error(err, "failed to delete worker", "worker", initWorkerKey)
 		return ctrl.Result{RequeueAfter: RequeueAfter}, err
 	}
 
