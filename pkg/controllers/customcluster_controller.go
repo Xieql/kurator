@@ -120,7 +120,9 @@ func (r *CustomClusterController) Reconcile(ctx context.Context, req ctrl.Reques
 		return ctrl.Result{RequeueAfter: RequeueAfter}, err
 	}
 
-	return r.reconcile(ctx, customCluster, customMachine, cluster)
+	return ctrl.Result{}, nil
+
+	//return r.reconcile(ctx, customCluster, customMachine, cluster)
 }
 
 // reconcile handles CustomCluster reconciliation.
