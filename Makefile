@@ -148,6 +148,7 @@ init-codegen:
 .PHONY: gen-crd
 gen-crd: init-codegen ## Generate WebhookConfiguration, ClusterRole and CustomResourceDefinition objects.
 	$(CONTROLLER_GEN) crd  paths="./pkg/apis/cluster/..." output:crd:dir=$(CRD_PATH)
+	kubectl kustomize manifests/charts/ -o manifests/charts/base/templates/cluster.kurator.dev_customclusters.yaml
 
 .PHONY: generate
 generate: init-codegen ## Generate code containing DeepCopy, DeepCopyInto, and DeepCopyObject method implementations.
