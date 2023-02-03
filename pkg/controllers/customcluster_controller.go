@@ -335,16 +335,16 @@ func (r *CustomClusterController) reconcileDeleteResource(ctx context.Context, c
 		log.Error(err, "failed to remove finalizer of customCluster", "customCluster", customCluster.Name)
 		return ctrl.Result{RequeueAfter: RequeueAfter}, err
 	}
-	// remove cluster finalizer
-	controllerutil.RemoveFinalizer(cluster, ClusterFinalizer)
-	if err := r.Client.Update(ctx, cluster); err != nil && !apierrors.IsNotFound(err) {
-		log.Error(err, "failed to remove finalizer of cluster", "cluster", cluster.Name)
-		return ctrl.Result{RequeueAfter: RequeueAfter}, err
-	}
-	if err := r.Client.Delete(ctx, customCluster); err != nil && !apierrors.IsNotFound(err) {
-		log.Error(err, "failed to delete customCluster", "customCluster", customCluster.Name)
-		return ctrl.Result{RequeueAfter: RequeueAfter}, err
-	}
+	//// remove cluster finalizer
+	//controllerutil.RemoveFinalizer(cluster, ClusterFinalizer)
+	//if err := r.Client.Update(ctx, cluster); err != nil && !apierrors.IsNotFound(err) {
+	//	log.Error(err, "failed to remove finalizer of cluster", "cluster", cluster.Name)
+	//	return ctrl.Result{RequeueAfter: RequeueAfter}, err
+	//}
+	//if err := r.Client.Delete(ctx, customCluster); err != nil && !apierrors.IsNotFound(err) {
+	//	log.Error(err, "failed to delete customCluster", "customCluster", customCluster.Name)
+	//	return ctrl.Result{RequeueAfter: RequeueAfter}, err
+	//}
 
 	return ctrl.Result{}, nil
 }
@@ -673,7 +673,9 @@ download_container: false
 download_localhost: true
 # network
 kube_pods_subnet: {{ .PodCIDR }}
+kube_network_plugin: cilium
 `))
+	// todo: kube_network_plugin default calico and can choose ["calico", "flannel", "canal", "cilium"]
 
 	if err := tmpl.Execute(configData, configContent); err != nil {
 		return nil, err
