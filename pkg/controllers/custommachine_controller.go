@@ -71,7 +71,7 @@ func (r *CustomMachineController) reconcile(ctx context.Context, customMachine *
 	if err != nil {
 		if apierrors.IsNotFound(err) {
 			log.Info("Could not find external object for CustomMachine, requeuing", "refGroupVersionKind", keyRef.GroupVersionKind(), "refName", keyRef.Name)
-			return ctrl.Result{RequeueAfter: 30 * time.Second}, nil
+			return ctrl.Result{RequeueAfter: 5 * time.Second}, nil
 		}
 		return ctrl.Result{}, err
 	}
