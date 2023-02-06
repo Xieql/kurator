@@ -19,6 +19,7 @@ package controllers
 import (
 	"context"
 	"fmt"
+	"istio.io/pkg/log"
 	"strings"
 	"text/template"
 	"time"
@@ -82,9 +83,10 @@ func (r *CustomClusterController) Reconcile(ctx context.Context, req ctrl.Reques
 	customCluster := &v1alpha1.CustomCluster{}
 	if err := r.Client.Get(ctx, req.NamespacedName, customCluster); err != nil {
 		if apierrors.IsNotFound(err) {
-			log.Info("Could not find customCluster", "customCluster", req)
+			log.Info("customCluster is not exist", "customCluster", req)
 			return ctrl.Result{}, nil
 		}
+		log.Error(err, "failed to find customCluster", "customCluster", req)
 		// Error reading the object - requeue the request.
 		return ctrl.Result{RequeueAfter: RequeueAfter}, err
 	}
@@ -92,17 +94,14 @@ func (r *CustomClusterController) Reconcile(ctx context.Context, req ctrl.Reques
 	ctx = ctrl.LoggerInto(ctx, log)
 
 	// Fetch the Cluster instance
-	clusterKey := client.ObjectKey{
-		Namespace: customCluster.Spec.ClusterRef.Namespace,
-		Name:      customCluster.Spec.ClusterRef.Name,
-	}
-	cluster := &clusterv1.Cluster{}
-	if err := r.Client.Get(ctx, clusterKey, cluster); err != nil {
-		if apierrors.IsNotFound(err) {
-			log.Info("Could not find cluster", "cluster", clusterKey)
+	cluster, err1 := r.fetchClusterFromCustomCluster(ctx, customCluster)
+	if err1 != nil {
+		if apierrors.IsNotFound(err1) {
+			log.Info("cluster is not exist", "customCluster", customCluster)
 			return ctrl.Result{}, nil
 		}
-		return ctrl.Result{RequeueAfter: RequeueAfter}, err
+		log.Error(err1, "failed to find cluster by customCluster", "customCluster", customCluster)
+		return ctrl.Result{RequeueAfter: RequeueAfter}, err1
 	}
 
 	// Fetch the CustomMachine instance.
@@ -113,13 +112,47 @@ func (r *CustomClusterController) Reconcile(ctx context.Context, req ctrl.Reques
 	customMachine := &v1alpha1.CustomMachine{}
 	if err := r.Client.Get(ctx, customMachinekey, customMachine); err != nil {
 		if apierrors.IsNotFound(err) {
-			log.Info("Could not find customMachine", "customMachine", customMachinekey)
+			log.Info("customMachine is not exist", "customMachine", customMachinekey)
 			return ctrl.Result{}, nil
 		}
+		log.Error(err, "failed to find customMachine", "customMachine", customMachinekey)
 		return ctrl.Result{RequeueAfter: RequeueAfter}, err
 	}
 
 	return r.reconcile(ctx, customCluster, customMachine, cluster)
+}
+
+func (r *CustomClusterController) fetchClusterFromCustomCluster(ctx context.Context, customCluster *v1alpha1.CustomCluster) (*clusterv1.Cluster, error) {
+	var clusterName string
+	for _, owner := range customCluster.GetOwnerReferences() {
+		if owner.Kind == "Cluster" {
+			clusterName = owner.Name
+			break
+		}
+	}
+	clusterKey := client.ObjectKey{
+		Namespace: customCluster.GetNamespace(),
+		Name:      clusterName,
+	}
+	cluster := &clusterv1.Cluster{}
+	return cluster, r.Client.Get(ctx, clusterKey, cluster)
+}
+
+func (r *CustomClusterController) ensureClusterFinalizer(ctx context.Context, customCluster *v1alpha1.CustomCluster) error {
+
+	if len(customCluster.Finalizers) == 0 {
+		log.Info("################## there is no cc finalizer in customCluster, and we will add it")
+		controllerutil.AddFinalizer(customCluster, CustomClusterFinalizer)
+		if err := r.Status().Update(ctx, customCluster); err != nil {
+			log.Error(err, "failed to update cc finalizer", "customCluster", customCluster.Name)
+			return err
+		}
+
+	}
+
+	log.Info("!!!!!!!!!!!! there has cc finalizer !!!!!!!!!!!!!!!!!!")
+
+	return nil
 }
 
 // reconcile handles CustomCluster reconciliation.
@@ -159,10 +192,10 @@ func (r *CustomClusterController) reconcileHandleRunning(ctx context.Context, cu
 	initWorkerKey := getWorkerKey(customCluster, CustomClusterInitAction)
 	if err := r.Client.Get(ctx, initWorkerKey, initWorker); err != nil {
 		if apierrors.IsNotFound(err) {
-			log.Info("Could not find worker", "worker", initWorkerKey)
+			log.Info("failed to find worker", "worker", initWorkerKey)
 			return ctrl.Result{}, nil
 		}
-		log.Error(err, "failed to get init worker. maybe it has been deleted.", "worker", initWorkerKey)
+		log.Error(err, "failed to get init worker.", "worker", initWorkerKey)
 		return ctrl.Result{RequeueAfter: RequeueAfter}, err
 	}
 
@@ -781,7 +814,7 @@ func (r *CustomClusterController) KcpToCustomClusterMapFunc(o client.Object) []c
 	// Find the cluster from kcp
 	clusterKey := client.ObjectKey{}
 	for _, owner := range c.GetOwnerReferences() {
-		if owner.Kind == "CustomCluster" {
+		if owner.Kind == "Cluster" {
 			clusterKey = client.ObjectKey{Namespace: c.GetNamespace(), Name: owner.Name}
 			break
 		}
