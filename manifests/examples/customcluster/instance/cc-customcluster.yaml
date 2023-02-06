@@ -4,6 +4,7 @@ metadata:
   name: cc-customcluster
   namespace: default
 spec:
+  cniPlugin: cilium
   machineRef:
     apiVersion: cluster.kurator.dev/v1alpha1
     kind: CustomMachine

@@ -528,14 +528,17 @@ type HostTemplateContent struct {
 type ConfigTemplateContent struct {
 	KubeVersion string
 	PodCIDR     string
+	// CNIPlugin is the CNI plugin of the cluster on VMs. The default plugin is calico and can be ["calico", "cilium", "canal", "flannel"]
+	CNIPlugin string
 	// TODO: support other kubernetes configs
 }
 
-func GetConfigContent(c *clusterv1.Cluster, kcp *controlplanev1.KubeadmControlPlane) *ConfigTemplateContent {
+func GetConfigContent(c *clusterv1.Cluster, kcp *controlplanev1.KubeadmControlPlane, cc *v1alpha1.CustomCluster) *ConfigTemplateContent {
 	// Add kubespray init config here
 	configContent := &ConfigTemplateContent{
 		PodCIDR:     c.Spec.ClusterNetwork.Pods.CIDRBlocks[0],
 		KubeVersion: kcp.Spec.Version,
+		CNIPlugin:   cc.Spec.CNIPlugin,
 	}
 	return configContent
 }
@@ -626,7 +629,7 @@ kube_control_plane
 }
 
 func (r *CustomClusterController) generateClusterConfig(ctx context.Context, c *clusterv1.Cluster, kcp *controlplanev1.KubeadmControlPlane, cc *v1alpha1.CustomCluster) (*corev1.ConfigMap, error) {
-	configContent := GetConfigContent(c, kcp)
+	configContent := GetConfigContent(c, kcp, cc)
 	configData := &strings.Builder{}
 
 	// todo: split this to a separated file
@@ -637,9 +640,8 @@ download_container: false
 download_localhost: true
 # network
 kube_pods_subnet: {{ .PodCIDR }}
-kube_network_plugin: cilium
+kube_network_plugin: {{ .CNIPlugin }}
 `))
-	// todo: kube_network_plugin default calico and can choose ["calico", "flannel", "canal", "cilium"]
 
 	if err := tmpl.Execute(configData, configContent); err != nil {
 		return nil, err

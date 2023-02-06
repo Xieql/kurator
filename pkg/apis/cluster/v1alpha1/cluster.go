@@ -48,6 +48,10 @@ type CustomClusterSpec struct {
 	// MachineRef is the reference of nodes for provisioning a kurator cluster.
 	// +optional
 	MachineRef *corev1.ObjectReference `json:"machineRef,omitempty"`
+
+	// CNIPlugin is the CNI plugin of the cluster on VMs. The default plugin is calico and can be ["calico", "cilium", "canal", "flannel"]
+	// +optional
+	CNIPlugin string `json:"cniPlugin,omitempty"`
 }
 
 type CustomClusterPhase string
