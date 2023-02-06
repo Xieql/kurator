@@ -71,7 +71,6 @@ const (
 	CustomClusterFinalizer = "customcluster.cluster.kurator.dev"
 	// custom configmap finalizer requires at least one slash
 	CustomClusterConfigMapFinalizer = CustomClusterFinalizer + "/configmap"
-	ClusterFinalizer                = "cluster.cluster.x-k8s.io"
 )
 
 // Reconcile is part of the main kubernetes reconciliation loop which aims to
@@ -127,16 +126,15 @@ func (r *CustomClusterController) Reconcile(ctx context.Context, req ctrl.Reques
 func (r *CustomClusterController) reconcile(ctx context.Context, customCluster *v1alpha1.CustomCluster, customMachine *v1alpha1.CustomMachine, cluster *clusterv1.Cluster) (ctrl.Result, error) {
 	phase := customCluster.Status.Phase
 	log := ctrl.LoggerFrom(ctx)
-
 	log.Info("~~~~~~~~~~~~~~~~start reconcile")
 
 	// if upstream cluster at pre-delete, the customCluster need to be deleted.
 	if !cluster.DeletionTimestamp.IsZero() {
 		// if customCluster is already in phase terminating, the controller will check the terminating worker to handle terminating process.
 		if phase == v1alpha1.TerminatingPhase {
-			return r.reconcileHandleTerminating(ctx, customCluster, customMachine, cluster)
+			return r.reconcileHandleTerminating(ctx, customCluster, customMachine)
 		}
-		return r.reconcileDelete(ctx, customCluster, customMachine, cluster)
+		return r.reconcileDelete(ctx, customCluster, customMachine)
 	}
 
 	// customCluster in phase nil or initFailed will try to enter running phase by creating an init worker successfully.
@@ -189,7 +187,7 @@ func (r *CustomClusterController) reconcileHandleRunning(ctx context.Context, cu
 }
 
 // reconcileHandleTerminating determine whether customCluster enter terminateFailed phase or not
-func (r *CustomClusterController) reconcileHandleTerminating(ctx context.Context, customCluster *v1alpha1.CustomCluster, customMachine *v1alpha1.CustomMachine, cluster *clusterv1.Cluster) (ctrl.Result, error) {
+func (r *CustomClusterController) reconcileHandleTerminating(ctx context.Context, customCluster *v1alpha1.CustomCluster, customMachine *v1alpha1.CustomMachine) (ctrl.Result, error) {
 	log := ctrl.LoggerFrom(ctx)
 	log.Info("~~~~~~~~~~~~~~~~start reconcileHandleTerminating")
 
@@ -207,7 +205,7 @@ func (r *CustomClusterController) reconcileHandleTerminating(ctx context.Context
 
 	if terminateWorker.Status.Phase == "Succeeded" {
 		// after k8s on VMs has been reset successful, we need delete the related CRD
-		return r.reconcileDeleteResource(ctx, customCluster, customMachine, cluster)
+		return r.reconcileDeleteResource(ctx, customCluster, customMachine)
 	}
 
 	if terminateWorker.Status.Phase == "Failed" {
@@ -223,11 +221,11 @@ func (r *CustomClusterController) reconcileHandleTerminating(ctx context.Context
 }
 
 // reconcileDelete. If k8s cluster has been installed on VMs then we should uninstall it first, otherwise we just should delete related CRD
-func (r *CustomClusterController) reconcileDelete(ctx context.Context, customCluster *v1alpha1.CustomCluster, customMachine *v1alpha1.CustomMachine, cluster *clusterv1.Cluster) (ctrl.Result, error) {
+func (r *CustomClusterController) reconcileDelete(ctx context.Context, customCluster *v1alpha1.CustomCluster, customMachine *v1alpha1.CustomMachine) (ctrl.Result, error) {
 	if vmsClusterIsAlreadyInstalled(customCluster) {
 		return r.reconcileVMsTerminate(ctx, customCluster)
 	}
-	return r.reconcileDeleteResource(ctx, customCluster, customMachine, cluster)
+	return r.reconcileDeleteResource(ctx, customCluster, customMachine)
 }
 
 // vmsClusterIsAlreadyInstalled determine whether a complete or partial k8s cluster has been installed on the VMs.
@@ -278,7 +276,7 @@ func (r *CustomClusterController) reconcileVMsTerminate(ctx context.Context, cus
 }
 
 // reconcileDeleteResource delete resource related to customCluster: configmap, pod, customMachine customCluster etc.
-func (r *CustomClusterController) reconcileDeleteResource(ctx context.Context, customCluster *v1alpha1.CustomCluster, customMachine *v1alpha1.CustomMachine, cluster *clusterv1.Cluster) (ctrl.Result, error) {
+func (r *CustomClusterController) reconcileDeleteResource(ctx context.Context, customCluster *v1alpha1.CustomCluster, customMachine *v1alpha1.CustomMachine) (ctrl.Result, error) {
 	log := ctrl.LoggerFrom(ctx)
 	log.Info("~~~~~~~~~~~~~~~~start reconcileDeleteResource")
 
@@ -327,22 +325,12 @@ func (r *CustomClusterController) reconcileDeleteResource(ctx context.Context, c
 		return ctrl.Result{RequeueAfter: RequeueAfter}, err
 	}
 
-	// delete customCluster.
+	// delete customCluster. After this, cluster will be deleted completely.
 	controllerutil.RemoveFinalizer(customCluster, CustomClusterFinalizer)
 	if err := r.Client.Update(ctx, customCluster); err != nil && !apierrors.IsNotFound(err) {
 		log.Error(err, "failed to remove finalizer of customCluster", "customCluster", customCluster.Name)
 		return ctrl.Result{RequeueAfter: RequeueAfter}, err
 	}
-	//// remove cluster finalizer
-	//controllerutil.RemoveFinalizer(cluster, ClusterFinalizer)
-	//if err := r.Client.Update(ctx, cluster); err != nil && !apierrors.IsNotFound(err) {
-	//	log.Error(err, "failed to remove finalizer of cluster", "cluster", cluster.Name)
-	//	return ctrl.Result{RequeueAfter: RequeueAfter}, err
-	//}
-	//if err := r.Client.Delete(ctx, customCluster); err != nil && !apierrors.IsNotFound(err) {
-	//	log.Error(err, "failed to delete customCluster", "customCluster", customCluster.Name)
-	//	return ctrl.Result{RequeueAfter: RequeueAfter}, err
-	//}
 
 	return ctrl.Result{}, nil
 }
@@ -410,20 +398,13 @@ func (r *CustomClusterController) reconcileCustomClusterInit(ctx context.Context
 		customCluster: customCluster,
 		customMachine: customMachine,
 	}
-
 	// when all related object is ready, we need ensure object's finalizer and ownerRef is set appropriately
 	if err := r.ensureFinalizerAndOwnerRef(ctx, initRelatedResource); err != nil {
 		log.Error(err, "failed to set finalizer or ownerRefs")
 		return ctrl.Result{RequeueAfter: RequeueAfter}, err
 	}
 
-	ownerRefs := metav1.OwnerReference{
-		APIVersion: cluster.APIVersion,
-		Kind:       cluster.Kind,
-		Name:       cluster.Name,
-		UID:        cluster.UID,
-	}
-	customCluster.OwnerReferences = []metav1.OwnerReference{ownerRefs}
+	// ensure customCluster finalizer, so as not to be directly deleted by clusterAPI controller
 	controllerutil.AddFinalizer(customCluster, CustomClusterFinalizer)
 	customCluster.Status.Phase = v1alpha1.RunningPhase
 	if err1 := r.Status().Update(ctx, customCluster); err1 != nil {
