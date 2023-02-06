@@ -65,8 +65,6 @@ const (
 	// TODO: support custom this in CustomCluster/CustomMachine
 	DefaultKubesprayImage = "quay.io/kubespray/kubespray:v2.20.0"
 
-	WorkerLabelKey = "customClusterName"
-
 	// CustomClusterFinalizer is the finalizer applied to crd
 	CustomClusterFinalizer = "customcluster.cluster.kurator.dev"
 	// custom configmap finalizer requires at least one slash
@@ -306,14 +304,14 @@ func (r *CustomClusterController) reconcileDeleteResource(ctx context.Context, c
 		return ctrl.Result{RequeueAfter: RequeueAfter}, err
 	}
 
-	// delete customMachine. Due to the existence of ownerReferences, just need to remove finalizer.
+	//  remove finalizer of customMachine.
 	controllerutil.RemoveFinalizer(customMachine, CustomClusterFinalizer)
 	if err := r.Client.Update(ctx, customMachine); err != nil && !apierrors.IsNotFound(err) {
 		log.Error(err, "failed to remove finalizer of customMachine when it should be deleted", "customMachine", customMachine.Name)
 		return ctrl.Result{RequeueAfter: RequeueAfter}, err
 	}
 
-	// delete customCluster. After this, cluster will be deleted completely.
+	// remove finalizer of customCluster. After this, cluster will be deleted completely.
 	controllerutil.RemoveFinalizer(customCluster, CustomClusterFinalizer)
 	if err := r.Client.Update(ctx, customCluster); err != nil && !apierrors.IsNotFound(err) {
 		log.Error(err, "failed to remove finalizer of customCluster", "customCluster", customCluster.Name)
@@ -446,13 +444,11 @@ func (r *CustomClusterController) generateClusterManageWorker(customCluster *v1a
 	podName := customCluster.Name + "-" + string(manageAction)
 	namespace := customCluster.Namespace
 	defaultMode := int32(0o600)
-	labels := map[string]string{WorkerLabelKey: customCluster.Name}
 
 	managerWorker := &corev1.Pod{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: namespace,
 			Name:      podName,
-			Labels:    labels,
 		},
 		TypeMeta: metav1.TypeMeta{
 			Kind:       "Pod",
@@ -726,9 +722,12 @@ func (r *CustomClusterController) WorkerToCustomClusterMapFunc(o client.Object) 
 	if !ok {
 		panic(fmt.Sprintf("Expected a Cluster but got a %T", o))
 	}
-	if len(c.Labels[WorkerLabelKey]) != 0 {
-		return []ctrl.Request{{NamespacedName: client.ObjectKey{Namespace: c.Namespace, Name: c.Labels[WorkerLabelKey]}}}
+	for _, owner := range c.GetOwnerReferences() {
+		if owner.Kind == "CustomCluster" {
+			return []ctrl.Request{{NamespacedName: client.ObjectKey{Namespace: c.Namespace, Name: owner.Name}}}
+		}
 	}
+
 	return nil
 }
 
