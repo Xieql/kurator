@@ -144,15 +144,13 @@ func (r *CustomClusterController) ensureClusterFinalizer(ctx context.Context, cu
 	if len(customCluster.Finalizers) == 0 {
 		log.Info("################## there is no cc finalizer in customCluster, and we will add it")
 		controllerutil.AddFinalizer(customCluster, CustomClusterFinalizer)
-		if err := r.Status().Update(ctx, customCluster); err != nil {
+		if err := r.Update(ctx, customCluster); err != nil {
 			log.Error(err, "failed to update cc finalizer", "customCluster", customCluster.Name)
 			return err
 		}
-
+		return nil
 	}
-
 	log.Info("!!!!!!!!!!!! there has cc finalizer !!!!!!!!!!!!!!!!!!")
-
 	return nil
 }
 
@@ -439,7 +437,6 @@ func (r *CustomClusterController) reconcileCustomClusterInit(ctx context.Context
 	}
 
 	// ensure customCluster finalizer, so as not to be directly deleted by clusterAPI controller
-	controllerutil.AddFinalizer(customCluster, CustomClusterFinalizer)
 	customCluster.Status.Phase = v1alpha1.RunningPhase
 	if err1 := r.Status().Update(ctx, customCluster); err1 != nil {
 		log.Error(err1, "failed to update customCluster", "customCluster", customCluster.Name)
@@ -454,6 +451,7 @@ func (r *CustomClusterController) reconcileCustomClusterInit(ctx context.Context
 func (r *CustomClusterController) ensureFinalizerAndOwnerRef(ctx context.Context, res *RelatedResource) error {
 	log := ctrl.LoggerFrom(ctx)
 
+	controllerutil.AddFinalizer(res.customCluster, CustomClusterFinalizer)
 	controllerutil.AddFinalizer(res.customMachine, CustomClusterFinalizer)
 	controllerutil.AddFinalizer(res.clusterHosts, CustomClusterConfigMapFinalizer)
 	controllerutil.AddFinalizer(res.clusterConfig, CustomClusterConfigMapFinalizer)
@@ -474,12 +472,17 @@ func (r *CustomClusterController) ensureFinalizerAndOwnerRef(ctx context.Context
 	}
 
 	if err := r.Client.Update(ctx, res.clusterHosts); err != nil {
-		log.Error(err, "failed to set finalizer or ownerRef of clusterHosts", res.clusterHosts.Name)
+		log.Error(err, "failed to set finalizer or ownerRef of clusterHosts", "clusterHosts-name", res.clusterHosts.Name)
 		return err
 	}
 
 	if err := r.Client.Update(ctx, res.clusterConfig); err != nil {
-		log.Error(err, "failed to set finalizer or ownerRef of clusterConfig", res.clusterConfig.Name)
+		log.Error(err, "failed to set finalizer or ownerRef of clusterConfig", "clusterConfig-name", res.clusterConfig.Name)
+		return err
+	}
+
+	if err := r.Client.Update(ctx, res.customCluster); err != nil {
+		log.Error(err, "failed to set finalizer", "", "customCluster-name", res.customCluster.Name)
 		return err
 	}
 
