@@ -93,7 +93,7 @@ func (r *CustomClusterController) Reconcile(ctx context.Context, req ctrl.Reques
 	ctx = ctrl.LoggerInto(ctx, log)
 
 	// Fetch the Cluster instance
-	cluster, err1 := r.fetchClusterFromCustomCluster(ctx, customCluster)
+	cluster, err1 := r.getClusterFromCustomCluster(ctx, customCluster)
 	if err1 != nil {
 		if apierrors.IsNotFound(err1) {
 			log.Info("cluster is not exist", "customCluster", customCluster)
@@ -119,22 +119,6 @@ func (r *CustomClusterController) Reconcile(ctx context.Context, req ctrl.Reques
 	}
 
 	return r.reconcile(ctx, customCluster, customMachine, cluster)
-}
-
-func (r *CustomClusterController) fetchClusterFromCustomCluster(ctx context.Context, customCluster *v1alpha1.CustomCluster) (*clusterv1.Cluster, error) {
-	var clusterName string
-	for _, owner := range customCluster.GetOwnerReferences() {
-		if owner.Kind == "Cluster" {
-			clusterName = owner.Name
-			break
-		}
-	}
-	clusterKey := client.ObjectKey{
-		Namespace: customCluster.GetNamespace(),
-		Name:      clusterName,
-	}
-	cluster := &clusterv1.Cluster{}
-	return cluster, r.Client.Get(ctx, clusterKey, cluster)
 }
 
 // reconcile handles CustomCluster reconciliation.
@@ -344,7 +328,6 @@ type RelatedResource struct {
 	clusterConfig *corev1.ConfigMap
 	customCluster *v1alpha1.CustomCluster
 	customMachine *v1alpha1.CustomMachine
-	initPod       *corev1.Pod
 }
 
 // reconcileCustomClusterInit create an init worker for installing cluster on VMs
@@ -387,6 +370,7 @@ func (r *CustomClusterController) reconcileCustomClusterInit(ctx context.Context
 	if err := r.Client.Get(ctx, initWorkerKey, initWorker); err != nil {
 		if apierrors.IsNotFound(err) {
 			initClusterPod := r.generateClusterManageWorker(customCluster, CustomClusterInitAction, KubesprayInitCMD)
+			initClusterPod.OwnerReferences = []metav1.OwnerReference{generateOwnerRefFromCustomCluster(customCluster)}
 			if err1 := r.Client.Create(ctx, initClusterPod); err1 != nil {
 				log.Error(err1, "failed to create customCluster init worker", "initWorker", initWorkerKey)
 				return ctrl.Result{RequeueAfter: RequeueAfter}, err1
@@ -402,7 +386,6 @@ func (r *CustomClusterController) reconcileCustomClusterInit(ctx context.Context
 		clusterConfig: clusterConfig,
 		customCluster: customCluster,
 		customMachine: customMachine,
-		initPod:       initWorker,
 	}
 	// when all related object is ready, we need ensure object's finalizer and ownerRef is set appropriately
 	if err := r.ensureFinalizerAndOwnerRef(ctx, initRelatedResource); err != nil {
@@ -434,7 +417,6 @@ func (r *CustomClusterController) ensureFinalizerAndOwnerRef(ctx context.Context
 	res.customMachine.OwnerReferences = []metav1.OwnerReference{ownerRefs}
 	res.clusterHosts.OwnerReferences = []metav1.OwnerReference{ownerRefs}
 	res.clusterConfig.OwnerReferences = []metav1.OwnerReference{ownerRefs}
-	res.initPod.OwnerReferences = []metav1.OwnerReference{ownerRefs}
 
 	if err := r.Client.Update(ctx, res.customMachine); err != nil {
 		log.Error(err, "failed to set finalizer or ownerRef of customMachine", "customMachine-name", res.customMachine.Name)
@@ -453,11 +435,6 @@ func (r *CustomClusterController) ensureFinalizerAndOwnerRef(ctx context.Context
 
 	if err := r.Client.Update(ctx, res.customCluster); err != nil {
 		log.Error(err, "failed to set finalizer of customCluster", "customCluster-name", res.customCluster.Name)
-		return err
-	}
-
-	if err := r.Client.Update(ctx, res.initPod); err != nil {
-		log.Error(err, "failed to set ownerRef of initPod", "initPod-name", res.initPod.Name)
 		return err
 	}
 
@@ -840,4 +817,20 @@ func generateOwnerRefFromCustomCluster(customCluster *v1alpha1.CustomCluster) me
 		Name:       customCluster.Name,
 		UID:        customCluster.UID,
 	}
+}
+
+func (r *CustomClusterController) getClusterFromCustomCluster(ctx context.Context, customCluster *v1alpha1.CustomCluster) (*clusterv1.Cluster, error) {
+	var clusterName string
+	for _, owner := range customCluster.GetOwnerReferences() {
+		if owner.Kind == "Cluster" {
+			clusterName = owner.Name
+			break
+		}
+	}
+	clusterKey := client.ObjectKey{
+		Namespace: customCluster.GetNamespace(),
+		Name:      clusterName,
+	}
+	cluster := &clusterv1.Cluster{}
+	return cluster, r.Client.Get(ctx, clusterKey, cluster)
 }
