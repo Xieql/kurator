@@ -289,6 +289,7 @@ func (r *CustomClusterController) reconcileVMsTerminate(ctx context.Context, cus
 	if err := r.Client.Get(ctx, terminateWorkerKey, terminateWorkerPod); err != nil {
 		if apierrors.IsNotFound(err) {
 			terminateClusterPod := r.generateClusterManageWorker(customCluster, CustomClusterTerminateAction, KubesprayTerminateCMD)
+			terminateClusterPod.OwnerReferences = []metav1.OwnerReference{generateOwnerRefFromCustomCluster(customCluster)}
 			if err1 := r.Client.Create(ctx, terminateClusterPod); err1 != nil {
 				log.Error(err1, "failed to create customCluster terminate worker")
 				return ctrl.Result{RequeueAfter: RequeueAfter}, err1
@@ -312,7 +313,7 @@ func (r *CustomClusterController) reconcileDeleteResource(ctx context.Context, c
 	log := ctrl.LoggerFrom(ctx)
 	log.Info("~~~~~~~~~~~~~~~~start reconcileDeleteResource")
 
-	// delete cluster-hosts. Due to the existence of ownerReferences, just need to remove finalizer.
+	// remove finalizer of clusterHosts.
 	clusterHostsKey := generateClusterHostsKey(customCluster)
 	clusterHosts := &corev1.ConfigMap{}
 	if err := r.Client.Get(ctx, clusterHostsKey, clusterHosts); err != nil && !apierrors.IsNotFound(err) {
@@ -325,7 +326,7 @@ func (r *CustomClusterController) reconcileDeleteResource(ctx context.Context, c
 		return ctrl.Result{RequeueAfter: RequeueAfter}, err
 	}
 
-	// delete cluster-config. Due to the existence of  ownerReferences, just need to remove finalizer.
+	// remove finalizer of clusterConfig.
 	clusterConfigKey := generateClusterConfigKey(customCluster)
 	clusterConfig := &corev1.ConfigMap{}
 	if err := r.Client.Get(ctx, clusterConfigKey, clusterConfig); err != nil && !apierrors.IsNotFound(err) {
@@ -335,18 +336,6 @@ func (r *CustomClusterController) reconcileDeleteResource(ctx context.Context, c
 	controllerutil.RemoveFinalizer(clusterConfig, CustomClusterConfigMapFinalizer)
 	if err := r.Client.Update(ctx, clusterConfig); err != nil && !apierrors.IsNotFound(err) {
 		log.Error(err, "failed to remove finalizer of clusterConfig  when it should be deleted", "clusterConfig", clusterConfigKey)
-		return ctrl.Result{RequeueAfter: RequeueAfter}, err
-	}
-
-	// delete terminal worker.
-	terminateWorker := &corev1.Pod{}
-	terminateWorkerKey := generateWorkerKey(customCluster, CustomClusterTerminateAction)
-	if err := r.Client.Get(ctx, terminateWorkerKey, terminateWorker); err != nil && !apierrors.IsNotFound(err) {
-		log.Error(err, "failed to get worker when it should be deleted", "worker", terminateWorkerKey)
-		return ctrl.Result{RequeueAfter: RequeueAfter}, err
-	}
-	if err := r.Client.Delete(ctx, terminateWorker); err != nil && !apierrors.IsNotFound(err) {
-		log.Error(err, "failed to delete worker", "worker", terminateWorkerKey)
 		return ctrl.Result{RequeueAfter: RequeueAfter}, err
 	}
 
