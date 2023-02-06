@@ -55,7 +55,7 @@ func (r *CustomMachineController) Reconcile(ctx context.Context, req ctrl.Reques
 	customMachine := &clusterv1alpha1.CustomMachine{}
 	if err := r.Client.Get(ctx, req.NamespacedName, customMachine); err != nil {
 		if apierrors.IsNotFound(err) {
-			log.Info("Could not find CustomMachine ", req.NamespacedName, "maybe deleted")
+			log.Info("customMachine is not exist", "customMachine", req)
 			return ctrl.Result{}, nil
 		}
 
