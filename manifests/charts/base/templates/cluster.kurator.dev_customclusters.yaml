@@ -39,6 +39,11 @@ spec:
           spec:
             description: Specification of the desired behavior of the kurator cluster.
             properties:
+              cniPlugin:
+                description: CNIPlugin is the CNI plugin of the cluster on VMs. The
+                  default plugin is calico and can be ["calico", "cilium", "canal",
+                  "flannel"]
+                type: string
               machineRef:
                 description: MachineRef is the reference of nodes for provisioning
                   a kurator cluster.
