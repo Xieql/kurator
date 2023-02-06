@@ -19,7 +19,6 @@ package controllers
 import (
 	"context"
 	"fmt"
-	"istio.io/pkg/log"
 	"strings"
 	"text/template"
 	"time"
@@ -92,7 +91,6 @@ func (r *CustomClusterController) Reconcile(ctx context.Context, req ctrl.Reques
 	}
 	log = log.WithValues("customCluster", klog.KObj(customCluster))
 	ctx = ctrl.LoggerInto(ctx, log)
-	r.ensureClusterFinalizer(ctx, customCluster)
 
 	// Fetch the Cluster instance
 	cluster, err1 := r.fetchClusterFromCustomCluster(ctx, customCluster)
@@ -137,21 +135,6 @@ func (r *CustomClusterController) fetchClusterFromCustomCluster(ctx context.Cont
 	}
 	cluster := &clusterv1.Cluster{}
 	return cluster, r.Client.Get(ctx, clusterKey, cluster)
-}
-
-func (r *CustomClusterController) ensureClusterFinalizer(ctx context.Context, customCluster *v1alpha1.CustomCluster) error {
-
-	if len(customCluster.Finalizers) == 0 {
-		log.Info("################## there is no cc finalizer in customCluster, and we will add it")
-		controllerutil.AddFinalizer(customCluster, CustomClusterFinalizer)
-		if err := r.Update(ctx, customCluster); err != nil {
-			log.Error(err, "failed to update cc finalizer", "customCluster", customCluster.Name)
-			return err
-		}
-		return nil
-	}
-	log.Info("!!!!!!!!!!!! there has cc finalizer !!!!!!!!!!!!!!!!!!")
-	return nil
 }
 
 // reconcile handles CustomCluster reconciliation.
