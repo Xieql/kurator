@@ -95,11 +95,6 @@ func (in *CustomClusterSpec) DeepCopyInto(out *CustomClusterSpec) {
 		*out = new(v1.ObjectReference)
 		**out = **in
 	}
-	if in.ClusterRef != nil {
-		in, out := &in.ClusterRef, &out.ClusterRef
-		*out = new(v1.ObjectReference)
-		**out = **in
-	}
 	return
 }
 
