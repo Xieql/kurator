@@ -49,9 +49,14 @@ type CustomClusterSpec struct {
 	// +optional
 	MachineRef *corev1.ObjectReference `json:"machineRef,omitempty"`
 
-	// CNIPlugin is the CNI plugin of the cluster on VMs. The default plugin is calico and can be ["calico", "cilium", "canal", "flannel"]
+	// CNIConfig is the CNI config of the cluster on VMs.
 	// +optional
-	CNIPlugin string `json:"cniPlugin,omitempty"`
+	CNI CNIConfig `json:"cni,omitempty"`
+}
+
+type CNIConfig struct {
+	// Type is the type of CNI. The default value is calico and can be ["calico", "cilium", "canal", "flannel"]
+	Type string `json:"type"`
 }
 
 type CustomClusterPhase string
@@ -80,10 +85,6 @@ type CustomClusterStatus struct {
 	// E.g.  Running, Succeed, Terminating, Failed etc.
 	// +optional
 	Phase CustomClusterPhase `json:"phase,omitempty"`
-
-	// Message indicating details about why the pod is in this condition.
-	// +optional
-	Message string `json:"message,omitempty"`
 }
 
 // +kubebuilder:object:root=true
