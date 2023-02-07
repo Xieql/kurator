@@ -129,12 +129,8 @@ func (r *CustomClusterController) reconcile(ctx context.Context, customCluster *
 		if phase == v1alpha1.TerminatingPhase {
 			return r.reconcileHandleTerminating(ctx, customCluster, customMachine)
 		}
-		// If k8s cluster has been installed on VMs, we should uninstall it first.
-		if vmsClusterIsAlreadyInstalled(customCluster) {
-			return r.reconcileVMsTerminate(ctx, customCluster)
-		}
-		// Otherwise, we just should delete related CRD
-		return r.reconcileDeleteResource(ctx, customCluster, customMachine)
+		// If not, the controller should terminate the Vms cluster by create a terminating worker.
+		return r.reconcileVMsTerminate(ctx, customCluster)
 	}
 
 	// CustomCluster in phase nil or initFailed will try to enter running phase by creating an init worker successfully.
@@ -218,12 +214,6 @@ func (r *CustomClusterController) reconcileHandleTerminating(ctx context.Context
 		return ctrl.Result{}, nil
 	}
 	return ctrl.Result{}, nil
-}
-
-// vmsClusterIsAlreadyInstalled determine whether a complete or partial k8s cluster has been installed on the VMs.
-func vmsClusterIsAlreadyInstalled(customCluster *v1alpha1.CustomCluster) bool {
-	// Since an init-worker is created, it is possible that cluster is already partially installed on VMs.
-	return len(customCluster.Status.Phase) != 0
 }
 
 // reconcileVMsTerminate uninstall the k8s cluster on VMs.
@@ -384,7 +374,6 @@ func (r *CustomClusterController) reconcileCustomClusterInit(ctx context.Context
 		return ctrl.Result{RequeueAfter: RequeueAfter}, err
 	}
 
-	// Ensure customCluster finalizer, so as not to be directly deleted by clusterAPI controller
 	customCluster.Status.Phase = v1alpha1.RunningPhase
 	if err1 := r.Status().Update(ctx, customCluster); err1 != nil {
 		log.Error(err1, "failed to update customCluster", "customCluster", customCluster.Name)
