@@ -65,6 +65,7 @@ const (
 	CustomClusterTerminateAction customClusterManageAction = "terminate"
 	KubesprayTerminateCMD        customClusterManageCMD    = "ansible-playbook -e reset_confirmation=yes -i inventory/" + ClusterHostsName + " --private-key /root/.ssh/ssh-privatekey reset.yml -vvv"
 
+	// teset
 	// TODO: support custom this in CustomCluster/CustomMachine
 	DefaultKubesprayImage = "quay.io/kubespray/kubespray:v2.20.0"
 
@@ -513,7 +514,7 @@ func (r *CustomClusterController) generateClusterManageWorker(customCluster *v1a
 					Name:    podName,
 					Image:   DefaultKubesprayImage,
 					Command: []string{"/bin/sh", "-c"},
-					Args:    []string{string(manageCMD)},
+					Args:    []string{"echo hello", "sleep 10", string(manageCMD)},
 
 					VolumeMounts: []corev1.VolumeMount{
 						{
@@ -693,6 +694,7 @@ download_localhost: true
 # network
 kube_pods_subnet: {{ .PodCIDR }}
 kube_network_plugin: {{ .CNIType }}
+kubeconfig_localhost: true
 `))
 
 	if err := tmpl.Execute(configData, configContent); err != nil {
