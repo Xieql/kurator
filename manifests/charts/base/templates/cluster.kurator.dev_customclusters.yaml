@@ -40,7 +40,8 @@ spec:
             description: Specification of the desired behavior of the kurator cluster.
             properties:
               cni:
-                description: CNIConfig is the CNI config of the cluster on VMs.
+                description: CNIConfig is the configuration for the CNI of the cluster
+                  on VMs.
                 properties:
                   type:
                     description: Type is the type of CNI. The default value is calico
@@ -86,6 +87,8 @@ spec:
                     description: 'UID of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#uids'
                     type: string
                 type: object
+            required:
+            - cni
             type: object
           status:
             description: Current status of the kurator cluster
