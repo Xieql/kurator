@@ -694,6 +694,7 @@ download_localhost: true
 kube_pods_subnet: {{ .PodCIDR }}
 kube_network_plugin: {{ .CNIType }}
 kubeconfig_localhost: true
+artifacts_dir: "{{ inventory_dir }}"
 `))
 
 	if err := tmpl.Execute(configData, configContent); err != nil {
