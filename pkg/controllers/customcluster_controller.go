@@ -40,7 +40,7 @@ import (
 	"kurator.dev/kurator/pkg/apis/cluster/v1alpha1"
 )
 
-// CustomClusterController reconciles a CustomCluster object
+// CustomClusterController reconciles a CustomCluster object.
 type CustomClusterController struct {
 	client.Client
 	APIReader client.Reader
@@ -68,9 +68,9 @@ const (
 	// TODO: support custom this in CustomCluster/CustomMachine
 	DefaultKubesprayImage = "quay.io/kubespray/kubespray:v2.20.0"
 
-	// CustomClusterFinalizer is the finalizer applied to crd
+	// CustomClusterFinalizer is the finalizer applied to crd.
 	CustomClusterFinalizer = "customcluster.cluster.kurator.dev"
-	// custom configmap finalizer requires at least one slash
+	// custom configmap finalizer requires at least one slash.
 	CustomClusterConfigMapFinalizer = CustomClusterFinalizer + "/configmap"
 )
 
@@ -134,7 +134,7 @@ func (r *CustomClusterController) Reconcile(ctx context.Context, req ctrl.Reques
 	log = log.WithValues("customCluster", klog.KObj(customCluster))
 	ctx = ctrl.LoggerInto(ctx, log)
 
-	// Fetch the Cluster instance
+	// Fetch the Cluster instance.
 	var clusterName string
 	for _, owner := range customCluster.GetOwnerReferences() {
 		if owner.Kind == ClusterKind {
@@ -222,21 +222,21 @@ func (r *CustomClusterController) reconcileHandleRunning(ctx context.Context, cu
 
 	if initWorker.Status.Phase == corev1.PodSucceeded {
 		customCluster.Status.Phase = v1alpha1.SucceededPhase
-		log.Info("customCluster's phase changes from Running to Succeeded")
 		if err := r.Status().Update(ctx, customCluster); err != nil {
 			log.Error(err, "failed to update init worker.", "worker", initWorkerKey)
 			return ctrl.Result{RequeueAfter: RequeueAfter}, err
 		}
+		log.Info("customCluster's phase changes from Running to Succeeded")
 		return ctrl.Result{}, nil
 	}
 
 	if initWorker.Status.Phase == corev1.PodFailed {
 		customCluster.Status.Phase = v1alpha1.InitFailedPhase
-		log.Info("customCluster's phase changes from Running to InitFailedPhase")
 		if err := r.Status().Update(ctx, customCluster); err != nil {
 			log.Error(err, "failed to update init worker.", "worker", initWorkerKey)
 			return ctrl.Result{RequeueAfter: RequeueAfter}, err
 		}
+		log.Info("customCluster's phase changes from Running to InitFailed")
 		return ctrl.Result{}, nil
 	}
 	return ctrl.Result{}, nil
@@ -254,7 +254,7 @@ func (r *CustomClusterController) reconcileHandleTerminating(ctx context.Context
 			log.Info("terminate worker does not exist, turn to reconcileVMsTerminate to create a new one", "worker", terminateWorkerKey)
 			return r.reconcileVMsTerminate(ctx, customCluster)
 		}
-		log.Error(err, "failed to get terminate worker. maybe it has been deleted.", "worker", terminateWorkerKey)
+		log.Error(err, "failed to get terminate worker. maybe it has been deleted", "worker", terminateWorkerKey)
 		return ctrl.Result{RequeueAfter: RequeueAfter}, err
 	}
 
@@ -266,11 +266,11 @@ func (r *CustomClusterController) reconcileHandleTerminating(ctx context.Context
 
 	if terminateWorker.Status.Phase == corev1.PodFailed {
 		customCluster.Status.Phase = v1alpha1.TerminateFailedPhase
-		log.Info("customCluster's phase changes from Terminating to TerminateFailed")
 		if err := r.Status().Update(ctx, customCluster); err != nil {
-			log.Error(err, "failed to Update", "worker", terminateWorkerKey)
+			log.Error(err, "failed to update terminate worker", "worker", terminateWorkerKey)
 			return ctrl.Result{RequeueAfter: RequeueAfter}, err
 		}
+		log.Info("customCluster's phase changes from Terminating to TerminateFailed")
 		return ctrl.Result{}, nil
 	}
 	return ctrl.Result{}, nil
@@ -309,9 +309,9 @@ func (r *CustomClusterController) reconcileVMsTerminate(ctx context.Context, cus
 				log.Error(err1, "failed to create customCluster terminate worker", "worker", terminateWorkerKey)
 				return ctrl.Result{RequeueAfter: RequeueAfter}, err1
 			}
-		} else {
-			return ctrl.Result{RequeueAfter: RequeueAfter}, err
 		}
+		log.Error(err, "failed to get terminate worker", "worker", terminateWorkerKey)
+		return ctrl.Result{RequeueAfter: RequeueAfter}, err
 	}
 
 	customCluster.Status.Phase = v1alpha1.TerminatingPhase
@@ -324,7 +324,7 @@ func (r *CustomClusterController) reconcileVMsTerminate(ctx context.Context, cus
 	return ctrl.Result{}, nil
 }
 
-// reconcileDeleteResource delete resource related to customCluster: configmap, pod, customMachine, customCluster etc.
+// reconcileDeleteResource delete resource related to customCluster: configmap, pod, customMachine, customCluster.
 func (r *CustomClusterController) reconcileDeleteResource(ctx context.Context, customCluster *v1alpha1.CustomCluster, customMachine *v1alpha1.CustomMachine) (ctrl.Result, error) {
 	log := ctrl.LoggerFrom(ctx)
 
@@ -369,7 +369,7 @@ func (r *CustomClusterController) reconcileDeleteResource(ctx context.Context, c
 	// Remove finalizer of customMachine.
 	controllerutil.RemoveFinalizer(customMachine, CustomClusterFinalizer)
 	if err := r.Client.Update(ctx, customMachine); err != nil && !apierrors.IsNotFound(err) {
-		log.Error(err, "failed to remove finalizer of customMachine when it should be deleted", "customMachine", customMachine.Name)
+		log.Error(err, "failed to remove finalizer of customMachine", "customMachine", customMachine.Name)
 		return ctrl.Result{RequeueAfter: RequeueAfter}, err
 	}
 
@@ -434,10 +434,9 @@ func (r *CustomClusterController) reconcileCustomClusterInit(ctx context.Context
 				log.Error(err1, "failed to create customCluster init worker", "initWorker", initWorkerKey)
 				return ctrl.Result{RequeueAfter: RequeueAfter}, err1
 			}
-		} else {
-			log.Error(err, "failed to get init worker", "initWorker", initWorkerKey)
-			return ctrl.Result{RequeueAfter: RequeueAfter}, err
 		}
+		log.Error(err, "failed to get init worker", "initWorker", initWorkerKey)
+		return ctrl.Result{RequeueAfter: RequeueAfter}, err
 	}
 
 	initRelatedResource := &RelatedResource{
@@ -454,10 +453,10 @@ func (r *CustomClusterController) reconcileCustomClusterInit(ctx context.Context
 
 	customCluster.Status.Phase = v1alpha1.RunningPhase
 	if err1 := r.Status().Update(ctx, customCluster); err1 != nil {
-		log.Error(err1, "failed to update customCluster", "customCluster", customCluster.Name)
+		log.Error(err1, "failed to update customCluster status", "customCluster", customCluster.Name)
 		return ctrl.Result{RequeueAfter: RequeueAfter}, err1
 	}
-	log.Info("customCluster's phase change to Running")
+	log.Info("customCluster's phase changes to Running")
 
 	return ctrl.Result{}, nil
 }
@@ -582,7 +581,7 @@ type HostTemplateContent struct {
 type ConfigTemplateContent struct {
 	KubeVersion string
 	PodCIDR     string
-	// CNIPlugin is the CNI plugin of the cluster on VMs. The default plugin is calico and can be ["calico", "cilium", "canal", "flannel"]
+	// CNIType is the CNI plugin of the cluster on VMs. The default plugin is calico and can be ["calico", "cilium", "canal", "flannel"]
 	CNIType string
 	// TODO: support other kubernetes configs
 }
