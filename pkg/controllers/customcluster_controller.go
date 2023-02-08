@@ -188,7 +188,7 @@ func (r *CustomClusterController) reconcile(ctx context.Context, customCluster *
 		if phase == v1alpha1.TerminatingPhase {
 			return r.reconcileHandleTerminating(ctx, customCluster, customMachine)
 		}
-		// If not, the controller should terminate the Vms cluster by create a terminating worker.
+		// If customCluster is not in terminating, the controller should terminate the Vms cluster by create a terminating worker.
 		return r.reconcileVMsTerminate(ctx, customCluster)
 	}
 
