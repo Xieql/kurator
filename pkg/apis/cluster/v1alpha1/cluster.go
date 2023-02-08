@@ -49,9 +49,8 @@ type CustomClusterSpec struct {
 	// +optional
 	MachineRef *corev1.ObjectReference `json:"machineRef,omitempty"`
 
-	// CNIConfig is the CNI config of the cluster on VMs.
-	// +optional
-	CNI CNIConfig `json:"cni,omitempty"`
+	// CNIConfig is the configuration for the CNI of the cluster on VMs.
+	CNI CNIConfig `json:"cni"`
 }
 
 type CNIConfig struct {
