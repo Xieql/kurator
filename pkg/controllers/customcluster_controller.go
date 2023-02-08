@@ -57,8 +57,8 @@ const (
 	ClusterConfigName = "cluster-config"
 	SecreteName       = "cluster-secret"
 
-	ClusterKind       = "cluster"
-	CustomClusterKind = "customCluster"
+	ClusterKind       = "Cluster"
+	CustomClusterKind = "CustomCluster"
 
 	CustomClusterInitAction      customClusterManageAction = "init"
 	KubesprayInitCMD             customClusterManageCMD    = "ansible-playbook -i inventory/" + ClusterHostsName + " --private-key /root/.ssh/ssh-privatekey cluster.yml -vvv"
