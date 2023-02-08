@@ -344,6 +344,7 @@ func (r *CustomClusterController) reconcileDeleteResource(ctx context.Context, c
 			log.Error(err, "failed to remove finalizer of clusterHosts when it should be deleted", "clusterHosts", clusterHostsKey)
 			return ctrl.Result{RequeueAfter: RequeueAfter}, err
 		}
+		log.Info("finalizer of clusterHosts was removed successfully", "clusterHosts", clusterHostsKey)
 	}
 
 	// Remove finalizer of clusterConfig.
@@ -362,6 +363,7 @@ func (r *CustomClusterController) reconcileDeleteResource(ctx context.Context, c
 			log.Error(err, "failed to remove finalizer of clusterConfig when it should be deleted", "clusterConfig", clusterConfigKey)
 			return ctrl.Result{RequeueAfter: RequeueAfter}, err
 		}
+		log.Info("finalizer of clusterConfig was removed successfully", "clusterConfig", clusterConfigKey)
 	}
 
 	// Remove finalizer of customMachine.
