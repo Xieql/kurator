@@ -153,10 +153,10 @@ func (r *CustomClusterController) Reconcile(ctx context.Context, req ctrl.Reques
 	cluster := &clusterv1.Cluster{}
 	if err := r.Client.Get(ctx, clusterKey, cluster); err != nil {
 		if apierrors.IsNotFound(err) {
-			log.Info("cluster does not exist", "customCluster", customCluster)
+			log.Info("cluster does not exist", "cluster", clusterKey)
 			return ctrl.Result{}, nil
 		}
-		log.Error(err, "failed to find cluster by customCluster", "customCluster", customCluster)
+		log.Error(err, "failed to get cluster", "cluster", clusterKey)
 		return ctrl.Result{RequeueAfter: RequeueAfter}, err
 	}
 
