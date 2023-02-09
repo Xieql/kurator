@@ -201,7 +201,7 @@ func (r *CustomClusterController) reconcile(ctx context.Context, customCluster *
 	}
 
 	// CustomCluster in phase nil or ProvisionFailed will try to enter Provisioning phase by creating an init worker successfully.
-	if len(phase) == 0 || phase == v1alpha1.ProvisionFailedPhase {
+	if phase == v1alpha1.PendingPhase || phase == v1alpha1.ProvisionFailedPhase {
 		return r.reconcileCustomClusterInit(ctx, customCluster, customMachine, cluster)
 	}
 
