@@ -5,7 +5,7 @@ metadata:
   namespace: default
 spec:
   cni:
-    type: cilium
+    type: calico
   machineRef:
     apiVersion: cluster.kurator.dev/v1alpha1
     kind: CustomMachine

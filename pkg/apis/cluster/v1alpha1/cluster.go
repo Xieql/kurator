@@ -51,6 +51,9 @@ type CustomClusterSpec struct {
 
 	// CNIConfig is the configuration for the CNI of the cluster on VMs.
 	CNI CNIConfig `json:"cni"`
+
+	// KubesprayImage is the pre-built docker image from Quay for the running of kubespray. Alternative images are here: https://quay.io/repository/kubespray/kubespray?tab=tags
+	KubesprayImage string `json:"kubesprayImage"`
 }
 
 type CNIConfig struct {
