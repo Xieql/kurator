@@ -696,10 +696,12 @@ func (r *CustomClusterController) CreateClusterConfig(ctx context.Context, c *cl
 	// todo: split this to a separated file
 	tmpl := template.Must(template.New("").Parse(`
 kube_version: {{ .KubeVersion}}
-# 
-# download_run_once: true
+# download once in the first control plane and will push them to the cluster nodes. the default value is false.
+download_run_once: true
 # download_container: false
 # download_localhost: true
+# prevent the cache files from being deleted. It can be useful while developing, because it can decrease provisioning times.
+download_keep_remote_cache: true
 # network
 kube_pods_subnet: {{ .PodCIDR }}
 kube_network_plugin: {{ .CNIType }}
