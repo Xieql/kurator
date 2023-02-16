@@ -696,10 +696,10 @@ func (r *CustomClusterController) CreateClusterConfig(ctx context.Context, c *cl
 	// todo: split this to a separated file
 	tmpl := template.Must(template.New("").Parse(`
 kube_version: {{ .KubeVersion}}
-# network
-download_run_once: true
-download_container: false
-download_localhost: true
+# 
+# download_run_once: true
+# download_container: false
+# download_localhost: true
 # network
 kube_pods_subnet: {{ .PodCIDR }}
 kube_network_plugin: {{ .CNIType }}
