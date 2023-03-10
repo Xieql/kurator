@@ -104,7 +104,7 @@ func (r *CustomClusterController) SetupWithManager(ctx context.Context, mgr ctrl
 	if err != nil {
 		return fmt.Errorf("failed setting up with a controller manager: %v", err)
 	}
-
+	//11
 	if err := c.Watch(
 		&source.Kind{Type: &corev1.Pod{}},
 		handler.EnqueueRequestsFromMapFunc(r.WorkerToCustomClusterMapFunc),
@@ -209,6 +209,8 @@ func (r *CustomClusterController) Reconcile(ctx context.Context, req ctrl.Reques
 
 // reconcile handles CustomCluster reconciliation.
 func (r *CustomClusterController) reconcile(ctx context.Context, customCluster *v1alpha1.CustomCluster, customMachine *v1alpha1.CustomMachine, cluster *clusterv1.Cluster) (ctrl.Result, error) {
+	log := ctrl.LoggerFrom(ctx)
+
 	phase := customCluster.Status.Phase
 
 	// If upstream cluster at pre-delete, the customCluster need to be deleted.
@@ -231,56 +233,43 @@ func (r *CustomClusterController) reconcile(ctx context.Context, customCluster *
 		return r.reconcileHandleProvisioning(ctx, customCluster, customMachine, cluster)
 	}
 
-	// If customCluster is in phase ProvisionedPhase, the controller will check whether to scale or do something else.
 	if phase == v1alpha1.ProvisionedPhase {
-		return r.reconcileProvisioned(ctx, customCluster, customMachine, cluster)
+		currentClusterInfo := getClusterInfoFromCustomMachine(customMachine)
+		provisionedClusterInfo, errGetProvision := r.getProvisionedClusterInfoFromConfigmap(ctx, customCluster)
+		if errGetProvision != nil {
+			log.Error(errGetProvision, "failed to get provisioned cluster Info from configmap")
+		}
+		// By comparing curClusterInfo and provisionedClusterInfo to decide whether to proceed reconcileScaleUp or reconcileScaleDown.
+		scaleUpWorkerNodes := findScaleUpWorkerNodes(provisionedClusterInfo.WorkerNodes, currentClusterInfo.WorkerNodes)
+		scaleDownWorkerNodes := findScaleDownWorkerNodes(provisionedClusterInfo.WorkerNodes, currentClusterInfo.WorkerNodes)
+		if len(scaleUpWorkerNodes) != 0 {
+			return r.reconcileScaleUp(ctx, customCluster, customMachine, cluster)
+		}
+		if len(scaleDownWorkerNodes) != 0 {
+			return r.reconcileScaleDown(ctx, customCluster, customMachine, cluster)
+		}
+		return ctrl.Result{}, nil
 	}
 
 	if phase == v1alpha1.ScalingUpPhase {
-		return r.reconcileHandleScalingUp(ctx, customCluster, customMachine, cluster)
+		return r.reconcileFinishScalingUp(ctx, customCluster, customMachine, cluster)
 	}
 
 	if phase == v1alpha1.ScalingDownPhase {
-		return r.reconcileHandleScalingDown(ctx, customCluster, customMachine, cluster)
-	}
-
-	return ctrl.Result{}, nil
-}
-
-// reconcileProvisioned check whether to scale or do something else.
-func (r *CustomClusterController) reconcileProvisioned(ctx context.Context, customCluster *v1alpha1.CustomCluster, customMachine *v1alpha1.CustomMachine, cluster *clusterv1.Cluster) (ctrl.Result, error) {
-	log := ctrl.LoggerFrom(ctx)
-
-	currentClusterInfo := getClusterInfoFromCustomMachine(customMachine)
-
-	provisionedClusterInfo, errGetProvision := r.getProvisionedClusterInfoFromConfigmap(ctx, customCluster)
-	if errGetProvision != nil {
-		log.Error(errGetProvision, "failed to get provisioned cluster Info from configmap")
-	}
-
-	// By comparing curClusterInfo and provisionedClusterInfo to decide whether to proceed reconcileScaleUp or reconcileScaleDown.
-	scaleUpWorkerNodes := findScaleUpWorkerNodes(provisionedClusterInfo.WorkerNodes, currentClusterInfo.WorkerNodes)
-	scaleDownWorkerNodes := findScaleDownWorkerNodes(provisionedClusterInfo.WorkerNodes, currentClusterInfo.WorkerNodes)
-
-	if len(scaleUpWorkerNodes) != 0 {
-		return r.reconcileScaleUp(ctx, customCluster, customMachine, cluster)
-	}
-
-	if len(scaleDownWorkerNodes) != 0 {
-		return r.reconcileScaleDown(ctx, customCluster, customMachine, scaleDownWorkerNodes)
+		return r.reconcileFinishScalingDown(ctx, customCluster, customMachine, cluster)
 	}
 
 	return ctrl.Result{}, nil
 }
 
 // reconcileHandleScalingDown determine whether customCluster enter Provisioned phase or UnknownPhase phase when current phase is ScalingUp.
-func (r *CustomClusterController) reconcileHandleScalingUp(ctx context.Context, customCluster *v1alpha1.CustomCluster, customMachine *v1alpha1.CustomMachine, cluster *clusterv1.Cluster) (ctrl.Result, error) {
+func (r *CustomClusterController) reconcileFinishScalingUp(ctx context.Context, customCluster *v1alpha1.CustomCluster, customMachine *v1alpha1.CustomMachine, cluster *clusterv1.Cluster) (ctrl.Result, error) {
 	return r.reconcileUpdateStatusByCheckPodStatus(ctx, customCluster, customMachine, cluster, r.reconcileScaleUp, CustomClusterScaleUpAction, v1alpha1.UnknownPhase)
 }
 
 // reconcileHandleScalingDown determine whether customCluster enter Provisioned phase or UnknownPhase phase when current phase is ScalingDown.
-func (r *CustomClusterController) reconcileHandleScalingDown(ctx context.Context, customCluster *v1alpha1.CustomCluster, customMachine *v1alpha1.CustomMachine, cluster *clusterv1.Cluster) (ctrl.Result, error) {
-	return r.reconcileUpdateStatusByCheckPodStatus(ctx, customCluster, customMachine, cluster, r.reconcileProvisioned, CustomClusterScaleDownAction, v1alpha1.UnknownPhase)
+func (r *CustomClusterController) reconcileFinishScalingDown(ctx context.Context, customCluster *v1alpha1.CustomCluster, customMachine *v1alpha1.CustomMachine, cluster *clusterv1.Cluster) (ctrl.Result, error) {
+	return r.reconcileUpdateStatusByCheckPodStatus(ctx, customCluster, customMachine, cluster, r.reconcileScaleDown, CustomClusterScaleDownAction, v1alpha1.UnknownPhase)
 }
 
 // reconcileHandleProvisioning determine whether customCluster enter Provisioned phase or ProvisionFailed phase when current phase is Provisioning.
@@ -369,15 +358,25 @@ func (r *CustomClusterController) reconcileScaleUp(ctx context.Context, customCl
 	return ctrl.Result{}, nil
 }
 
-func (r *CustomClusterController) reconcileScaleDown(ctx context.Context, customCluster *v1alpha1.CustomCluster, customMachine *v1alpha1.CustomMachine, scaleDownWorkerNodes []NodeInfo) (ctrl.Result, error) {
+func (r *CustomClusterController) reconcileScaleDown(ctx context.Context, customCluster *v1alpha1.CustomCluster, customMachine *v1alpha1.CustomMachine, cluster *clusterv1.Cluster) (ctrl.Result, error) {
 	log := ctrl.LoggerFrom(ctx)
 
+	// First make sure the transition of the state
 	customCluster.Status.Phase = v1alpha1.ScalingDownPhase
 	if err1 := r.Status().Update(ctx, customCluster); err1 != nil {
 		log.Error(err1, "failed to update customCluster status", "customCluster", customCluster.Name)
 		return ctrl.Result{RequeueAfter: RequeueAfter}, err1
 	}
 	log.Info("customCluster's phase changes to ScalingDownPhase")
+
+	// In order to prevent pod creation failure and re-enter reconcileScaleUp, check scaleDownWorkerNodes again here.
+	curClusterInfo := getClusterInfoFromCustomMachine(customMachine)
+	provisionedClusterInfo, errGetProvision := r.getProvisionedClusterInfoFromConfigmap(ctx, customCluster)
+	if errGetProvision != nil {
+		log.Error(errGetProvision, "failed to get provisioned cluster Info from configmap")
+	}
+
+	scaleDownWorkerNodes := findScaleDownWorkerNodes(provisionedClusterInfo.WorkerNodes, curClusterInfo.WorkerNodes)
 
 	// Check if scaleDown worker already exist. If not, create it.
 	_, err := r.ensureWorkerPodIsCreated(ctx, customCluster, CustomClusterScaleDownAction, generateScaleDownManageCMD(scaleDownWorkerNodes))
@@ -821,6 +820,21 @@ download_localhost: true
 # network
 kube_pods_subnet: {{ .PodCIDR }}
 kube_network_plugin: {{ .CNIType }}
+kube_proxy_strict_arp: true
+kube_vip_enabled: true
+# HA for control-plane, requires a VIP
+kube_vip_controlplane_enabled: true
+kube_vip_address: 192.168.0.144
+loadbalancer_apiserver:
+  address: 192.168.0.144
+  port: 6443
+# kube_vip_interface: ens160
+
+# LoadBalancer for services
+kube_vip_services_enabled: false
+# kube_vip_services_interface: ens320
+kube_vip_arp_enabled: true
+kube_vip_lb_enable: true
 
 `))
 
