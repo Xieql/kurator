@@ -825,6 +825,23 @@ download_localhost: true
 kube_pods_subnet: {{ .PodCIDR }}
 kube_network_plugin: {{ .CNIType }}
 
+kube_proxy_strict_arp: true
+kube_vip_enabled: true
+# HA for control-plane, requires a VIP
+kube_vip_controlplane_enabled: true
+kube_vip_address: 192.168.0.144
+loadbalancer_apiserver:
+  address: 192.168.0.144
+  port: 6443
+# kube_vip_interface: ens160
+
+# LoadBalancer for services
+kube_vip_services_enabled: false
+# kube_vip_services_interface: ens320
+
+kube_vip_arp_enabled: true
+kube_vip_lb_enable: true
+
 `))
 
 	if err := tmpl.Execute(configData, configContent); err != nil {
