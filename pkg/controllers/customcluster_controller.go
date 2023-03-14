@@ -829,6 +829,7 @@ kube_proxy_strict_arp: true
 kube_vip_enabled: true
 # HA for control-plane, requires a VIP
 kube_vip_controlplane_enabled: true
+apiserver_loadbalancer_domain_name: "192.168.0.144"
 kube_vip_address: 192.168.0.144
 loadbalancer_apiserver:
   address: 192.168.0.144
