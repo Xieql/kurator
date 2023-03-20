@@ -113,11 +113,12 @@ func TestGetWorkerNodesFromCustomMachine(t *testing.T) {
 	assert.Equal(t, targetWorkerNodesMulti, workerNodes2)
 }
 
-func TestGetClusterInfoFromCustomMachine(t *testing.T) {
-	clusterInfo1 := getClusterInfoFromCustomMachine(curCustomMachineSingle)
+func TestDesiredClusterInfo(t *testing.T) {
+	cc := &v1alpha1.CustomCluster{}
+	clusterInfo1 := getDesiredClusterInfo(curCustomMachineSingle, cc)
 	assert.Equal(t, targetClusterInfoSingle, clusterInfo1)
 
-	clusterInfo2 := getClusterInfoFromCustomMachine(curCustomMachineMulti)
+	clusterInfo2 := getDesiredClusterInfo(curCustomMachineMulti, cc)
 	assert.Equal(t, targetClusterInfoMulti, clusterInfo2)
 }
 
@@ -251,4 +252,153 @@ func TestGetNodeInfoFromNodeStr(t *testing.T) {
 func TestGetScaleUpConfigMapData(t *testing.T) {
 	ans := getScaleUpConfigMapData(clusterHostDataStr1, curNodes1)
 	assert.Equal(t, clusterHostDataStr3, ans)
+}
+
+func TestIsKubeadmUpgradeSupported(t *testing.T) {
+	// Test case 1: Same version
+	assert.True(t, isKubeadmUpgradeSupported("v1.18.0", "v1.18.0"))
+	assert.True(t, isKubeadmUpgradeSupported("1.18.0", "1.18.0"))
+
+	// Test case 2: Minor version difference is 1
+	assert.True(t, isKubeadmUpgradeSupported("v1.18.0", "v1.19.0"))
+	assert.True(t, isKubeadmUpgradeSupported("v1.19.0", "v1.18.0"))
+	assert.True(t, isKubeadmUpgradeSupported("1.19.9", "1.18.0"))
+	assert.True(t, isKubeadmUpgradeSupported("1.18.9", "1.19.1"))
+	assert.True(t, isKubeadmUpgradeSupported("v1.18.9", "1.19.1"))
+
+	// Test case 3: Minor version difference is more than 1
+	assert.False(t, isKubeadmUpgradeSupported("v1.18.0", "v1.20.0"))
+	assert.False(t, isKubeadmUpgradeSupported("1.20.0", "1.18.0"))
+	assert.False(t, isKubeadmUpgradeSupported("1.18.0", "v1.20.0"))
+
+	// Test case 4: Invalid version string
+	assert.False(t, isKubeadmUpgradeSupported("1.18", "1.19.0"))
+	assert.False(t, isKubeadmUpgradeSupported("1.18.0", "1.19"))
+	assert.False(t, isKubeadmUpgradeSupported("1.18.0", "1.x.0"))
+	assert.False(t, isKubeadmUpgradeSupported("vv1.18.9", "1.19.1"))
+}
+
+func TestIsSupportedVersion(t *testing.T) {
+	tests := []struct {
+		name           string
+		desiredVersion string
+		minVersion     string
+		maxVersion     string
+		expectedResult bool
+	}{
+		{
+			name:           "desired version is between min and max versions",
+			desiredVersion: "1.2.3",
+			minVersion:     "1.0.0",
+			maxVersion:     "2.0.0",
+			expectedResult: true,
+		},
+		{
+			name:           "desired version is between min and max versions",
+			desiredVersion: "v1.2.3",
+			minVersion:     "1.0.0",
+			maxVersion:     "2.0.0",
+			expectedResult: true,
+		},
+		{
+			name:           "desired version is equal to min version",
+			desiredVersion: "1.0.0",
+			minVersion:     "1.0.0",
+			maxVersion:     "2.0.0",
+			expectedResult: true,
+		},
+		{
+			name:           "desired version is equal to max version",
+			desiredVersion: "2.0.0",
+			minVersion:     "1.0.0",
+			maxVersion:     "2.0.0",
+			expectedResult: true,
+		},
+		{
+			name:           "desired version is less than min version",
+			desiredVersion: "0.9.0",
+			minVersion:     "1.0.0",
+			maxVersion:     "2.0.0",
+			expectedResult: false,
+		},
+		{
+			name:           "desired version is greater than max version",
+			desiredVersion: "3.0.0",
+			minVersion:     "1.0.0",
+			maxVersion:     "2.0.0",
+			expectedResult: false,
+		},
+		{
+			name:           "desired version is invalid",
+			desiredVersion: "1.2.3.4",
+			minVersion:     "1.0.0",
+			maxVersion:     "2.0.0",
+			expectedResult: false,
+		},
+	}
+
+	for _, test := range tests {
+		result := isSupportedVersion(test.desiredVersion, test.minVersion, test.maxVersion)
+		assert.Equal(t, test.expectedResult, result)
+	}
+}
+
+func TestGenerateUpgradeManageCMD(t *testing.T) {
+	tests := []struct {
+		name        string
+		kubeVersion string
+		want        customClusterManageCMD
+	}{
+		{
+			name:        "valid kube version",
+			kubeVersion: "v1.20.0",
+			want:        "ansible-playbook -i inventory/cluster-hosts --private-key /root/.ssh/ssh-privatekey upgrade-cluster.yml -vvv  -e kube_version=v1.20.0",
+		},
+		{
+			name:        "empty kube version",
+			kubeVersion: "1.23.4",
+			want:        "ansible-playbook -i inventory/cluster-hosts --private-key /root/.ssh/ssh-privatekey upgrade-cluster.yml -vvv  -e kube_version=v1.23.4",
+		},
+		{
+			name:        "empty kube version",
+			kubeVersion: "",
+			want:        "",
+		},
+	}
+	for _, tt := range tests {
+		got := generateUpgradeManageCMD(tt.kubeVersion)
+		assert.Equal(t, tt.want, got)
+	}
+}
+
+func TestCalculateTargetVersion(t *testing.T) {
+	// Test case 1: Provisioned version and desired version are the same
+	provisionedVersion := "v1.19.0"
+	desiredVersion := "v1.19.0"
+	midVersion := "v1.20.0"
+	expectedVersion := "v1.19.0"
+	result := calculateTargetVersion(provisionedVersion, desiredVersion, midVersion)
+	assert.Equal(t, expectedVersion, result)
+
+	// Test case 2:  Provisioned version and desired version have a minor version difference of 1
+	provisionedVersion = "v1.20.0"
+	desiredVersion = "v1.21.2"
+	midVersion = "v1.21.0"
+	expectedVersion = "v1.21.2"
+	result = calculateTargetVersion(provisionedVersion, desiredVersion, midVersion)
+	assert.Equal(t, expectedVersion, result)
+
+	// Test case 3: Provisioned version and desired version have a minor version difference of more than 1
+	provisionedVersion = "v1.19.0"
+	desiredVersion = "v1.21.0"
+	midVersion = "v1.20.0"
+	expectedVersion = "v1.20.0"
+	result = calculateTargetVersion(provisionedVersion, desiredVersion, midVersion)
+	assert.Equal(t, expectedVersion, result)
+	provisionedVersion = "v1.23.0"
+	desiredVersion = "v1.24.6"
+	midVersion = "v1.23.0"
+	expectedVersion = "v1.24.6"
+	result = calculateTargetVersion(provisionedVersion, desiredVersion, midVersion)
+	assert.Equal(t, expectedVersion, result)
 }

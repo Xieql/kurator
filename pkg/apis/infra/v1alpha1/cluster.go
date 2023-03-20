@@ -51,6 +51,10 @@ type CustomClusterSpec struct {
 
 	// CNIConfig is the configuration for the CNI of the cluster on VMs.
 	CNI CNIConfig `json:"cni"`
+
+	// UpgradeK8sVersion represents the target version of Kubernetes that we desire to upgrade to.
+	// if UpgradeK8sVersion existed and is different to kcp.spec.version, then Kurator will reconcile to ensure that the provisioned cluster's version upgrade to upgradeK8sVersion.
+	UpgradeK8sVersion string `json:"upgradeK8sVersion,omitempty"`
 }
 
 type CNIConfig struct {
@@ -84,6 +88,9 @@ const (
 
 	// ScalingDownPhase represents the cluster on VMs is removing the worker nodes.
 	ScalingDownPhase CustomClusterPhase = "ScalingDown"
+
+	// UpgradingPhase represents the kubernetes version of cluster is upgrading.
+	UpgradingPhase CustomClusterPhase = "Upgrading"
 )
 
 // CustomClusterStatus represents the current status of the cluster.

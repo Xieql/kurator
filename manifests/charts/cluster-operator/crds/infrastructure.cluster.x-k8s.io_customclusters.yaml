@@ -87,6 +87,12 @@ spec:
                     description: 'UID of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#uids'
                     type: string
                 type: object
+              upgradeK8sVersion:
+                description: UpgradeK8sVersion represents the target version of Kubernetes
+                  that we desire to upgrade to. if UpgradeK8sVersion existed and is
+                  different to kcp.spec.version, then Kurator will reconcile to ensure
+                  that the provisioned cluster's version upgrade to upgradeK8sVersion.
+                type: string
             required:
             - cni
             type: object

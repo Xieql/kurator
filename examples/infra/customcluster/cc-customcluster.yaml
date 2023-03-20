@@ -6,6 +6,7 @@ metadata:
 spec:
   cni:
     type: cilium
+  kubesprayVersion: v2.20.0
   machineRef:
     apiVersion: cluster.kurator.dev/v1alpha1
     kind: CustomMachine
