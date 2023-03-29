@@ -51,6 +51,12 @@ type CustomClusterSpec struct {
 
 	// CNIConfig is the configuration for the CNI of the cluster on VMs.
 	CNI CNIConfig `json:"cni"`
+
+	// EnableVIP setting to "true" indicates the selection of kube-vip for achieving High Availability (HA).
+	EnableVIP bool `json:"enableVIP,omitempty"`
+
+	// VIPAddress is the Virtual IP address for HA when the EnableVIP is set to "true".
+	VIPAddress string `json:"vipAddress,omitempty"`
 }
 
 type CNIConfig struct {

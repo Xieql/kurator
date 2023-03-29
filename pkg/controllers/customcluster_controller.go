@@ -550,9 +550,16 @@ func (r *CustomClusterController) reconcileCustomClusterInit(ctx context.Context
 
 	var clusterConfig *corev1.ConfigMap
 	var errorConfig error
-	if clusterConfig, errorConfig = r.ensureClusterConfigCreated(ctx, customCluster, customCluster, cluster, kcp); errorConfig != nil {
-		log.Error(errorConfig, "failed to update cluster-config configmap")
-		return ctrl.Result{RequeueAfter: RequeueAfter}, errorConfig
+	if customCluster.Spec.EnableVIP {
+		if clusterConfig, errorConfig = r.ensureEnableVIPClusterConfigCreated(ctx, customCluster, customCluster, cluster, kcp); errorConfig != nil {
+			log.Error(errorConfig, "failed to update cluster-config configmap")
+			return ctrl.Result{RequeueAfter: RequeueAfter}, errorConfig
+		}
+	} else {
+		if clusterConfig, errorConfig = r.ensureClusterConfigCreated(ctx, customCluster, customCluster, cluster, kcp); errorConfig != nil {
+			log.Error(errorConfig, "failed to update cluster-config configmap")
+			return ctrl.Result{RequeueAfter: RequeueAfter}, errorConfig
+		}
 	}
 
 	if _, err := r.ensureWorkerPodCreated(ctx, customCluster, CustomClusterInitAction, KubesprayInitCMD, generateClusterHostsName(customCluster), generateClusterConfigName(customCluster)); err != nil {
@@ -704,6 +711,8 @@ type ConfigTemplateContent struct {
 	PodCIDR     string
 	// CNIType is the CNI plugin of the cluster on VMs. The default plugin is calico and can be ["calico", "cilium", "canal", "flannel"]
 	CNIType string
+	// VIPAddress is the Virtual IP address for HA when the EnableVIP is set to "true".
+	VIPAddress string
 	// TODO: support other kubernetes configs
 }
 
@@ -713,6 +722,7 @@ func GetConfigContent(c *clusterv1.Cluster, kcp *controlplanev1.KubeadmControlPl
 		PodCIDR:     c.Spec.ClusterNetwork.Pods.CIDRBlocks[0],
 		KubeVersion: kcp.Spec.Version,
 		CNIType:     cc.Spec.CNI.Type,
+		VIPAddress:  cc.Spec.VIPAddress,
 	}
 	return configContent
 }
@@ -836,6 +846,39 @@ kube_network_plugin: {{ .CNIType }}
 	return r.CreateConfigMapWithTemplate(ctx, name, namespace, ClusterConfigName, configData.String())
 }
 
+func (r *CustomClusterController) CreateEnableVIPClusterConfig(ctx context.Context, c *clusterv1.Cluster, kcp *controlplanev1.KubeadmControlPlane, cc *v1alpha1.CustomCluster) (*corev1.ConfigMap, error) {
+	configContent := GetConfigContent(c, kcp, cc)
+	configData := &strings.Builder{}
+
+	tmpl := template.Must(template.New("").Parse(`
+kube_version: {{ .KubeVersion}}
+download_run_once: true
+download_container: false
+download_localhost: true
+# network
+kube_pods_subnet: {{ .PodCIDR }}
+kube_network_plugin: {{ .CNIType }}
+
+kube_proxy_strict_arp: true
+kube_vip_enabled: true
+kube_vip_controlplane_enabled: true
+kube_vip_address: {{ .vipAddress }}
+loadbalancer_apiserver:
+  address: {{ .vipAddress }}
+  port: 6443
+kube_vip_services_enabled: false
+kube_vip_arp_enabled: true
+`))
+
+	if err := tmpl.Execute(configData, configContent); err != nil {
+		return nil, err
+	}
+	name := generateClusterConfigName(cc)
+	namespace := cc.Namespace
+
+	return r.CreateConfigMapWithTemplate(ctx, name, namespace, ClusterConfigName, configData.String())
+}
+
 // createScaleUpConfigMap create temporary cluster-hosts configmap for scaling.
 func (r *CustomClusterController) createScaleUpConfigMap(ctx context.Context, customCluster *v1alpha1.CustomCluster, scaleUpWorkerNodes []NodeInfo) (*corev1.ConfigMap, error) {
 	// get current cm
@@ -895,6 +938,19 @@ func (r *CustomClusterController) ensureClusterConfigCreated(ctx context.Context
 	if err := r.Client.Get(ctx, cmKey, cm); err != nil {
 		if apierrors.IsNotFound(err) {
 			return r.CreateClusterConfig(ctx, cluster, kcp, cc)
+		}
+		return nil, err
+	}
+	return cm, nil
+}
+
+// ensureClusterConfigCreated ensure that the cluster-config configmap is created.
+func (r *CustomClusterController) ensureEnableVIPClusterConfigCreated(ctx context.Context, customCluster *v1alpha1.CustomCluster, cc *v1alpha1.CustomCluster, cluster *clusterv1.Cluster, kcp *controlplanev1.KubeadmControlPlane) (*corev1.ConfigMap, error) {
+	cmKey := generateClusterConfigKey(customCluster)
+	cm := &corev1.ConfigMap{}
+	if err := r.Client.Get(ctx, cmKey, cm); err != nil {
+		if apierrors.IsNotFound(err) {
+			return r.CreateEnableVIPClusterConfig(ctx, cluster, kcp, cc)
 		}
 		return nil, err
 	}
