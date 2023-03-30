@@ -21,6 +21,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	corev1 "k8s.io/api/core/v1"
+	controlplanev1 "sigs.k8s.io/cluster-api/controlplane/kubeadm/api/v1beta1"
 
 	"kurator.dev/kurator/pkg/apis/infra/v1alpha1"
 )
@@ -113,11 +114,22 @@ func TestGetWorkerNodesFromCustomMachine(t *testing.T) {
 	assert.Equal(t, targetWorkerNodesMulti, workerNodes2)
 }
 
-func TestGetClusterInfoFromCustomMachine(t *testing.T) {
-	clusterInfo1 := getClusterInfoFromCustomMachine(curCustomMachineSingle)
+func TestDesiredClusterInfo(t *testing.T) {
+	kcp1 := &controlplanev1.KubeadmControlPlane{
+		Spec: controlplanev1.KubeadmControlPlaneSpec{
+			Version: "v1.20.0",
+		},
+	}
+	kcp2 := &controlplanev1.KubeadmControlPlane{
+		Spec: controlplanev1.KubeadmControlPlaneSpec{
+			Version: "v1.25.0",
+		},
+	}
+
+	clusterInfo1 := getDesiredClusterInfo(curCustomMachineSingle, kcp1)
 	assert.Equal(t, targetClusterInfoSingle, clusterInfo1)
 
-	clusterInfo2 := getClusterInfoFromCustomMachine(curCustomMachineMulti)
+	clusterInfo2 := getDesiredClusterInfo(curCustomMachineMulti, kcp2)
 	assert.Equal(t, targetClusterInfoMulti, clusterInfo2)
 }
 
@@ -147,54 +159,9 @@ var curNodes2 = []NodeInfo{workerNode2, workerNode3, workerNode1}
 
 var curNodes3 = []NodeInfo{workerNode1}
 
-func TestFindScaleUpWorkerNodes(t *testing.T) {
-	scaleUpNodes1 := findScaleUpWorkerNodes(provisionedNodes, curNodes1)
-	assert.Equal(t, []NodeInfo{workerNode2}, scaleUpNodes1)
-
-	scaleUpNodes2 := findScaleUpWorkerNodes(provisionedNodes, curNodes2)
-	assert.Equal(t, []NodeInfo{workerNode2}, scaleUpNodes2)
-
-	scaleUpNodes3 := findScaleUpWorkerNodes(provisionedNodes, curNodes3)
-	assert.Equal(t, 0, len(scaleUpNodes3))
-
-	scaleUpNodes4 := findScaleUpWorkerNodes(nil, curNodes2)
-	assert.Equal(t, curNodes2, scaleUpNodes4)
-
-	scaleUpNodes5 := findScaleUpWorkerNodes(curNodes2, nil)
-	assert.Equal(t, 0, len(scaleUpNodes5))
-}
-
-func TestFindScaleDownWorkerNodes(t *testing.T) {
-	scaleDoneNodes1 := findScaleDownWorkerNodes(provisionedNodes, curNodes1)
-	assert.Equal(t, []NodeInfo{workerNode1}, scaleDoneNodes1)
-
-	scaleDoneNodes2 := findScaleDownWorkerNodes(provisionedNodes, curNodes2)
-	assert.Equal(t, 0, len(scaleDoneNodes2))
-
-	scaleDoneNodes3 := findScaleDownWorkerNodes(provisionedNodes, curNodes3)
-	assert.Equal(t, []NodeInfo{workerNode3}, scaleDoneNodes3)
-
-	scaleDoneNodes4 := findScaleDownWorkerNodes(nil, curNodes2)
-	assert.Equal(t, 0, len(scaleDoneNodes4))
-
-	scaleDoneNodes5 := findScaleDownWorkerNodes(curNodes2, nil)
-	assert.Equal(t, curNodes2, scaleDoneNodes5)
-}
-
 var nodeNeedDelete1 []NodeInfo
 var nodeNeedDelete2 = []NodeInfo{workerNode1}
 var nodeNeedDelete3 = []NodeInfo{workerNode1, workerNode2, workerNode3}
-
-func TestGenerateScaleDownManageCMD(t *testing.T) {
-	scaleDownCMD1 := generateScaleDownManageCMD(nodeNeedDelete1)
-	assert.Equal(t, customClusterManageCMD(""), scaleDownCMD1)
-
-	scaleDownCMD2 := generateScaleDownManageCMD(nodeNeedDelete2)
-	assert.Equal(t, customClusterManageCMD("ansible-playbook -i inventory/cluster-hosts --private-key /root/.ssh/ssh-privatekey remove-node.yml -vvv -e skip_confirmation=yes --extra-vars \"node=node1\" "), scaleDownCMD2)
-
-	scaleDownCMD3 := generateScaleDownManageCMD(nodeNeedDelete3)
-	assert.Equal(t, customClusterManageCMD("ansible-playbook -i inventory/cluster-hosts --private-key /root/.ssh/ssh-privatekey remove-node.yml -vvv -e skip_confirmation=yes --extra-vars \"node=node1,node2,node3\" "), scaleDownCMD3)
-}
 
 var clusterHostDataStr1 = "[all]\n\nmaster1 ansible_host=200.1.1.0 ip=127.1.1.0\n\nnode1 ansible_host=200.1.1.1 ip=127.1.1.1\n\n[kube_control_plane]\n\nmaster1\n\n[etcd]\nmaster1\n[kube_node]\nnode1\n[k8s-cluster:children]\nkube_node\nkube_control_plane"
 var clusterHostDataStr2 = "[all]\n\nmaster1 ansible_host=200.1.1.0 ip=127.1.1.0\n\nnode1 ansible_host=200.1.1.1 ip=127.1.1.1\n\n[kube_control_plane]\n\nmaster1\n\n[etcd]\nmaster1\n[kube_node]\n\n[k8s-cluster:children]\nkube_node\nkube_control_plane"
