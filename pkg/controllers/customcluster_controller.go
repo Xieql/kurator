@@ -258,11 +258,6 @@ func (r *CustomClusterController) reconcile(ctx context.Context, customCluster *
 	log := ctrl.LoggerFrom(ctx)
 	phase := customCluster.Status.Phase
 
-	// Handle cluster provision.
-	if phase == v1alpha1.PendingPhase || phase == v1alpha1.ProvisionFailedPhase || phase == v1alpha1.ProvisioningPhase {
-		return r.reconcileProvision(ctx, customCluster, customMachine, cluster, kcp)
-	}
-
 	// get desiredClusterInfo and provisionedClusterInfo to determine if further scaling or upgrading is needed.
 	desiredClusterInfo := getDesiredClusterInfo(customMachine, kcp)
 	provisionedClusterInfo, err := r.getProvisionedClusterInfo(ctx, customCluster)
@@ -273,6 +268,11 @@ func (r *CustomClusterController) reconcile(ctx context.Context, customCluster *
 
 	log.Info("~~~~~~~~~ desiredClusterInfo", "desiredClusterInfo", desiredClusterInfo.WorkerNodes)
 	log.Info("~~~~~~~~~ provisionedClusterInfo", "provisionedClusterInfo", provisionedClusterInfo.WorkerNodes)
+
+	// Handle cluster provision.
+	if phase == v1alpha1.PendingPhase || phase == v1alpha1.ProvisionFailedPhase || phase == v1alpha1.ProvisioningPhase {
+		return r.reconcileProvision(ctx, customCluster, customMachine, cluster, kcp)
+	}
 
 	// Handle worker nodes scaling.
 	// By comparing desiredClusterInfo.WorkerNodes and provisionedClusterInfo.WorkerNodes to decide whether to proceed reconcileScaleUp or reconcileScaleDown.
