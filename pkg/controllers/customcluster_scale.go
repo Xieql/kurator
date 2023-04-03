@@ -57,9 +57,7 @@ func (r *CustomClusterController) reconcileScaleUp(ctx context.Context, customCl
 	if customCluster.Status.Phase != v1alpha1.ScalingUpPhase {
 		log.Info("phase changes", "prevPhase", customCluster.Status.Phase, "currentPhase", v1alpha1.ScalingUpPhase)
 		customCluster.Status.Phase = v1alpha1.ScalingUpPhase
-		if err := r.Status().Update(ctx, customCluster); err != nil {
-			log.Error(err, "failed to update customCluster status")
-		}
+
 	}
 
 	// Determine the progress of scaling based on the status of the workerPod.
@@ -73,9 +71,6 @@ func (r *CustomClusterController) reconcileScaleUp(ctx context.Context, customCl
 		// The scale up process is completed by restoring the workerPod's status to "provisioned".
 		log.Info("phase changes", "prevPhase", customCluster.Status.Phase, "currentPhase", v1alpha1.ProvisionedPhase)
 		customCluster.Status.Phase = v1alpha1.ProvisionedPhase
-		if err := r.Status().Update(ctx, customCluster); err != nil {
-			log.Error(err, "failed to update customCluster status")
-		}
 
 		// Delete the temporary scaleUp cm.
 		if err := r.ensureConfigMapDeleted(ctx, generateScaleUpHostsKey(customCluster)); err != nil {
@@ -96,9 +91,7 @@ func (r *CustomClusterController) reconcileScaleUp(ctx context.Context, customCl
 	if workerPod.Status.Phase == corev1.PodFailed {
 		log.Info("scale up failed, phase changes", "prevPhase", customCluster.Status.Phase, "currentPhase", v1alpha1.ProvisionedPhase)
 		customCluster.Status.Phase = v1alpha1.ProvisionedPhase
-		if err := r.Status().Update(ctx, customCluster); err != nil {
-			log.Error(err, "failed to update customCluster status")
-		}
+
 		conditions.MarkFalse(customCluster, v1alpha1.ScaledUpCondition, v1alpha1.ScaleUpWorkerRunFailedReason,
 			clusterv1.ConditionSeverityWarning, "scale up worker run failed %s/%s", customCluster.Namespace, customCluster.Name)
 		return ctrl.Result{}, nil
@@ -124,9 +117,6 @@ func (r *CustomClusterController) reconcileScaleDown(ctx context.Context, custom
 	if customCluster.Status.Phase != v1alpha1.ScalingDownPhase {
 		log.Info("phase changes", "prevPhase", customCluster.Status.Phase, "currentPhase", v1alpha1.ScalingDownPhase)
 		customCluster.Status.Phase = v1alpha1.ScalingDownPhase
-		if err := r.Status().Update(ctx, customCluster); err != nil {
-			log.Error(err, "failed to update customCluster status")
-		}
 	}
 
 	// Determine the progress of scaling based on the status of the workerPod.
@@ -140,9 +130,6 @@ func (r *CustomClusterController) reconcileScaleDown(ctx context.Context, custom
 		// The scale down process is completed by restoring the workerPod's status to "provisioned".
 		log.Info("phase changes", "prevPhase", customCluster.Status.Phase, "currentPhase", v1alpha1.ProvisionedPhase)
 		customCluster.Status.Phase = v1alpha1.ProvisionedPhase
-		if err := r.Status().Update(ctx, customCluster); err != nil {
-			log.Error(err, "failed to update customCluster status")
-		}
 
 		// Delete the scaleDown worker
 		if err := r.ensureWorkerPodDeleted(ctx, generateWorkerKey(customCluster, CustomClusterScaleDownAction)); err != nil {
@@ -158,9 +145,7 @@ func (r *CustomClusterController) reconcileScaleDown(ctx context.Context, custom
 	if workerPod.Status.Phase == corev1.PodFailed {
 		log.Info("scale down failed, phase changes", "prevPhase", customCluster.Status.Phase, "currentPhase", v1alpha1.ProvisionedPhase)
 		customCluster.Status.Phase = v1alpha1.ProvisionedPhase
-		if err := r.Status().Update(ctx, customCluster); err != nil {
-			log.Error(err, "failed to update customCluster status")
-		}
+
 		conditions.MarkFalse(customCluster, v1alpha1.ScaledDownCondition, v1alpha1.ScaleDownWorkerRunFailedReason,
 			clusterv1.ConditionSeverityWarning, "scale down worker run failed %s/%s", customCluster.Namespace, customCluster.Name)
 		return ctrl.Result{}, nil
