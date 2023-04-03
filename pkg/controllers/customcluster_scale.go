@@ -56,7 +56,6 @@ func (r *CustomClusterController) reconcileScaleUp(ctx context.Context, customCl
 	if customCluster.Status.Phase != v1alpha1.ScalingUpPhase {
 		log.Info("phase changes", "prevPhase", customCluster.Status.Phase, "currentPhase", v1alpha1.ScalingUpPhase)
 		customCluster.Status.Phase = v1alpha1.ScalingUpPhase
-
 	}
 
 	// Determine the progress of scaling based on the status of the workerPod.

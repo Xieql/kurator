@@ -157,7 +157,6 @@ func (r *CustomClusterController) Reconcile(ctx context.Context, req ctrl.Reques
 	// ensure customCluster status no nil
 	if len(customCluster.Status.Phase) == 0 {
 		customCluster.Status.Phase = v1alpha1.PendingPhase
-
 	}
 
 	// Fetch the Cluster instance.
@@ -249,7 +248,6 @@ func (r *CustomClusterController) Reconcile(ctx context.Context, req ctrl.Reques
 		if phase != v1alpha1.DeletingPhase {
 			log.Info("phase changes", "prevPhase", customCluster.Status.Phase, "currentPhase", v1alpha1.DeletingPhase)
 			customCluster.Status.Phase = v1alpha1.DeletingPhase
-
 		}
 		// Handle cluster deletion.
 		return r.reconcileDelete(ctx, customCluster, customMachine, kcp)
@@ -329,7 +327,6 @@ func (r *CustomClusterController) reconcileProvision(ctx context.Context, custom
 	if customCluster.Status.Phase != v1alpha1.ProvisioningPhase {
 		log.Info("phase changes", "prevPhase", customCluster.Status.Phase, "currentPhase", v1alpha1.ProvisioningPhase)
 		customCluster.Status.Phase = v1alpha1.ProvisioningPhase
-
 	}
 
 	// The provisioning process will be successfully completed if the init worker is finished successfully.

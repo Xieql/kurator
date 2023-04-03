@@ -186,6 +186,18 @@ func TestGetScaleUpConfigMapData(t *testing.T) {
 			name:     "test case 1",
 			dataStr:  clusterHostDataStr1,
 			curNodes: curNodes1,
+			expected: clusterHostDataStr1,
+		},
+		{
+			name:     "test case 2",
+			dataStr:  clusterHostDataStr2,
+			curNodes: curNodes2,
+			expected: clusterHostDataStr2,
+		},
+		{
+			name:     "test case 3",
+			dataStr:  clusterHostDataStr3,
+			curNodes: curNodes3,
 			expected: clusterHostDataStr3,
 		},
 	}
