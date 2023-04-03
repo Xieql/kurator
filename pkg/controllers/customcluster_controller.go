@@ -271,6 +271,9 @@ func (r *CustomClusterController) reconcile(ctx context.Context, customCluster *
 		return ctrl.Result{}, err
 	}
 
+	log.Info("~~~~~~~~~ desiredClusterInfo", "desiredClusterInfo", desiredClusterInfo.WorkerNodes)
+	log.Info("~~~~~~~~~ provisionedClusterInfo", "provisionedClusterInfo", provisionedClusterInfo.WorkerNodes)
+
 	// Handle worker nodes scaling.
 	// By comparing desiredClusterInfo.WorkerNodes and provisionedClusterInfo.WorkerNodes to decide whether to proceed reconcileScaleUp or reconcileScaleDown.
 	scaleUpWorkerNodes := findScaleUpWorkerNodes(provisionedClusterInfo.WorkerNodes, desiredClusterInfo.WorkerNodes)
