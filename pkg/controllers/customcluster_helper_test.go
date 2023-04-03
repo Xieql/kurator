@@ -161,7 +161,6 @@ func TestDesiredClusterInfo(t *testing.T) {
 		})
 	}
 }
-}
 
 var workerNode1 = NodeInfo{
 	NodeName:  "node1",
