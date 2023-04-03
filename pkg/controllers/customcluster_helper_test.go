@@ -192,13 +192,13 @@ var masterNode = NodeInfo{
 }
 
 func TestGetWorkerNodeInfoFromClusterHost(t *testing.T) {
-	nodeInfoArr1 := getWorkerNodeInfoFromClusterHost(clusterHost1)
+	nodeInfoArr1 := getWorkerNodeInfoFromClusterHosts(clusterHost1)
 	assert.Equal(t, []NodeInfo{workerNode1}, nodeInfoArr1)
 
-	nodeInfoArr2 := getWorkerNodeInfoFromClusterHost(clusterHost2)
+	nodeInfoArr2 := getWorkerNodeInfoFromClusterHosts(clusterHost2)
 	assert.Equal(t, 0, len(nodeInfoArr2))
 
-	nodeInfoArr3 := getWorkerNodeInfoFromClusterHost(clusterHost3)
+	nodeInfoArr3 := getWorkerNodeInfoFromClusterHosts(clusterHost3)
 	assert.Equal(t, []NodeInfo{workerNode1, workerNode2, workerNode3}, nodeInfoArr3)
 }
 

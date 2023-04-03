@@ -155,6 +155,9 @@ func (r *CustomClusterController) Reconcile(ctx context.Context, req ctrl.Reques
 	// ensure customCluster status no nil
 	if len(customCluster.Status.Phase) == 0 {
 		customCluster.Status.Phase = v1alpha1.PendingPhase
+		if err := r.Status().Update(ctx, customCluster); err != nil {
+			log.Error(err, "failed to update customCluster status")
+		}
 	}
 
 	// Fetch the Cluster instance.
@@ -219,10 +222,6 @@ func (r *CustomClusterController) Reconcile(ctx context.Context, req ctrl.Reques
 	}
 
 	defer func() {
-		if err := r.Status().Update(ctx, customCluster); err != nil {
-			log.Error(err, "failed to update customCluster status", "customCluster", req)
-			reterr = err
-		}
 
 		patchOpts := []patch.Option{
 			patch.WithOwnedConditions{Conditions: []clusterv1.ConditionType{
@@ -243,6 +242,11 @@ func (r *CustomClusterController) Reconcile(ctx context.Context, req ctrl.Reques
 		if phase != v1alpha1.DeletingPhase {
 			log.Info("phase changes", "prevPhase", customCluster.Status.Phase, "currentPhase", v1alpha1.DeletingPhase)
 			customCluster.Status.Phase = v1alpha1.DeletingPhase
+
+			if err := r.Status().Update(ctx, customCluster); err != nil {
+				log.Error(err, "failed to update customCluster status", "customCluster", req)
+			}
+
 			conditions.MarkFalse(customCluster, v1alpha1.ReadyCondition, v1alpha1.DeletingReason, clusterv1.ConditionSeverityWarning, "cluster is deleting %s/%s.", customCluster.Namespace, customCluster.Name)
 		}
 		// Handle cluster deletion.
@@ -323,6 +327,9 @@ func (r *CustomClusterController) reconcileProvision(ctx context.Context, custom
 	if customCluster.Status.Phase != v1alpha1.ProvisioningPhase {
 		log.Info("phase changes", "prevPhase", customCluster.Status.Phase, "currentPhase", v1alpha1.ProvisioningPhase)
 		customCluster.Status.Phase = v1alpha1.ProvisioningPhase
+		if err := r.Status().Update(ctx, customCluster); err != nil {
+			log.Error(err, "failed to update customCluster status")
+		}
 	}
 
 	// The provisioning process will be successfully completed if the init worker is finished successfully.
@@ -330,6 +337,9 @@ func (r *CustomClusterController) reconcileProvision(ctx context.Context, custom
 		log.Info("phase changes", "prevPhase", customCluster.Status.Phase, "currentPhase", v1alpha1.ProvisionedPhase)
 		customCluster.Status.Phase = v1alpha1.ProvisionedPhase
 		conditions.MarkTrue(customCluster, v1alpha1.ReadyCondition)
+		if err := r.Status().Update(ctx, customCluster); err != nil {
+			log.Error(err, "failed to update customCluster status")
+		}
 		return ctrl.Result{}, nil
 	}
 	if initWorker.Status.Phase == corev1.PodFailed {
@@ -337,6 +347,9 @@ func (r *CustomClusterController) reconcileProvision(ctx context.Context, custom
 		customCluster.Status.Phase = v1alpha1.ProvisionFailedPhase
 		conditions.MarkFalse(customCluster, v1alpha1.ReadyCondition, v1alpha1.InitWorkerRunFailedReason,
 			clusterv1.ConditionSeverityWarning, "init worker run failed %s/%s", customCluster.Namespace, customCluster.Name)
+		if err := r.Status().Update(ctx, customCluster); err != nil {
+			log.Error(err, "failed to update customCluster status")
+		}
 		return ctrl.Result{}, nil
 	}
 
@@ -376,6 +389,9 @@ func (r *CustomClusterController) reconcileDelete(ctx context.Context, customClu
 		customCluster.Status.Phase = v1alpha1.UnknownPhase
 		conditions.MarkFalse(customCluster, v1alpha1.TerminatedCondition, v1alpha1.TerminateWorkerRunFailedReason,
 			clusterv1.ConditionSeverityWarning, "terminate worker run failed %s/%s.", customCluster.Namespace, customCluster.Name)
+		if err := r.Status().Update(ctx, customCluster); err != nil {
+			log.Error(err, "failed to update customCluster status")
+		}
 		return ctrl.Result{}, nil
 	}
 
