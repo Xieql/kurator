@@ -308,13 +308,13 @@ func getDesiredClusterInfo(customMachine *v1alpha1.CustomMachine, kcp *controlpl
 // getProvisionedClusterInfo get the provisioned cluster info on VMs from current configmap.
 func (r *CustomClusterController) getProvisionedClusterInfo(ctx context.Context, customCluster *v1alpha1.CustomCluster) (*ClusterInfo, error) {
 	// get current cluster-host configMap
-	clusterHost := &corev1.ConfigMap{}
-	if err := r.Client.Get(ctx, generateClusterHostsKey(customCluster), clusterHost); err != nil {
+	clusterHosts := &corev1.ConfigMap{}
+	if err := r.Client.Get(ctx, generateClusterHostsKey(customCluster), clusterHosts); err != nil {
 		return nil, err
 	}
 
 	// get workerNode from cluster-host
-	workerNodes := getWorkerNodeInfoFromClusterHost(clusterHost)
+	workerNodes := getWorkerNodeInfoFromClusterHosts(clusterHosts)
 
 	// create workerNodes from cluster-host Configmap
 	clusterInfo := &ClusterInfo{

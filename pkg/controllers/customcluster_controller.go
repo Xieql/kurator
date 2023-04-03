@@ -23,12 +23,12 @@ import (
 	"github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	utilerrors "k8s.io/apimachinery/pkg/util/errors"
 	"k8s.io/klog/v2"
 	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
 	controlplanev1 "sigs.k8s.io/cluster-api/controlplane/kubeadm/api/v1beta1"
+	capiutil "sigs.k8s.io/cluster-api/util"
 	"sigs.k8s.io/cluster-api/util/conditions"
 	"sigs.k8s.io/cluster-api/util/patch"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -241,7 +241,7 @@ func (r *CustomClusterController) Reconcile(ctx context.Context, req ctrl.Reques
 	if !cluster.DeletionTimestamp.IsZero() {
 		phase := customCluster.Status.Phase
 		if phase != v1alpha1.DeletingPhase {
-			log.Info(fmt.Sprintf("customCluster's phase changes from %s to %s", string(customCluster.Status.Phase), string(v1alpha1.DeletingPhase)))
+			log.Info("phase changes", "prevPhase", customCluster.Status.Phase, "currentPhase", v1alpha1.DeletingPhase)
 			customCluster.Status.Phase = v1alpha1.DeletingPhase
 			conditions.MarkFalse(customCluster, v1alpha1.ReadyCondition, v1alpha1.DeletingReason, clusterv1.ConditionSeverityWarning, "cluster is deleting %s/%s.", customCluster.Namespace, customCluster.Name)
 		}
@@ -265,10 +265,10 @@ func (r *CustomClusterController) reconcile(ctx context.Context, customCluster *
 
 	// get desiredClusterInfo and provisionedClusterInfo to determine if further scaling or upgrading is needed.
 	desiredClusterInfo := getDesiredClusterInfo(customMachine, kcp)
-	provisionedClusterInfo, err1 := r.getProvisionedClusterInfo(ctx, customCluster)
-	if err1 != nil {
-		log.Error(err1, "failed to get provisioned cluster Info from configmap")
-		return ctrl.Result{}, err1
+	provisionedClusterInfo, err := r.getProvisionedClusterInfo(ctx, customCluster)
+	if err != nil {
+		log.Error(err, "failed to get provisioned cluster Info from configmap")
+		return ctrl.Result{}, err
 	}
 
 	// Handle worker nodes scaling.
@@ -306,7 +306,8 @@ func (r *CustomClusterController) reconcileProvision(ctx context.Context, custom
 	if err3 != nil {
 		conditions.MarkFalse(customCluster, v1alpha1.ReadyCondition, v1alpha1.FailedCreateInitWorker,
 			clusterv1.ConditionSeverityWarning, "init worker not ready %s/%s", customCluster.Namespace, customCluster.Name)
-		log.Error(err3, "failed to ensure that init WorkerPod is created ", "customCluster", customCluster.Name)
+
+		log.Error(err3, "failed to ensure that init WorkerPod is created ", "name", customCluster.Name, "namespace", customCluster.Namespace)
 		return ctrl.Result{}, err3
 	}
 
@@ -317,19 +318,19 @@ func (r *CustomClusterController) reconcileProvision(ctx context.Context, custom
 	}
 
 	if customCluster.Status.Phase != v1alpha1.ProvisioningPhase {
-		log.Info(fmt.Sprintf("customCluster's phase changes from %s to %s", string(customCluster.Status.Phase), string(v1alpha1.ProvisioningPhase)))
+		log.Info("phase changes", "prevPhase", customCluster.Status.Phase, "currentPhase", v1alpha1.ProvisioningPhase)
 		customCluster.Status.Phase = v1alpha1.ProvisioningPhase
 	}
 
 	// The provisioning process will be successfully completed if the init worker is finished successfully.
 	if initWorker.Status.Phase == corev1.PodSucceeded {
-		log.Info(fmt.Sprintf("customCluster's phase changes from %s to %s", string(customCluster.Status.Phase), string(v1alpha1.ProvisionedPhase)))
+		log.Info("phase changes", "prevPhase", customCluster.Status.Phase, "currentPhase", v1alpha1.ProvisionedPhase)
 		customCluster.Status.Phase = v1alpha1.ProvisionedPhase
 		conditions.MarkTrue(customCluster, v1alpha1.ReadyCondition)
 		return ctrl.Result{}, nil
 	}
 	if initWorker.Status.Phase == corev1.PodFailed {
-		log.Info(fmt.Sprintf("customCluster's phase changes from %s to %s", string(customCluster.Status.Phase), string(v1alpha1.ProvisionFailedPhase)))
+		log.Info("phase changes", "prevPhase", customCluster.Status.Phase, "currentPhase", v1alpha1.ProvisionFailedPhase)
 		customCluster.Status.Phase = v1alpha1.ProvisionFailedPhase
 		conditions.MarkFalse(customCluster, v1alpha1.ReadyCondition, v1alpha1.InitWorkerRunFailedReason,
 			clusterv1.ConditionSeverityWarning, "init worker run failed %s/%s", customCluster.Namespace, customCluster.Name)
@@ -345,7 +346,7 @@ func (r *CustomClusterController) reconcileDelete(ctx context.Context, customClu
 
 	// Delete the manager worker pods first if there are still any running.
 	if err := r.deleteWorkerPods(ctx, customCluster); err != nil {
-		log.Error(err, "failed to delete worker pods", "customCluster", customCluster.Name)
+		log.Error(err, "failed to delete worker pods", "name", customCluster.Name, "namespace", customCluster.Namespace)
 		return ctrl.Result{}, err
 	}
 
@@ -354,7 +355,7 @@ func (r *CustomClusterController) reconcileDelete(ctx context.Context, customClu
 	if err1 != nil {
 		conditions.MarkFalse(customCluster, v1alpha1.TerminatedCondition, v1alpha1.FailedCreateTerminateWorker,
 			clusterv1.ConditionSeverityWarning, "terminate worker not ready %s/%s.", customCluster.Namespace, customCluster.Name)
-		log.Error(err1, "failed to create terminate worker", "customCluster", customCluster.Name)
+		log.Error(err1, "failed to create terminate worker", "name", customCluster.Name, "namespace", customCluster.Namespace)
 		return ctrl.Result{}, err1
 	}
 
@@ -362,13 +363,13 @@ func (r *CustomClusterController) reconcileDelete(ctx context.Context, customClu
 	if terminateWorker.Status.Phase == corev1.PodSucceeded {
 		log.Info("terminating worker was completed successfully, delete the related CRD")
 		if err := r.deleteResource(ctx, customCluster, customMachine, kcp); err != nil {
-			log.Error(err, "failed to delete resource", "customCluster", customCluster.Name)
+			log.Error(err, "failed to delete resource", "name", customCluster.Name, "namespace", customCluster.Namespace)
 			return ctrl.Result{}, err
 		}
 		return ctrl.Result{}, nil
 	}
 	if terminateWorker.Status.Phase == corev1.PodFailed {
-		log.Info(fmt.Sprintf("customCluster's phase changes from %s to %s", string(customCluster.Status.Phase), string(v1alpha1.UnknownPhase)))
+		log.Info("phase changes", "prevPhase", customCluster.Status.Phase, "currentPhase", v1alpha1.UnknownPhase)
 		customCluster.Status.Phase = v1alpha1.UnknownPhase
 		conditions.MarkFalse(customCluster, v1alpha1.TerminatedCondition, v1alpha1.TerminateWorkerRunFailedReason,
 			clusterv1.ConditionSeverityWarning, "terminate worker run failed %s/%s.", customCluster.Namespace, customCluster.Name)
@@ -382,19 +383,19 @@ func (r *CustomClusterController) reconcileDelete(ctx context.Context, customClu
 func (r *CustomClusterController) deleteWorkerPods(ctx context.Context, customCluster *v1alpha1.CustomCluster) error {
 	// Delete the init worker.
 	if err := r.ensureWorkerPodDeleted(ctx, generateWorkerKey(customCluster, CustomClusterInitAction)); err != nil {
-		log.Error(err, "failed to delete init worker", "customCluster", customCluster.Name)
+		log.Error(err, "failed to delete init worker", "name", customCluster.Name, "namespace", customCluster.Namespace)
 		return err
 	}
 
 	// Delete the scale up worker.
 	if err := r.ensureWorkerPodDeleted(ctx, generateWorkerKey(customCluster, CustomClusterScaleUpAction)); err != nil {
-		log.Error(err, "failed to delete scale up worker", "customCluster", customCluster.Name)
+		log.Error(err, "failed to delete scale up worker", "name", customCluster.Name, "namespace", customCluster.Namespace)
 		return err
 	}
 
 	// Delete the scale down worker.
 	if err := r.ensureWorkerPodDeleted(ctx, generateWorkerKey(customCluster, CustomClusterScaleDownAction)); err != nil {
-		log.Error(err, "failed to delete scale down worker", "customCluster", customCluster.Name)
+		log.Error(err, "failed to delete scale down worker", "name", customCluster.Name, "namespace", customCluster.Namespace)
 		return err
 	}
 
@@ -419,21 +420,21 @@ func (r *CustomClusterController) deleteResource(ctx context.Context, customClus
 	// Remove finalizer of customMachine.
 	controllerutil.RemoveFinalizer(customMachine, CustomClusterFinalizer)
 	if err := r.Client.Update(ctx, customMachine); err != nil && !apierrors.IsNotFound(err) {
-		log.Error(err, "failed to remove finalizer of customMachine", "customMachine", customMachine.Name)
+		log.Error(err, "failed to remove finalizer of customMachine", "name", customMachine.Name, "namespace", customMachine.Namespace)
 		return err
 	}
 
 	// Remove finalizer of kcp.
 	controllerutil.RemoveFinalizer(kcp, CustomClusterFinalizer)
 	if err := r.Client.Update(ctx, kcp); err != nil && !apierrors.IsNotFound(err) {
-		log.Error(err, "failed to remove finalizer of customMachine", "customMachine", customMachine.Name)
+		log.Error(err, "failed to remove finalizer of kcp", "name", kcp.Name, "namespace", kcp.Namespace)
 		return err
 	}
 
 	// Remove finalizer of customCluster. After this, cluster will be deleted completely.
 	controllerutil.RemoveFinalizer(customCluster, CustomClusterFinalizer)
 	if err := r.Client.Update(ctx, customCluster); err != nil && !apierrors.IsNotFound(err) {
-		log.Error(err, "failed to remove finalizer of customCluster", "customCluster", customCluster.Name)
+		log.Error(err, "failed to remove finalizer of customCluster", "name", customCluster.Name, "namespace", customCluster.Namespace)
 		return err
 	}
 
@@ -449,9 +450,9 @@ func (r *CustomClusterController) ensureFinalizerAndOwnerRef(ctx context.Context
 	controllerutil.AddFinalizer(clusterConfig, CustomClusterConfigMapFinalizer)
 
 	ownerRefs := generateOwnerRefFromCustomCluster(customCluster)
-	customMachine.OwnerReferences = []metav1.OwnerReference{ownerRefs}
-	clusterHosts.OwnerReferences = []metav1.OwnerReference{ownerRefs}
-	clusterConfig.OwnerReferences = []metav1.OwnerReference{ownerRefs}
+	capiutil.EnsureOwnerRef(customMachine.OwnerReferences, ownerRefs)
+	capiutil.EnsureOwnerRef(clusterHosts.OwnerReferences, ownerRefs)
+	capiutil.EnsureOwnerRef(clusterConfig.OwnerReferences, ownerRefs)
 
 	if err := r.Client.Update(ctx, customMachine); err != nil {
 		return fmt.Errorf("failed to set finalizer or ownerRef of customMachine: %v", err)
