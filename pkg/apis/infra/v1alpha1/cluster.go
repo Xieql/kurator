@@ -94,8 +94,6 @@ const (
 	FailedCreateInitWorker = "InitWorkerNotReady"
 	// InitWorkerRunFailedReason (Severity=Error) documents that the initialization worker run failed.
 	InitWorkerRunFailedReason = "InitWorkerRunFailed"
-	// DeletingReason (Severity=Info) documents that the cluster is being deleted.
-	DeletingReason = "Deleting"
 
 	// ScaledUpCondition reports on whether the cluster worker nodes is scaled up.
 	ScaledUpCondition capiv1.ConditionType = "ScaledUp"

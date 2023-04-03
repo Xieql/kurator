@@ -244,8 +244,6 @@ func (r *CustomClusterController) Reconcile(ctx context.Context, req ctrl.Reques
 			if err := r.Status().Update(ctx, customCluster); err != nil {
 				log.Error(err, "failed to update customCluster status", "customCluster", req)
 			}
-
-			conditions.MarkFalse(customCluster, v1alpha1.ReadyCondition, v1alpha1.DeletingReason, clusterv1.ConditionSeverityWarning, "cluster is deleting %s/%s.", customCluster.Namespace, customCluster.Name)
 		}
 		// Handle cluster deletion.
 		return r.reconcileDelete(ctx, customCluster, customMachine, kcp)
@@ -284,11 +282,11 @@ func (r *CustomClusterController) reconcile(ctx context.Context, customCluster *
 	// Handle worker nodes scaling.
 	// By comparing desiredClusterInfo.WorkerNodes and provisionedClusterInfo.WorkerNodes to decide whether to proceed reconcileScaleUp or reconcileScaleDown.
 	scaleUpWorkerNodes := findScaleUpWorkerNodes(provisionedClusterInfo.WorkerNodes, desiredClusterInfo.WorkerNodes)
-	log.Info("~~~~~~~~~ scaleUpWorkerNodes", "scaleUpWorkerNodes", desiredClusterInfo.WorkerNodes)
+	log.Info("~~~~~~~~~ scaleUpWorkerNodes", "scaleUpWorkerNodes", scaleUpWorkerNodes)
 
 	scaleDownWorkerNodes := findScaleDownWorkerNodes(provisionedClusterInfo.WorkerNodes, desiredClusterInfo.WorkerNodes)
 
-	log.Info("~~~~~~~~~ scaleDownWorkerNodes", "scaleDownWorkerNodes", provisionedClusterInfo.WorkerNodes)
+	log.Info("~~~~~~~~~ scaleDownWorkerNodes", "scaleDownWorkerNodes", scaleDownWorkerNodes)
 
 	if (phase == v1alpha1.ProvisionedPhase && len(scaleUpWorkerNodes) != 0) || phase == v1alpha1.ScalingUpPhase {
 		return r.reconcileScaleUp(ctx, customCluster, scaleUpWorkerNodes)
