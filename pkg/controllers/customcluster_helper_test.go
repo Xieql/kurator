@@ -192,30 +192,97 @@ var masterNode = NodeInfo{
 }
 
 func TestGetWorkerNodeInfoFromClusterHost(t *testing.T) {
-	nodeInfoArr1 := getWorkerNodeInfoFromClusterHosts(clusterHost1)
-	assert.Equal(t, []NodeInfo{workerNode1}, nodeInfoArr1)
+	cases := []struct {
+		name     string
+		input    *corev1.ConfigMap
+		expected []NodeInfo
+	}{
+		{
+			name:     "Get worker node info from cluster host 1",
+			input:    clusterHost1,
+			expected: []NodeInfo{workerNode1},
+		},
+		{
+			name:     "Get worker node info from cluster host 2",
+			input:    clusterHost2,
+			expected: []NodeInfo{},
+		},
+		{
+			name:     "Get worker node info from cluster host 3",
+			input:    clusterHost3,
+			expected: []NodeInfo{workerNode1, workerNode2, workerNode3},
+		},
+	}
 
-	nodeInfoArr2 := getWorkerNodeInfoFromClusterHosts(clusterHost2)
-	assert.Equal(t, 0, len(nodeInfoArr2))
-
-	nodeInfoArr3 := getWorkerNodeInfoFromClusterHosts(clusterHost3)
-	assert.Equal(t, []NodeInfo{workerNode1, workerNode2, workerNode3}, nodeInfoArr3)
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			nodeInfoArr := getWorkerNodeInfoFromClusterHosts(tc.input)
+			assert.Equal(t, tc.expected, nodeInfoArr)
+		})
+	}
 }
 
-var nodeStr1 = "master1 ansible_host=200.1.1.0 ip=127.1.1.0"
-var nodeStr2 = "node1 ansible_host=200.1.1.1 ip=127.1.1.1"
-
 func TestGetNodeInfoFromNodeStr(t *testing.T) {
-	hostName1, nodeInfo1 := getNodeInfoFromNodeStr(nodeStr1)
-	assert.Equal(t, "master1", hostName1)
-	assert.Equal(t, masterNode, nodeInfo1)
+	cases := []struct {
+		name     string
+		nodeStr  string
+		expected struct {
+			hostName string
+			nodeInfo NodeInfo
+		}
+	}{
+		{
+			name:    "test case 1",
+			nodeStr: "master1 ansible_host=200.1.1.0 ip=127.1.1.0",
+			expected: struct {
+				hostName string
+				nodeInfo NodeInfo
+			}{
+				hostName: "master1",
+				nodeInfo: masterNode,
+			},
+		},
+		{
+			name:    "test case 2",
+			nodeStr: "node1 ansible_host=200.1.1.1 ip=127.1.1.1",
+			expected: struct {
+				hostName string
+				nodeInfo NodeInfo
+			}{
+				hostName: "node1",
+				nodeInfo: workerNode1,
+			},
+		},
+	}
 
-	hostName2, nodeInfo2 := getNodeInfoFromNodeStr(nodeStr2)
-	assert.Equal(t, "node1", hostName2)
-	assert.Equal(t, workerNode1, nodeInfo2)
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			hostName, nodeInfo := getNodeInfoFromNodeStr(tc.nodeStr)
+			assert.Equal(t, tc.expected.hostName, hostName)
+			assert.Equal(t, tc.expected.nodeInfo, nodeInfo)
+		})
+	}
 }
 
 func TestGetScaleUpConfigMapData(t *testing.T) {
-	ans := getScaleUpConfigMapData(clusterHostDataStr1, curNodes1)
-	assert.Equal(t, clusterHostDataStr3, ans)
+	cases := []struct {
+		name     string
+		dataStr  string
+		curNodes []NodeInfo
+		expected string
+	}{
+		{
+			name:     "test case 1",
+			dataStr:  clusterHostDataStr1,
+			curNodes: curNodes1,
+			expected: clusterHostDataStr3,
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			ans := getScaleUpConfigMapData(tc.dataStr, tc.curNodes)
+			assert.Equal(t, tc.expected, ans)
+		})
+	}
 }

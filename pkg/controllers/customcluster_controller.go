@@ -139,6 +139,8 @@ func (r *CustomClusterController) SetupWithManager(ctx context.Context, mgr ctrl
 func (r *CustomClusterController) Reconcile(ctx context.Context, req ctrl.Request) (_ ctrl.Result, reterr error) {
 	log := ctrl.LoggerFrom(ctx)
 
+	log.Info("··················Reconcile")
+
 	// Fetch the customCluster instance.
 	customCluster := &v1alpha1.CustomCluster{}
 	if err := r.Client.Get(ctx, req.NamespacedName, customCluster); err != nil {
@@ -258,6 +260,8 @@ func (r *CustomClusterController) reconcile(ctx context.Context, customCluster *
 	log := ctrl.LoggerFrom(ctx)
 	phase := customCluster.Status.Phase
 
+	log.Info("%%%%%%%%%%%%%%%%%%%%%%%%%%%%··················reconcile")
+
 	// Handle cluster provision.
 	if phase == v1alpha1.PendingPhase || phase == v1alpha1.ProvisionFailedPhase || phase == v1alpha1.ProvisioningPhase {
 		return r.reconcileProvision(ctx, customCluster, customMachine, cluster, kcp)
@@ -301,6 +305,7 @@ func (r *CustomClusterController) reconcile(ctx context.Context, customCluster *
 // reconcileProvision handle cluster provision.
 func (r *CustomClusterController) reconcileProvision(ctx context.Context, customCluster *v1alpha1.CustomCluster, customMachine *v1alpha1.CustomMachine, cluster *clusterv1.Cluster, kcp *controlplanev1.KubeadmControlPlane) (ctrl.Result, error) {
 	log := ctrl.LoggerFrom(ctx)
+	log.Info("··················reconcileProvision")
 
 	// Create the configmaps that can be recognized by kubespray, which are derived from CRD parameters.
 	clusterHosts, err1 := r.ensureClusterHostsCreated(ctx, customCluster, customMachine)
@@ -365,6 +370,7 @@ func (r *CustomClusterController) reconcileProvision(ctx context.Context, custom
 // reconcileDelete handle cluster deletion.
 func (r *CustomClusterController) reconcileDelete(ctx context.Context, customCluster *v1alpha1.CustomCluster, customMachine *v1alpha1.CustomMachine, kcp *controlplanev1.KubeadmControlPlane) (ctrl.Result, error) {
 	log := ctrl.LoggerFrom(ctx)
+	log.Info("··················reconcileDelete")
 
 	// Delete the manager worker pods first if there are still any running.
 	if err := r.deleteWorkerPods(ctx, customCluster); err != nil {
