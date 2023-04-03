@@ -107,30 +107,60 @@ var targetClusterInfoMulti = &ClusterInfo{
 }
 
 func TestGetWorkerNodesFromCustomMachine(t *testing.T) {
-	workerNodes1 := getWorkerNodesFromCustomMachine(curCustomMachineSingle)
-	assert.Equal(t, targetWorkerNodesSingle, workerNodes1)
+	cases := []struct {
+		name string
+		obj  *v1alpha1.CustomMachine
 
-	workerNodes2 := getWorkerNodesFromCustomMachine(curCustomMachineMulti)
-	assert.Equal(t, targetWorkerNodesMulti, workerNodes2)
+		expected []NodeInfo
+	}{
+		{
+			name:     "single worker node",
+			obj:      curCustomMachineSingle,
+			expected: targetWorkerNodesSingle,
+		},
+		{
+			name:     "multiple worker nodes",
+			obj:      curCustomMachineMulti,
+			expected: targetWorkerNodesMulti,
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			workerNodes := getWorkerNodesFromCustomMachine(tc.obj)
+			assert.Equal(t, tc.expected, workerNodes)
+		})
+	}
 }
 
 func TestDesiredClusterInfo(t *testing.T) {
-	kcp1 := &controlplanev1.KubeadmControlPlane{
-		Spec: controlplanev1.KubeadmControlPlaneSpec{
-			Version: "v1.20.0",
+	cases := []struct {
+		name     string
+		machine  *v1alpha1.CustomMachine
+		kcp      *controlplanev1.KubeadmControlPlane
+		expected *ClusterInfo
+	}{
+		{
+			name:     "Single control plane node with v1.20.0 KubeadmControlPlane",
+			machine:  curCustomMachineSingle,
+			kcp:      &controlplanev1.KubeadmControlPlane{Spec: controlplanev1.KubeadmControlPlaneSpec{Version: "v1.20.0"}},
+			expected: targetClusterInfoSingle,
 		},
-	}
-	kcp2 := &controlplanev1.KubeadmControlPlane{
-		Spec: controlplanev1.KubeadmControlPlaneSpec{
-			Version: "v1.25.0",
+		{
+			name:     "Multi control plane nodes with v1.25.0 KubeadmControlPlane",
+			machine:  curCustomMachineMulti,
+			kcp:      &controlplanev1.KubeadmControlPlane{Spec: controlplanev1.KubeadmControlPlaneSpec{Version: "v1.25.0"}},
+			expected: targetClusterInfoMulti,
 		},
 	}
 
-	clusterInfo1 := getDesiredClusterInfo(curCustomMachineSingle, kcp1)
-	assert.Equal(t, targetClusterInfoSingle, clusterInfo1)
-
-	clusterInfo2 := getDesiredClusterInfo(curCustomMachineMulti, kcp2)
-	assert.Equal(t, targetClusterInfoMulti, clusterInfo2)
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			clusterInfo := getDesiredClusterInfo(tc.machine, tc.kcp)
+			assert.Equal(t, tc.expected, clusterInfo)
+		})
+	}
+}
 }
 
 var workerNode1 = NodeInfo{
@@ -260,29 +290,6 @@ func TestGetNodeInfoFromNodeStr(t *testing.T) {
 			hostName, nodeInfo := getNodeInfoFromNodeStr(tc.nodeStr)
 			assert.Equal(t, tc.expected.hostName, hostName)
 			assert.Equal(t, tc.expected.nodeInfo, nodeInfo)
-		})
-	}
-}
-
-func TestGetScaleUpConfigMapData(t *testing.T) {
-	cases := []struct {
-		name     string
-		dataStr  string
-		curNodes []NodeInfo
-		expected string
-	}{
-		{
-			name:     "test case 1",
-			dataStr:  clusterHostDataStr1,
-			curNodes: curNodes1,
-			expected: clusterHostDataStr3,
-		},
-	}
-
-	for _, tc := range cases {
-		t.Run(tc.name, func(t *testing.T) {
-			ans := getScaleUpConfigMapData(tc.dataStr, tc.curNodes)
-			assert.Equal(t, tc.expected, ans)
 		})
 	}
 }

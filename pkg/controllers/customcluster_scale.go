@@ -36,7 +36,6 @@ import (
 // reconcileScaleUp is responsible for handling the customCluster reconciliation process when worker nodes need to be scaled up.
 func (r *CustomClusterController) reconcileScaleUp(ctx context.Context, customCluster *v1alpha1.CustomCluster, scaleUpWorkerNodes []NodeInfo) (ctrl.Result, error) {
 	log := ctrl.LoggerFrom(ctx)
-	log.Info("··················reconcileScaleUp")
 
 	// Create a temporary configmap that represents the desired state to create the scaleUp pod.
 	if _, err := r.ensureScaleUpHostsCreated(ctx, customCluster, scaleUpWorkerNodes); err != nil {
@@ -102,7 +101,6 @@ func (r *CustomClusterController) reconcileScaleUp(ctx context.Context, customCl
 // reconcileScaleDown is responsible for handling the customCluster reconciliation process when worker nodes need to be scaled down.
 func (r *CustomClusterController) reconcileScaleDown(ctx context.Context, customCluster *v1alpha1.CustomCluster, customMachine *v1alpha1.CustomMachine, scaleDownWorkerNodes []NodeInfo) (ctrl.Result, error) {
 	log := ctrl.LoggerFrom(ctx)
-	log.Info("··················reconcileScaleDown")
 
 	// Checks whether the worker node for scaling down already exists. If it does not exist, the function creates it.
 	workerPod, err1 := r.ensureWorkerPodCreated(ctx, customCluster, CustomClusterScaleDownAction, generateScaleDownManageCMD(scaleDownWorkerNodes), generateClusterHostsName(customCluster), generateClusterConfigName(customCluster))

@@ -264,37 +264,25 @@ func (r *CustomClusterController) reconcile(ctx context.Context, customCluster *
 	log := ctrl.LoggerFrom(ctx)
 	phase := customCluster.Status.Phase
 
-	log.Info("%%%%%%%%%%%%%%%%%%%%%%%%%%%%··················reconcile")
-
 	// Handle cluster provision.
 	if phase == v1alpha1.PendingPhase || phase == v1alpha1.ProvisionFailedPhase || phase == v1alpha1.ProvisioningPhase {
 		return r.reconcileProvision(ctx, customCluster, customMachine, cluster, kcp)
 	}
 
 	// Get desiredClusterInfo and provisionedClusterInfo to determine if further scaling or upgrading is needed.
-	// desiredClusterInfo is the info from configed crd(customMachine kcp)
+	// desiredClusterInfo contains information retrieved from configured CRDs such as "customMachine" and "kcp".
 	desiredClusterInfo := getDesiredClusterInfo(customMachine, kcp)
-	log.Info("~~~~~~~~~ customMachine", "customMachine.firstnode.publicIP", customMachine.Spec.Nodes[0].PublicIP)
-
-	log.Info("~~~~~~~~~ desiredClusterInfo", "desiredClusterInfo", desiredClusterInfo.WorkerNodes)
-
-	// provisionedClusterInfo is the info from cm
+	// provisionedClusterInfo contains information retrieved from configmap that represent provisioned cluster.
 	provisionedClusterInfo, err := r.getProvisionedClusterInfo(ctx, customCluster)
 	if err != nil {
 		log.Error(err, "failed to get provisioned cluster Info from configmap")
 		return ctrl.Result{}, err
 	}
 
-	log.Info("~~~~~~~~~ provisionedClusterInfo", "provisionedClusterInfo", provisionedClusterInfo.WorkerNodes)
-
 	// Handle worker nodes scaling.
 	// By comparing desiredClusterInfo.WorkerNodes and provisionedClusterInfo.WorkerNodes to decide whether to proceed reconcileScaleUp or reconcileScaleDown.
 	scaleUpWorkerNodes := findScaleUpWorkerNodes(provisionedClusterInfo.WorkerNodes, desiredClusterInfo.WorkerNodes)
-	log.Info("~~~~~~~~~ scaleUpWorkerNodes", "scaleUpWorkerNodes", scaleUpWorkerNodes)
-
 	scaleDownWorkerNodes := findScaleDownWorkerNodes(provisionedClusterInfo.WorkerNodes, desiredClusterInfo.WorkerNodes)
-
-	log.Info("~~~~~~~~~ scaleDownWorkerNodes", "scaleDownWorkerNodes", scaleDownWorkerNodes)
 
 	if (phase == v1alpha1.ProvisionedPhase && len(scaleUpWorkerNodes) != 0) || phase == v1alpha1.ScalingUpPhase {
 		return r.reconcileScaleUp(ctx, customCluster, scaleUpWorkerNodes)
@@ -309,7 +297,6 @@ func (r *CustomClusterController) reconcile(ctx context.Context, customCluster *
 // reconcileProvision handle cluster provision.
 func (r *CustomClusterController) reconcileProvision(ctx context.Context, customCluster *v1alpha1.CustomCluster, customMachine *v1alpha1.CustomMachine, cluster *clusterv1.Cluster, kcp *controlplanev1.KubeadmControlPlane) (ctrl.Result, error) {
 	log := ctrl.LoggerFrom(ctx)
-	log.Info("··················reconcileProvision")
 
 	// Create the configmaps that can be recognized by kubespray, which are derived from CRD parameters.
 	clusterHosts, err1 := r.ensureClusterHostsCreated(ctx, customCluster, customMachine)
@@ -368,7 +355,6 @@ func (r *CustomClusterController) reconcileProvision(ctx context.Context, custom
 // reconcileDelete handle cluster deletion.
 func (r *CustomClusterController) reconcileDelete(ctx context.Context, customCluster *v1alpha1.CustomCluster, customMachine *v1alpha1.CustomMachine, kcp *controlplanev1.KubeadmControlPlane) (ctrl.Result, error) {
 	log := ctrl.LoggerFrom(ctx)
-	log.Info("··················reconcileDelete")
 
 	// Delete the manager worker pods first if there are still any running.
 	if err := r.deleteWorkerPods(ctx, customCluster); err != nil {
