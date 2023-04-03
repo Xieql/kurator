@@ -139,8 +139,6 @@ func (r *CustomClusterController) SetupWithManager(ctx context.Context, mgr ctrl
 func (r *CustomClusterController) Reconcile(ctx context.Context, req ctrl.Request) (_ ctrl.Result, reterr error) {
 	log := ctrl.LoggerFrom(ctx)
 
-	log.Info("··················Reconcile")
-
 	// Fetch the customCluster instance.
 	customCluster := &v1alpha1.CustomCluster{}
 	if err := r.Client.Get(ctx, req.NamespacedName, customCluster); err != nil {

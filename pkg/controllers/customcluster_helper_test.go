@@ -180,8 +180,6 @@ var workerNode3 = NodeInfo{
 	PrivateIP: "127.1.1.3",
 }
 
-var provisionedNodes = []NodeInfo{workerNode1, workerNode3}
-
 var curNodes1 = []NodeInfo{workerNode2, workerNode3}
 
 var curNodes2 = []NodeInfo{workerNode2, workerNode3, workerNode1}
