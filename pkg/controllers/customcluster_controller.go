@@ -222,10 +222,10 @@ func (r *CustomClusterController) Reconcile(ctx context.Context, req ctrl.Reques
 	}
 
 	defer func() {
-		//if err := r.Status().Update(ctx, customCluster); err != nil {
-		//	log.Error(err, "failed to update customCluster status", "customCluster", req)
-		//	reterr = err
-		//}
+		if err := r.Status().Update(ctx, customCluster); err != nil {
+			log.Error(err, "failed to update customCluster status", "customCluster", req)
+			reterr = err
+		}
 		if err := r.Update(ctx, customCluster); err != nil {
 			log.Error(err, "failed to update customCluster", "customCluster", req)
 			reterr = err
