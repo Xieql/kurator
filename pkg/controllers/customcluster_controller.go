@@ -222,7 +222,6 @@ func (r *CustomClusterController) Reconcile(ctx context.Context, req ctrl.Reques
 	}
 
 	defer func() {
-
 		patchOpts := []patch.Option{
 			patch.WithOwnedConditions{Conditions: []clusterv1.ConditionType{
 				v1alpha1.ReadyCondition,
@@ -242,7 +241,6 @@ func (r *CustomClusterController) Reconcile(ctx context.Context, req ctrl.Reques
 		if phase != v1alpha1.DeletingPhase {
 			log.Info("phase changes", "prevPhase", customCluster.Status.Phase, "currentPhase", v1alpha1.DeletingPhase)
 			customCluster.Status.Phase = v1alpha1.DeletingPhase
-
 			if err := r.Status().Update(ctx, customCluster); err != nil {
 				log.Error(err, "failed to update customCluster status", "customCluster", req)
 			}
@@ -282,6 +280,10 @@ func (r *CustomClusterController) reconcile(ctx context.Context, customCluster *
 	// By comparing desiredClusterInfo.WorkerNodes and provisionedClusterInfo.WorkerNodes to decide whether to proceed reconcileScaleUp or reconcileScaleDown.
 	scaleUpWorkerNodes := findScaleUpWorkerNodes(provisionedClusterInfo.WorkerNodes, desiredClusterInfo.WorkerNodes)
 	scaleDownWorkerNodes := findScaleDownWorkerNodes(provisionedClusterInfo.WorkerNodes, desiredClusterInfo.WorkerNodes)
+
+	log.Info("~~~~~~~~~ desiredClusterInfo", "scaleUpWorkerNodes", desiredClusterInfo.WorkerNodes)
+	log.Info("~~~~~~~~~ provisionedClusterInfo", "scaleDownWorkerNodes", provisionedClusterInfo.WorkerNodes)
+
 	if (phase == v1alpha1.ProvisionedPhase && len(scaleUpWorkerNodes) != 0) || phase == v1alpha1.ScalingUpPhase {
 		return r.reconcileScaleUp(ctx, customCluster, scaleUpWorkerNodes)
 	}
