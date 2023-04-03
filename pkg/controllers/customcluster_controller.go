@@ -263,7 +263,6 @@ func (r *CustomClusterController) reconcile(ctx context.Context, customCluster *
 	provisionedClusterInfo, err := r.getProvisionedClusterInfo(ctx, customCluster)
 	if err != nil {
 		log.Error(err, "failed to get provisioned cluster Info from configmap")
-		return ctrl.Result{}, err
 	}
 
 	log.Info("~~~~~~~~~ desiredClusterInfo", "desiredClusterInfo", desiredClusterInfo.WorkerNodes)
