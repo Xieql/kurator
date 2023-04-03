@@ -481,9 +481,9 @@ func (r *CustomClusterController) ensureFinalizerAndOwnerRef(ctx context.Context
 	controllerutil.AddFinalizer(clusterConfig, CustomClusterConfigMapFinalizer)
 
 	ownerRefs := generateOwnerRefFromCustomCluster(customCluster)
-	capiutil.EnsureOwnerRef(customMachine.OwnerReferences, ownerRefs)
-	capiutil.EnsureOwnerRef(clusterHosts.OwnerReferences, ownerRefs)
-	capiutil.EnsureOwnerRef(clusterConfig.OwnerReferences, ownerRefs)
+	customMachine.OwnerReferences = capiutil.EnsureOwnerRef(customMachine.OwnerReferences, ownerRefs)
+	clusterHosts.OwnerReferences = capiutil.EnsureOwnerRef(clusterHosts.OwnerReferences, ownerRefs)
+	clusterConfig.OwnerReferences = capiutil.EnsureOwnerRef(clusterConfig.OwnerReferences, ownerRefs)
 
 	if err := r.Client.Update(ctx, customMachine); err != nil {
 		return fmt.Errorf("failed to set finalizer or ownerRef of customMachine: %v", err)
