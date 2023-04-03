@@ -266,23 +266,29 @@ func (r *CustomClusterController) reconcile(ctx context.Context, customCluster *
 	}
 
 	// Get desiredClusterInfo and provisionedClusterInfo to determine if further scaling or upgrading is needed.
+	// desiredClusterInfo is the info from configed crd(customMachine kcp)
 	desiredClusterInfo := getDesiredClusterInfo(customMachine, kcp)
+	log.Info("~~~~~~~~~ customMachine", "customMachine.firstnode.publicIP", customMachine.Spec.Nodes[0].PublicIP)
+
+	log.Info("~~~~~~~~~ desiredClusterInfo", "desiredClusterInfo", desiredClusterInfo.WorkerNodes)
+
+	// provisionedClusterInfo is the info from cm
 	provisionedClusterInfo, err := r.getProvisionedClusterInfo(ctx, customCluster)
 	if err != nil {
 		log.Error(err, "failed to get provisioned cluster Info from configmap")
 		return ctrl.Result{}, err
 	}
 
-	log.Info("~~~~~~~~~ desiredClusterInfo", "desiredClusterInfo", desiredClusterInfo.WorkerNodes)
 	log.Info("~~~~~~~~~ provisionedClusterInfo", "provisionedClusterInfo", provisionedClusterInfo.WorkerNodes)
 
 	// Handle worker nodes scaling.
 	// By comparing desiredClusterInfo.WorkerNodes and provisionedClusterInfo.WorkerNodes to decide whether to proceed reconcileScaleUp or reconcileScaleDown.
 	scaleUpWorkerNodes := findScaleUpWorkerNodes(provisionedClusterInfo.WorkerNodes, desiredClusterInfo.WorkerNodes)
+	log.Info("~~~~~~~~~ scaleUpWorkerNodes", "scaleUpWorkerNodes", desiredClusterInfo.WorkerNodes)
+
 	scaleDownWorkerNodes := findScaleDownWorkerNodes(provisionedClusterInfo.WorkerNodes, desiredClusterInfo.WorkerNodes)
 
-	log.Info("~~~~~~~~~ desiredClusterInfo", "scaleUpWorkerNodes", desiredClusterInfo.WorkerNodes)
-	log.Info("~~~~~~~~~ provisionedClusterInfo", "scaleDownWorkerNodes", provisionedClusterInfo.WorkerNodes)
+	log.Info("~~~~~~~~~ scaleDownWorkerNodes", "scaleDownWorkerNodes", provisionedClusterInfo.WorkerNodes)
 
 	if (phase == v1alpha1.ProvisionedPhase && len(scaleUpWorkerNodes) != 0) || phase == v1alpha1.ScalingUpPhase {
 		return r.reconcileScaleUp(ctx, customCluster, scaleUpWorkerNodes)
