@@ -18,6 +18,7 @@ package controllers
 
 import (
 	"context"
+	_ "embed"
 	"fmt"
 	"strings"
 	"text/template"
@@ -195,32 +196,37 @@ func (r *CustomClusterController) recreateClusterHosts(ctx context.Context, cust
 	return r.CreateClusterHosts(ctx, customMachine, customCluster)
 }
 
+//go:embed cluster_hosts.template
+var clusterHostsTemplate string
+
 func (r *CustomClusterController) CreateClusterHosts(ctx context.Context, customMachine *v1alpha1.CustomMachine, customCluster *v1alpha1.CustomCluster) (*corev1.ConfigMap, error) {
 	hostsContent := GetHostsContent(customMachine)
 	hostData := &strings.Builder{}
 
+	tmpl := template.Must(template.New("").Parse(clusterHostsTemplate))
+
 	// todo: split this to a separated file
-	tmpl := template.Must(template.New("").Parse(`
-[all]
-{{ range $v := .NodeAndIP }}
-{{ $v }}
-{{ end }}
-[kube_control_plane]
-{{ range $v := .MasterName }}
-{{ $v }}
-{{ end }}
-[etcd]
-{{- range $v := .EtcdNodeName }}
-{{ $v }}
-{{ end }}
-[kube_node]
-{{- range $v := .NodeName }}
-{{ $v }}
-{{ end }}
-[k8s-cluster:children]
-kube_node
-kube_control_plane
-`))
+	//	tmpl := template.Must(template.New("").Parse(`
+	//[all]
+	//{{ range $v := .NodeAndIP }}
+	//{{ $v }}
+	//{{ end }}
+	//[kube_control_plane]
+	//{{ range $v := .MasterName }}
+	//{{ $v }}
+	//{{ end }}
+	//[etcd]
+	//{{- range $v := .EtcdNodeName }}
+	//{{ $v }}
+	//{{ end }}
+	//[kube_node]
+	//{{- range $v := .NodeName }}
+	//{{ $v }}
+	//{{ end }}
+	//[k8s-cluster:children]
+	//kube_node
+	//kube_control_plane
+	//`))
 
 	if err := tmpl.Execute(hostData, hostsContent); err != nil {
 		return nil, err
@@ -231,21 +237,25 @@ kube_control_plane
 	return r.CreateConfigMapWithTemplate(ctx, name, namespace, ClusterHostsName, hostData.String())
 }
 
+//go:embed cluster_config.template
+var clusterConfigTemplate string
+
 func (r *CustomClusterController) CreateClusterConfig(ctx context.Context, c *clusterv1.Cluster, kcp *controlplanev1.KubeadmControlPlane, cc *v1alpha1.CustomCluster) (*corev1.ConfigMap, error) {
 	configContent := GetConfigContent(c, kcp, cc)
 	configData := &strings.Builder{}
 
+	tmpl := template.Must(template.New("").Parse(clusterConfigTemplate))
 	// todo: split this to a separated file
-	tmpl := template.Must(template.New("").Parse(`
-kube_version: {{ .KubeVersion}}
-download_run_once: true
-download_container: false
-download_localhost: true
-# network
-kube_pods_subnet: {{ .PodCIDR }}
-kube_network_plugin: {{ .CNIType }}
-
-`))
+	//	tmpl := template.Must(template.New("").Parse(`
+	//kube_version: {{ .KubeVersion}}
+	//download_run_once: true
+	//download_container: false
+	//download_localhost: true
+	//# network
+	//kube_pods_subnet: {{ .PodCIDR }}
+	//kube_network_plugin: {{ .CNIType }}
+	//
+	//`))
 
 	if err := tmpl.Execute(configData, configContent); err != nil {
 		return nil, err
