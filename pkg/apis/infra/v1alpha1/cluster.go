@@ -85,6 +85,9 @@ const (
 
 	// ScalingDownPhase represents the cluster is removing the worker nodes.
 	ScalingDownPhase CustomClusterPhase = "ScalingDown"
+
+	// UpgradingPhase represents the kubernetes version of cluster is upgrading.
+	UpgradingPhase CustomClusterPhase = "Upgrading"
 )
 
 const (
@@ -115,6 +118,13 @@ const (
 	FailedCreateTerminateWorker = "TerminateWorkerNotReady"
 	// TerminateWorkerRunFailedReason (Severity=Error) documents that the terminal worker run failed.
 	TerminateWorkerRunFailedReason = "TerminateWorkerRunFailed"
+
+	// UpgradeCondition reports on whether the cluster Kubernetes version is upgraded.
+	UpgradeCondition capiv1.ConditionType = "Upgraded"
+	// FailedCreateUpgradeWorker (Severity=Error) documents that the upgrade worker failed to create.
+	FailedCreateUpgradeWorker = "UpgradeWorkerNotReady"
+	// UpgradeWorkerRunFailedReason (Severity=Error) documents that the upgrade worker run failed.
+	UpgradeWorkerRunFailedReason = "UpgradeWorkerRunFailed"
 )
 
 // CustomClusterStatus represents the current status of the cluster.

@@ -332,6 +332,7 @@ func getWorkerNodeInfoFromClusterHosts(clusterHost *corev1.ConfigMap) []NodeInfo
 	return workerNodes
 }
 
+// getNodeInfoFromNodeStr takes a string representing a node and returns its hostname and NodeInfo
 func getNodeInfoFromNodeStr(nodeStr string) (hostName string, nodeInfo NodeInfo) {
 	nodeStr = strings.TrimSpace(nodeStr)
 	// The sepStr depend on the template text which the function "CreateClusterHosts" use.
@@ -349,6 +350,7 @@ func getNodeInfoFromNodeStr(nodeStr string) (hostName string, nodeInfo NodeInfo)
 	}
 }
 
+// getWorkerNodesFromCustomMachine takes in CustomMachine object and returns an array of workerNodes NodeInfo objects.
 func getWorkerNodesFromCustomMachine(customMachine *v1alpha1.CustomMachine) []NodeInfo {
 	var workerNodes []NodeInfo
 	for i := 0; i < len(customMachine.Spec.Nodes); i++ {

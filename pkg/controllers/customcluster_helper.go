@@ -39,7 +39,7 @@ func generateClusterManageWorker(customCluster *v1alpha1.CustomCluster, manageAc
 	podName := customCluster.Name + "-" + string(manageAction)
 	namespace := customCluster.Namespace
 	defaultMode := int32(0o600)
-
+	kubesprayImage := getKubesprayImage(DefaultKubesprayVersion)
 	managerWorker := &corev1.Pod{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: namespace,
@@ -54,7 +54,7 @@ func generateClusterManageWorker(customCluster *v1alpha1.CustomCluster, manageAc
 			Containers: []corev1.Container{
 				{
 					Name:    podName,
-					Image:   DefaultKubesprayImage,
+					Image:   kubesprayImage,
 					Command: []string{"/bin/sh", "-c"},
 					Args:    []string{string(manageCMD)},
 
@@ -268,7 +268,7 @@ func generateOwnerRefFromCustomCluster(customCluster *v1alpha1.CustomCluster) me
 	}
 }
 
-// getDesiredClusterInfo get desired cluster info from crd configuration。
+// getDesiredClusterInfo get desired cluster info from crd configuration
 func getDesiredClusterInfo(customMachine *v1alpha1.CustomMachine, kcp *controlplanev1.KubeadmControlPlane) *ClusterInfo {
 	workerNodes := getWorkerNodesFromCustomMachine(customMachine)
 
@@ -290,9 +290,19 @@ func (r *CustomClusterController) getProvisionedClusterInfo(ctx context.Context,
 	// get workerNode from cluster-host
 	workerNodes := getWorkerNodeInfoFromClusterHosts(clusterHosts)
 
-	// create workerNodes from cluster-host Configmap
+	// get current cluster-config configMap
+	clusterConfig := &corev1.ConfigMap{}
+	if err := r.Client.Get(ctx, generateClusterConfigKey(customCluster), clusterConfig); err != nil {
+		return nil, err
+	}
+
+	// get workerNode from cluster-config
+	provisionedVersion := getKubeVersionFromCM(clusterConfig)
+
+	// get the provisioned cluster info
 	clusterInfo := &ClusterInfo{
 		WorkerNodes: workerNodes,
+		KubeVersion: provisionedVersion,
 	}
 
 	return clusterInfo, nil
@@ -379,4 +389,10 @@ func (r *CustomClusterController) ensureWorkerPodCreated(ctx context.Context, cu
 		return nil, fmt.Errorf("failed to get worker pod: %v", err)
 	}
 	return workerPod, nil
+}
+
+// getKubesprayImage take in kubesprayVersion return the kubespray image path of this version.
+func getKubesprayImage(kubesprayVersion string) string {
+	imagePath := "quay.io/kubespray/kubespray:" + kubesprayVersion
+	return imagePath
 }
