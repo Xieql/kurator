@@ -166,6 +166,10 @@ func (r *CustomClusterController) Reconcile(ctx context.Context, req ctrl.Reques
 	// ensure customCluster status no nil
 	if len(customCluster.Status.Phase) == 0 {
 		customCluster.Status.Phase = v1alpha1.PendingPhase
+		if err := r.Status().Update(ctx, customCluster); err != nil {
+			log.Error(err, "failed to update customCluster status", "customCluster", req)
+			reterr = err
+		}
 	}
 
 	// Fetch the Cluster instance.
