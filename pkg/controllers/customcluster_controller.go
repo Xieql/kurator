@@ -237,8 +237,8 @@ func (r *CustomClusterController) Reconcile(ctx context.Context, req ctrl.Reques
 				v1alpha1.ScaledDownCondition,
 				v1alpha1.TerminatedCondition,
 			}},
+			patch.WithStatusObservedGeneration{},
 		}
-		patchOpts = append(patchOpts, patch.WithStatusObservedGeneration{})
 
 		if err := patchHelper.Patch(ctx, cluster, patchOpts...); err != nil {
 			reterr = utilerrors.NewAggregate([]error{reterr, errors.Wrapf(err, "failed to patch cluster %s", req.NamespacedName)})
