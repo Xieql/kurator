@@ -230,14 +230,6 @@ func (r *CustomClusterController) Reconcile(ctx context.Context, req ctrl.Reques
 	}
 
 	defer func() {
-		if err := r.Status().Update(ctx, customCluster); err != nil {
-			log.Error(err, "failed to update customCluster status", "customCluster", req)
-			reterr = err
-		}
-		if err := r.Update(ctx, customCluster); err != nil {
-			log.Error(err, "failed to update customCluster", "customCluster", req)
-			reterr = err
-		}
 		patchOpts := []patch.Option{
 			patch.WithOwnedConditions{Conditions: []clusterv1.ConditionType{
 				v1alpha1.ReadyCondition,
@@ -246,6 +238,8 @@ func (r *CustomClusterController) Reconcile(ctx context.Context, req ctrl.Reques
 				v1alpha1.TerminatedCondition,
 			}},
 		}
+		patchOpts = append(patchOpts, patch.WithStatusObservedGeneration{})
+
 		if err := patchHelper.Patch(ctx, cluster, patchOpts...); err != nil {
 			reterr = utilerrors.NewAggregate([]error{reterr, errors.Wrapf(err, "failed to patch cluster %s", req.NamespacedName)})
 		}
