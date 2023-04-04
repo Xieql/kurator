@@ -207,10 +207,12 @@ func (r *CustomClusterController) CreateClusterHosts(ctx context.Context, custom
 	if err := tmpl.Execute(hostData, hostsContent); err != nil {
 		return nil, err
 	}
+	hostsTemplate := hostData.String()
+
 	name := generateClusterHostsName(customCluster)
 	namespace := customCluster.Namespace
 
-	return r.CreateConfigMapWithTemplate(ctx, name, namespace, ClusterHostsName, hostData.String())
+	return r.CreateConfigMapWithTemplate(ctx, name, namespace, ClusterHostsName, hostsTemplate)
 }
 
 //go:embed customcluster_clusterconfig.template
@@ -224,10 +226,11 @@ func (r *CustomClusterController) CreateClusterConfig(ctx context.Context, c *cl
 	if err := tmpl.Execute(configData, configContent); err != nil {
 		return nil, err
 	}
+	configTemplate := configData.String()
 	name := generateClusterConfigName(cc)
 	namespace := cc.Namespace
 
-	return r.CreateConfigMapWithTemplate(ctx, name, namespace, ClusterConfigName, configData.String())
+	return r.CreateConfigMapWithTemplate(ctx, name, namespace, ClusterConfigName, configTemplate)
 }
 
 func generateWorkerKey(customCluster *v1alpha1.CustomCluster, action customClusterManageAction) client.ObjectKey {

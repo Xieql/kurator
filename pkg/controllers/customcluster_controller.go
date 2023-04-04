@@ -155,6 +155,11 @@ func (r *CustomClusterController) Reconcile(ctx context.Context, req ctrl.Reques
 	// ensure customCluster status no nil
 	if len(customCluster.Status.Phase) == 0 {
 		customCluster.Status.Phase = v1alpha1.PendingPhase
+		// using patchHelper.Patch() to update status need ensure "isConditionsSetter" is true.
+		if err := r.Status().Update(ctx, customCluster); err != nil {
+			log.Error(err, "failed to update customCluster status", "customCluster", req)
+			reterr = err
+		}
 	}
 
 	// Fetch the Cluster instance.
@@ -219,14 +224,6 @@ func (r *CustomClusterController) Reconcile(ctx context.Context, req ctrl.Reques
 	}
 
 	defer func() {
-		if err := r.Status().Update(ctx, customCluster); err != nil {
-			log.Error(err, "failed to update customCluster status", "customCluster", req)
-			reterr = err
-		}
-		if err := r.Update(ctx, customCluster); err != nil {
-			log.Error(err, "failed to update customCluster", "customCluster", req)
-			reterr = err
-		}
 		patchOpts := []patch.Option{
 			patch.WithOwnedConditions{Conditions: []clusterv1.ConditionType{
 				v1alpha1.ReadyCondition,
@@ -235,8 +232,9 @@ func (r *CustomClusterController) Reconcile(ctx context.Context, req ctrl.Reques
 				v1alpha1.TerminatedCondition,
 			}},
 		}
-		if err := patchHelper.Patch(ctx, cluster, patchOpts...); err != nil {
-			reterr = utilerrors.NewAggregate([]error{reterr, errors.Wrapf(err, "failed to patch cluster %s", req.NamespacedName)})
+
+		if err := patchHelper.Patch(ctx, customCluster, patchOpts...); err != nil {
+			reterr = utilerrors.NewAggregate([]error{reterr, errors.Wrapf(err, "failed to patch customCluster %s", req.NamespacedName)})
 		}
 	}()
 
@@ -265,14 +263,19 @@ func (r *CustomClusterController) reconcile(ctx context.Context, customCluster *
 		return r.reconcileProvision(ctx, customCluster, customMachine, cluster, kcp)
 	}
 
-	// Get desiredClusterInfo and provisionedClusterInfo to determine if further scaling or upgrading is needed.
 	// desiredClusterInfo contains information retrieved from configured CRDs such as "customMachine" and "kcp".
-	desiredClusterInfo := getDesiredClusterInfo(customMachine, kcp)
+	var desiredClusterInfo *ClusterInfo
 	// provisionedClusterInfo contains information retrieved from configmap that represent provisioned cluster.
-	provisionedClusterInfo, err := r.getProvisionedClusterInfo(ctx, customCluster)
-	if err != nil {
-		log.Error(err, "failed to get provisioned cluster Info from configmap")
-		return ctrl.Result{}, err
+	var provisionedClusterInfo *ClusterInfo
+	// Get desiredClusterInfo and provisionedClusterInfo to determine if further scaling or upgrading is needed.
+	if phase == v1alpha1.ProvisionedPhase {
+		desiredClusterInfo = getDesiredClusterInfo(customMachine, kcp)
+		var err error
+		provisionedClusterInfo, err = r.getProvisionedClusterInfo(ctx, customCluster)
+		if err != nil {
+			log.Error(err, "failed to get provisioned cluster Info from configmap")
+			return ctrl.Result{}, err
+		}
 	}
 
 	// Handle worker nodes scaling.
