@@ -301,10 +301,10 @@ func (r *CustomClusterController) reconcile(ctx context.Context, customCluster *
 
 	// Handle worker nodes scaling.
 	// By comparing desiredClusterInfo.WorkerNodes and provisionedClusterInfo.WorkerNodes to decide whether to proceed reconcileScaleUp or reconcileScaleDown.
-	if (phase == v1alpha1.ProvisionedPhase && len(scaleUpWorkerNodes) != 0) || phase == v1alpha1.ScalingUpPhase {
+	if len(scaleUpWorkerNodes) != 0 {
 		return r.reconcileScaleUp(ctx, customCluster, scaleUpWorkerNodes)
 	}
-	if (phase == v1alpha1.ProvisionedPhase && len(scaleDownWorkerNodes) != 0) || phase == v1alpha1.ScalingDownPhase {
+	if len(scaleDownWorkerNodes) != 0 {
 		return r.reconcileScaleDown(ctx, customCluster, customMachine, scaleDownWorkerNodes)
 	}
 
@@ -316,9 +316,7 @@ func (r *CustomClusterController) reconcile(ctx context.Context, customCluster *
 			return ctrl.Result{}, nil
 		}
 		// Start reconcileUpgrade.
-		if phase == v1alpha1.ProvisionedPhase || phase == v1alpha1.UpgradingPhase {
-			return r.reconcileUpgrade(ctx, customCluster, desiredVersion)
-		}
+		return r.reconcileUpgrade(ctx, customCluster, desiredVersion)
 	}
 
 	return ctrl.Result{}, nil
