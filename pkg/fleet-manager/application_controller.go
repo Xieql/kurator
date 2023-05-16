@@ -56,7 +56,7 @@ func (a *ApplicationManager) Reconcile(ctx context.Context, req ctrl.Request) (_
 
 	log := ctrl.LoggerFrom(ctx)
 	log = log.WithValues("attachedCluster", klog.KObj(app))
-	log.Info("~~~~~~ app Reconcile")
+	log.Info("~~~~~~ app Reconcile", "the fleet is ", app.Spec.SyncPolicy[0].Destination.Fleet)
 
 	patchHelper, err := patch.NewHelper(app, a.Client)
 	if err != nil {

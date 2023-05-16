@@ -1,0 +1,14 @@
+apiVersion: apps.kurator.dev/v1alpha1
+kind: Application
+metadata:
+  name: app
+  namespace: default
+spec:
+  source:
+    name: ac1
+    key: kubeconfig
+  syncPolicy:
+    applicationSyncPolicy:
+      name: policy1
+      destination:
+        fleet:
