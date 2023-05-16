@@ -134,7 +134,7 @@ func run(ctx context.Context, opts *options.Options) error {
 	}
 
 	if err = application.InitControllers(ctx, opts, mgr); err != nil {
-		return fmt.Errorf("attachedcluster init fail, %w", err)
+		return fmt.Errorf("application init fail, %w", err)
 	}
 
 	log.Info("starting manager", "version", version.Get().String())
