@@ -5,6 +5,15 @@ metadata:
 rules:
   - apiGroups:
       - fleet.kurator.dev
+    resources:
+      - '*'
+    verbs:
+      - get
+      - list
+      - patch
+      - update
+      - watch
+  - apiGroups:
       - application.kurator.dev
     resources:
       - '*'
