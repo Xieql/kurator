@@ -5,6 +5,7 @@ metadata:
 rules:
   - apiGroups:
       - fleet.kurator.dev
+      - application.kurator.dev
     resources:
       - '*'
     verbs:
