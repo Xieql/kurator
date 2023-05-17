@@ -14,7 +14,7 @@ rules:
       - update
       - watch
   - apiGroups:
-      - application.kurator.dev
+      - apps.kurator.dev
     resources:
       - '*'
     verbs:
