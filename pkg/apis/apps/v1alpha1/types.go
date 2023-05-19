@@ -57,16 +57,6 @@ type ApplicationSource struct {
 	OCIRepo *sourceapi.OCIRepositorySpec `json:"ociRepo,omitempty"`
 }
 
-// ApplicationDestination defines the configuration to dispatch an artifact to a fleet or specific clusters.
-type ApplicationDestination struct {
-	// Fleet defines the fleet to dispatch the artifact.
-	// +required
-	Fleet string `json:"fleet"`
-	// ClusterSelector defines the label selectors to select the clusters of the fleet.
-	// +optional
-	ClusterSelector *metav1.LabelSelector `json:"clusterSelector,omitempty"`
-}
-
 // ApplicationSyncPolicy defines the configuration to sync an artifact.
 // Only `kustomization` or `helm` can be specified to manage application sync.
 type ApplicationSyncPolicy struct {
@@ -84,6 +74,16 @@ type ApplicationSyncPolicy struct {
 	// Destination defines the destination for the artifact.
 	// +required
 	Destination ApplicationDestination `json:"destination"`
+}
+
+// ApplicationDestination defines the configuration to dispatch an artifact to a fleet or specific clusters.
+type ApplicationDestination struct {
+	// Fleet defines the fleet to dispatch the artifact.
+	// +required
+	Fleet string `json:"fleet"`
+	// ClusterSelector defines the label selectors to select the clusters of the fleet.
+	// +optional
+	ClusterSelector *metav1.LabelSelector `json:"clusterSelector,omitempty"`
 }
 
 // ApplicationStatus defines the observed state of Application.

@@ -5,8 +5,18 @@ metadata:
   namespace: default
 spec:
   source:
+    gitRepo:
+      interval: 3m0s
+      ref:
+        branch: master
+      timeout: 1m0s
+      url: https://github.com/stefanprodan/podinfo
   syncPolicy:
-    applicationSyncPolicy:
-      name: policy1
+    - name: policy1
       destination:
         fleet: quickstart
+      kustomization:
+        interval: 5m0s
+        path: ./deploy/webapp
+        prune: true
+        timeout: 2m0s
