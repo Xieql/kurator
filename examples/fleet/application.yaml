@@ -5,6 +5,7 @@ metadata:
   namespace: default
 spec:
   source:
+<<<<<<< HEAD
     gitRepo:
       interval: 3m0s
       ref:
@@ -20,3 +21,10 @@ spec:
         path: ./deploy/webapp
         prune: true
         timeout: 2m0s
+=======
+  syncPolicy:
+    applicationSyncPolicy:
+      name: policy1
+      destination:
+        fleet: quickstart
+>>>>>>> d20d1dd842a26b0a14fc67c6e22bfa16117cfaf0

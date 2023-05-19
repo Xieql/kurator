@@ -170,6 +170,7 @@ func (a *ApplicationManager) createSyncPolicyResource(ctx context.Context, app *
 	if kind == gitRepoKind {
 		if err := a.createKustomizationsForFleet(ctx, app, syncPolicy, fleet); err != nil {
 			log.Error(err, "failed to create gitRepo from application")
+			return err
 		}
 	}
 
@@ -305,6 +306,10 @@ func (a *ApplicationManager) createGitRepoFromApplication(ctx context.Context, a
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      app.Name,
 			Namespace: app.Namespace,
+			Labels: map[string]string{
+				ApplicationLabel: app.Name,
+			},
+			OwnerReferences: []metav1.OwnerReference{generateApplicationOwnerRef(app)},
 		},
 		Spec: *app.Spec.Source.GitRepo,
 	}
@@ -318,6 +323,10 @@ func (a *ApplicationManager) createHelmRepoFromApplication(ctx context.Context, 
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      app.Name,
 			Namespace: app.Namespace,
+			Labels: map[string]string{
+				ApplicationLabel: app.Name,
+			},
+			OwnerReferences: []metav1.OwnerReference{generateApplicationOwnerRef(app)},
 		},
 		Spec: *app.Spec.Source.HelmRepo,
 	}
@@ -332,6 +341,10 @@ func (a *ApplicationManager) createOCIRepoFromApplication(ctx context.Context, a
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      app.Name,
 			Namespace: app.Namespace,
+			Labels: map[string]string{
+				ApplicationLabel: app.Name,
+			},
+			OwnerReferences: []metav1.OwnerReference{generateApplicationOwnerRef(app)},
 		},
 		Spec: *app.Spec.Source.OCIRepo,
 	}
