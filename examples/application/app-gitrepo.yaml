@@ -1,11 +1,10 @@
 apiVersion: apps.kurator.dev/v1alpha1
 kind: Application
 metadata:
-  name: app
+  name: app-gitrepo
   namespace: default
 spec:
   source:
-<<<<<<< HEAD
     gitRepo:
       interval: 3m0s
       ref:
@@ -13,18 +12,11 @@ spec:
       timeout: 1m0s
       url: https://github.com/stefanprodan/podinfo
   syncPolicy:
-    - name: policy1
-      destination:
-        fleet: quickstart
+    - destination:
+        fleet: fleet-gitrepo
       kustomization:
         interval: 5m0s
         path: ./deploy/webapp
         prune: true
         timeout: 2m0s
-=======
-  syncPolicy:
-    applicationSyncPolicy:
-      name: policy1
-      destination:
-        fleet: quickstart
->>>>>>> d20d1dd842a26b0a14fc67c6e22bfa16117cfaf0
+

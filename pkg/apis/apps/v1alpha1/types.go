@@ -49,12 +49,26 @@ type ApplicationSpec struct {
 // ApplicationSource defines the configuration to produce an artifact for git, helm or OCI repository.
 // Note only one source can be specified
 type ApplicationSource struct {
+	// Kind specifies the type of application source.
+	// This field is generated based on the other fields in ApplicationSource.
+	// +optional
+	Kind string `json:"kind,omitempty"`
 	// +optional
 	GitRepo *sourcev1.GitRepositorySpec `json:"gitRepo,omitempty"`
 	// +optional
 	HelmRepo *sourceapi.HelmRepositorySpec `json:"helmRepo,omitempty"`
 	// +optional
 	OCIRepo *sourceapi.OCIRepositorySpec `json:"ociRepo,omitempty"`
+}
+
+// ApplicationDestination defines the configuration to dispatch an artifact to a fleet or specific clusters.
+type ApplicationDestination struct {
+	// Fleet defines the fleet to dispatch the artifact.
+	// +required
+	Fleet string `json:"fleet"`
+	// ClusterSelector defines the label selectors to select the clusters of the fleet.
+	// +optional
+	ClusterSelector *metav1.LabelSelector `json:"clusterSelector,omitempty"`
 }
 
 // ApplicationSyncPolicy defines the configuration to sync an artifact.
@@ -74,16 +88,6 @@ type ApplicationSyncPolicy struct {
 	// Destination defines the destination for the artifact.
 	// +required
 	Destination ApplicationDestination `json:"destination"`
-}
-
-// ApplicationDestination defines the configuration to dispatch an artifact to a fleet or specific clusters.
-type ApplicationDestination struct {
-	// Fleet defines the fleet to dispatch the artifact.
-	// +required
-	Fleet string `json:"fleet"`
-	// ClusterSelector defines the label selectors to select the clusters of the fleet.
-	// +optional
-	ClusterSelector *metav1.LabelSelector `json:"clusterSelector,omitempty"`
 }
 
 // ApplicationStatus defines the observed state of Application.
