@@ -14,6 +14,30 @@ rules:
       - update
       - watch
   - apiGroups:
+<<<<<<< HEAD
+=======
+      - apps.kurator.dev
+    resources:
+      - '*'
+    verbs:
+      - get
+      - list
+      - patch
+      - update
+      - watch
+  - apiGroups:
+      - kustomize.toolkit.fluxcd.io
+    resources:
+      - kustomizations
+    verbs:
+      - create
+      - get
+      - list
+      - patch
+      - update
+      - watch
+  - apiGroups:
+>>>>>>> d0ebe57 (bugfix: sync the use of Flux)
       - cluster.kurator.dev
     resources:
       - "*"

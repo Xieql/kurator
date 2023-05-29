@@ -17,10 +17,16 @@ limitations under the License.
 package v1alpha1
 
 import (
+<<<<<<< HEAD
 	helmv2beta1 "github.com/fluxcd/helm-controller/api/v2beta1"
 	kustomizev1 "github.com/fluxcd/kustomize-controller/api/v1"
 	sourcev1 "github.com/fluxcd/source-controller/api/v1"
 	sourceapi "github.com/fluxcd/source-controller/api/v1beta2"
+=======
+	helmv2b1 "github.com/fluxcd/helm-controller/api/v2beta1"
+	kustomizev1 "github.com/fluxcd/kustomize-controller/api/v1beta2"
+	sourcev1 "github.com/fluxcd/source-controller/api/v1beta2"
+>>>>>>> d0ebe57 (bugfix: sync the use of Flux)
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -52,9 +58,15 @@ type ApplicationSource struct {
 	// +optional
 	GitRepo *sourcev1.GitRepositorySpec `json:"gitRepo,omitempty"`
 	// +optional
+<<<<<<< HEAD
 	HelmRepo *sourceapi.HelmRepositorySpec `json:"helmRepo,omitempty"`
 	// +optional
 	OCIRepo *sourceapi.OCIRepositorySpec `json:"ociRepo,omitempty"`
+=======
+	HelmRepo *sourcev1.HelmRepositorySpec `json:"helmRepo,omitempty"`
+	// +optional
+	OCIRepo *sourcev1.OCIRepositorySpec `json:"ociRepo,omitempty"`
+>>>>>>> d0ebe57 (bugfix: sync the use of Flux)
 }
 
 // ApplicationDestination defines the configuration to dispatch an artifact to a fleet or specific clusters.
@@ -94,9 +106,15 @@ type ApplicationStatus struct {
 
 // applicationSourceStatus defines the observed state of the artifact source.
 type ApplicationSourceStatus struct {
+<<<<<<< HEAD
 	GitRepoStatus  *sourcev1.GitRepositoryStatus   `json:"gitRepoStatus,omitempty"`
 	HelmRepoStatus *sourceapi.HelmRepositoryStatus `json:"helmRepoStatus,omitempty"`
 	OCIRepoStatus  *sourceapi.OCIRepositoryStatus  `json:"ociRepoStatus,omitempty"`
+=======
+	GitRepoStatus  *sourcev1.GitRepositoryStatus  `json:"gitRepoStatus,omitempty"`
+	HelmRepoStatus *sourcev1.HelmRepositoryStatus `json:"helmRepoStatus,omitempty"`
+	OCIRepoStatus  *sourcev1.OCIRepositoryStatus  `json:"ociRepoStatus,omitempty"`
+>>>>>>> d0ebe57 (bugfix: sync the use of Flux)
 }
 
 // ApplicationSyncStatus defines the observed state of Application sync.
