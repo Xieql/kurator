@@ -152,10 +152,12 @@ func run(ctx context.Context, opts *options.Options) error {
 	if err = customcluster.InitControllers(ctx, opts, mgr); err != nil {
 		return err
 	}
+	log.Info("~~~~~~~~~~~attachedcluster.InitControllers start")
 
 	if err = attachedcluster.InitControllers(ctx, opts, mgr); err != nil {
 		return fmt.Errorf("attachedcluster init fail, %w", err)
 	}
+	log.Info("~~~~~~~~~~~~attachedcluster.InitControllers end")
 
 	if err = infra.InitControllers(ctx, opts, mgr); err != nil {
 		return fmt.Errorf("infra cluster init fail, %w", err)

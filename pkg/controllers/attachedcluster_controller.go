@@ -55,6 +55,8 @@ func (a *AttachedClusterController) SetupWithManager(ctx context.Context, mgr ct
 
 func (a *AttachedClusterController) Reconcile(ctx context.Context, req ctrl.Request) (_ ctrl.Result, reterr error) {
 	log := ctrl.LoggerFrom(ctx)
+	log.Info("~~~~~~~~~~~~~~~~~~~attachedcluster Reconcile")
+
 	// Fetch the attachedCluster instance.
 	attachedCluster := &clusterv1alpha1.AttachedCluster{}
 	if err := a.Client.Get(ctx, req.NamespacedName, attachedCluster); err != nil {
@@ -86,6 +88,7 @@ func (a *AttachedClusterController) Reconcile(ctx context.Context, req ctrl.Requ
 func (a *AttachedClusterController) reconcile(ctx context.Context, attachedCluster *clusterv1alpha1.AttachedCluster) (ctrl.Result, error) {
 	log := ctrl.LoggerFrom(ctx)
 	attachedCluster.Status.Ready = false
+	log.Info("~~~~~~~~~~~~~~~~~~~attachedcluster reconcile")
 
 	var secret corev1.Secret
 	secretKey := types.NamespacedName{Name: attachedCluster.GetSecretName(), Namespace: attachedCluster.Namespace}
