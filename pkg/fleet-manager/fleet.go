@@ -148,12 +148,21 @@ func (f *FleetManager) reconcile(ctx context.Context, fleet *fleetapi.Fleet) (ct
 	log := ctrl.LoggerFrom(ctx)
 	log = log.WithValues("fleet", types.NamespacedName{Name: fleet.Name, Namespace: fleet.Namespace})
 
-	// Install fleet control plane
-	if err := f.reconcileControlPlane(ctx, fleet); err != nil {
-		log.Error(err, "controlplane reconcile failed")
-		fleet.Status.Phase = fleetapi.FailedPhase
-		fleet.Status.Reason = err.Error()
-		return ctrl.Result{}, err
+	controlplaneSpecified := fleet.Annotations[fleetapi.ControlplaneAnnotation] != ""
+
+	if controlplaneSpecified {
+		// Install fleet control plane
+		if err := f.reconcileControlPlane(ctx, fleet); err != nil {
+			log.Error(err, "controlplane reconcile failed")
+			fleet.Status.Phase = fleetapi.FailedPhase
+			fleet.Status.Reason = err.Error()
+			return ctrl.Result{}, err
+		}
+	} else {
+		// if no controlplane is specified, do nothing
+		// we donot support annotation update yet
+		fleet.Status.Phase = fleetapi.ReadyPhase
+		fleet.Status.CredentialSecret = nil
 	}
 
 	if fleet.Status.Phase != fleetapi.ReadyPhase {
@@ -161,7 +170,7 @@ func (f *FleetManager) reconcile(ctx context.Context, fleet *fleetapi.Fleet) (ct
 	}
 
 	// Loop over all clusters and reconcile them.
-	res, err := f.reconcileClusters(ctx, fleet)
+	res, err := f.reconcileClusters(ctx, fleet, controlplaneSpecified)
 	if err != nil || res.RequeueAfter > 0 {
 		return res, err
 	}

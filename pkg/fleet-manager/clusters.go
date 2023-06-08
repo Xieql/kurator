@@ -53,13 +53,7 @@ const (
 	AttachedClusterKind = "AttachedCluster"
 )
 
-func (f *FleetManager) reconcileClusters(ctx context.Context, fleet *fleetapi.Fleet) (ctrl.Result, error) {
-	controlplane := fleet.Annotations[fleetapi.ControlplaneAnnotation]
-	controlplaneSpecified := true
-	if len(controlplane) == 0 {
-		controlplaneSpecified = false
-	}
-
+func (f *FleetManager) reconcileClusters(ctx context.Context, fleet *fleetapi.Fleet, controlplaneSpecified bool) (ctrl.Result, error) {
 	fleetKey := client.ObjectKeyFromObject(fleet)
 	log := ctrl.LoggerFrom(ctx).WithValues("fleet", fleetKey)
 	var unreadyClusters int32
