@@ -316,4 +316,3 @@ func (a *ApplicationManager) objectToApplicationFunc(o client.Object) []ctrl.Req
 
 	return nil
 }
-
