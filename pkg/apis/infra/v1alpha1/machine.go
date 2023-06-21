@@ -26,6 +26,7 @@ import (
 // +kubebuilder:object:root=true
 // +kubebuilder:resource:path=custommachines
 // +kubebuilder:subresource:status
+// +kubebuilder:printcolumn:name="Ready",type="boolean",JSONPath=".status.ready",description="Indicates if the machines are ready"
 
 // CustomMachine is the schema for kubernetes nodes.
 type CustomMachine struct {
@@ -43,14 +44,13 @@ type CustomMachine struct {
 
 // CustomMachineSpec defines kubernetes cluster master and nodes.
 type CustomMachineSpec struct {
-	Master []Machine `json:"master,omitempty"`
-	Nodes  []Machine `json:"node,omitempty"`
+	Masters []Machine `json:"masters,omitempty"`
+	Nodes   []Machine `json:"nodes,omitempty"`
 }
 
 // CustomMachineStatus represents the current status of the machine.
 type CustomMachineStatus struct {
 	// TODO: add state.
-	// TODO: display with kubectl
 	// Indicate whether the machines are ready.
 	Ready *bool `json:"ready,omitempty"`
 }
@@ -69,7 +69,7 @@ type Machine struct {
 	// Region specifies the region where the machine resides.
 	// +optional
 	Region *string `json:"region,omitempty"`
-	// Region specifies the zone where the machine resides.
+	// Zone specifies the zone where the machine resides.
 	// +optional
 	Zone *string `json:"zone,omitempty"`
 	// SSHKeyName is the name of the ssh key to attach to the instance. Valid values are empty string (do not use SSH keys), a valid SSH key name, or omitted (use the default SSH key name)
