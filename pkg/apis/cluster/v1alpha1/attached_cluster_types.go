@@ -38,8 +38,7 @@ type AttachedCluster struct {
 
 type AttachedClusterSpec struct {
 	// Kubeconfig represents the secret that contains the credential to access this cluster.
-	// +optional
-	Kubeconfig SecretKeyRef `json:"kubeconfig,omitempty"`
+	Kubeconfig SecretKeyRef `json:"kubeconfig"`
 }
 
 // SecretKeyRef holds the reference to a secret key.
