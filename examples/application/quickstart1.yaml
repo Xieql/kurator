@@ -5,7 +5,7 @@ metadata:
   namespace: default
 spec:
   kubeconfig:
-    name: kurator-member1
+    name: sf@@@@kurator-member1-f_
     key: kurator-member1.config
 ---
 apiVersion: cluster.kurator.dev/v1alpha1
