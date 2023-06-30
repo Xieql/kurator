@@ -79,7 +79,7 @@ func validateVersion(in *v1.Cluster) field.ErrorList {
 		allErrs = append(allErrs, field.Required(field.NewPath("spec", "version"), "must be set"))
 	} else {
 		if !version.KubeSemver.MatchString(in.Spec.Version) {
-			allErrs = append(allErrs, field.Invalid(field.NewPath("spec", "version"), in.Spec.Version, "must be a valid Kubernetes version"))
+			allErrs = append(allErrs, field.Invalid(field.NewPath("spec", "version"), in.Spec.Version, "must  be a valid Kubernetes version"))
 		}
 	}
 
