@@ -20,6 +20,8 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	capiv1 "sigs.k8s.io/cluster-api/api/v1beta1"
+	"sigs.k8s.io/cluster-api/util/conditions"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 // +genclient
@@ -183,4 +185,23 @@ type CustomClusterList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`
 	Items           []CustomCluster `json:"items"`
+}
+
+func (cc *CustomCluster) IsReady() bool {
+	return conditions.IsTrue(cc, ReadyCondition)
+}
+
+func (cc *CustomCluster) GetObject() client.Object {
+	return cc
+}
+
+func (cc *CustomCluster) GetSecretName() string {
+	return cc.Status.KubeconfigSecretRef
+}
+
+// ProvisionedKubeConfigKey is the key used to store a Kubeconfig of provisioned cluster.
+const ProvisionedKubeConfigKey = "admin.conf"
+
+func (cc *CustomCluster) GetSecretKey() string {
+	return ProvisionedKubeConfigKey
 }

@@ -138,6 +138,16 @@ rules:
       - update
       - list
       - watch
+  - apiGroups:
+      - infrastructure.cluster.x-k8s.io
+    resources:
+      - customclusters
+    verbs:
+      - get
+      - list
+      - patch
+      - update
+      - watch
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding

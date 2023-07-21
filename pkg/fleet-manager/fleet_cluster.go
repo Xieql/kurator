@@ -27,6 +27,7 @@ import (
 
 	clusterv1alpha1 "kurator.dev/kurator/pkg/apis/cluster/v1alpha1"
 	fleetapi "kurator.dev/kurator/pkg/apis/fleet/v1alpha1"
+	infrav1alpha1 "kurator.dev/kurator/pkg/apis/infra/v1alpha1"
 	kclient "kurator.dev/kurator/pkg/client"
 )
 
@@ -86,6 +87,12 @@ func (f *FleetManager) getFleetClusterInterface(ctx context.Context, kind string
 			return nil, err
 		}
 		return attachedCluster, nil
+	case CustomClusterKind:
+		customCluster := &infrav1alpha1.CustomCluster{}
+		if err := f.Get(ctx, nn, customCluster); err != nil {
+			return nil, err
+		}
+		return customCluster, nil
 	default:
 		return nil, fmt.Errorf("unsupported cluster kind")
 	}

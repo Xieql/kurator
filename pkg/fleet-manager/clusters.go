@@ -38,6 +38,7 @@ import (
 
 	clusterv1alpha1 "kurator.dev/kurator/pkg/apis/cluster/v1alpha1"
 	fleetapi "kurator.dev/kurator/pkg/apis/fleet/v1alpha1"
+	infrav1alpha1 "kurator.dev/kurator/pkg/apis/infra/v1alpha1"
 )
 
 // TODO: rename to FleetCluster?
@@ -51,6 +52,7 @@ type ClusterInterface interface {
 const (
 	ClusterKind         = "Cluster"
 	AttachedClusterKind = "AttachedCluster"
+	CustomClusterKind   = "CustomCluster"
 )
 
 func (f *FleetManager) reconcileClusters(ctx context.Context, fleet *fleetapi.Fleet) (ctrl.Result, error) {
@@ -99,6 +101,7 @@ func (f *FleetManager) reconcileClusters(ctx context.Context, fleet *fleetapi.Fl
 		if currentCluster.IsReady() {
 			readyClusters = append(readyClusters, currentCluster)
 		} else {
+			log.V(4).Info("cluster is not ready", "cluster", clusterKey)
 			unreadyClusters++
 		}
 	}
@@ -146,7 +149,15 @@ func (f *FleetManager) reconcileClusters(ctx context.Context, fleet *fleetapi.Fl
 		return result, err
 	}
 
-	var labeledCluster []ClusterInterface
+	var customClusterList infrav1alpha1.CustomClusterList
+	err = f.Client.List(ctx, &customClusterList,
+		client.InNamespace(fleet.Namespace),
+		client.MatchingLabels{FleetLabel: fleet.Name})
+	if err != nil {
+		return result, err
+	}
+
+	labeledCluster := make([]ClusterInterface, 0, len(clusterList.Items)+len(attachedClusterList.Items)+len(customClusterList.Items))
 
 	for _, cluster := range clusterList.Items {
 		tmpCluster := cluster
@@ -158,12 +169,17 @@ func (f *FleetManager) reconcileClusters(ctx context.Context, fleet *fleetapi.Fl
 		labeledCluster = append(labeledCluster, &tmpAttachedCluster)
 	}
 
+	for _, customCluster := range customClusterList.Items {
+		tmpCustomCluster := customCluster
+		labeledCluster = append(labeledCluster, &tmpCustomCluster)
+	}
+
 	for _, cluster := range labeledCluster {
 		if _, ok := clusterMap[generateClusterNameInKarmada(cluster)]; !ok {
 			if controlplaneSpecified {
 				err = f.unjoinCluster(ctx, controlplaneRestConfig, cluster)
 				if err != nil {
-					log.Error(err, "Unjoin cluster failed")
+					log.Error(err, "unjoin cluster failed")
 					return result, err
 				}
 			}

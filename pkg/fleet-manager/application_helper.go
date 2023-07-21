@@ -35,6 +35,7 @@ import (
 	applicationapi "kurator.dev/kurator/pkg/apis/apps/v1alpha1"
 	clusterv1alpha1 "kurator.dev/kurator/pkg/apis/cluster/v1alpha1"
 	fleetapi "kurator.dev/kurator/pkg/apis/fleet/v1alpha1"
+	infrav1alpha1 "kurator.dev/kurator/pkg/apis/infra/v1alpha1"
 )
 
 // syncPolicyResource synchronizes the sync policy resources for a given application.
@@ -101,6 +102,22 @@ func (a *ApplicationManager) fetchFleetClusterList(ctx context.Context, fleet *f
 			}
 			if doLabelsMatchSelector(attachedCluster.Labels, selector) {
 				fleetClusterList = append(fleetClusterList, attachedCluster)
+			}
+		} else if kind == CustomClusterKind {
+			customCluster := &infrav1alpha1.CustomCluster{}
+			key := client.ObjectKey{
+				Name:      name,
+				Namespace: fleet.Namespace,
+			}
+			err := a.Client.Get(ctx, key, customCluster)
+			if apierrors.IsNotFound(err) {
+				return nil, ctrl.Result{RequeueAfter: RequeueAfter}, nil
+			}
+			if err != nil {
+				return nil, ctrl.Result{}, err
+			}
+			if doLabelsMatchSelector(customCluster.Labels, selector) {
+				fleetClusterList = append(fleetClusterList, customCluster)
 			}
 		} else {
 			log.Info("kind of cluster in fleet is not support, skip this cluster", "fleet", fleet.Name, "kind", kind)

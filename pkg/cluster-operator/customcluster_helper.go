@@ -515,10 +515,15 @@ func (r *CustomClusterController) fetchProvisionedClusterKubeConfig(ctx context.
 		return err
 	}
 
-	err = r.createKubeConfigSecret(ctx, getKubeConfigSecretName(customCluster), customCluster.Namespace, kubeConfigData)
+	secretName := getKubeConfigSecretName(customCluster)
+
+	err = r.createKubeConfigSecret(ctx, secretName, customCluster, kubeConfigData)
 	if err != nil {
 		return err
 	}
+
+	// update the secret name recorded in customCluster
+	customCluster.Status.KubeconfigSecretRef = secretName
 
 	return nil
 }
@@ -585,15 +590,16 @@ func (r *CustomClusterController) fetchRemoteKubeConfig(sftpClient *sftp.Client,
 	return buf.Bytes(), nil
 }
 
-func (r *CustomClusterController) createKubeConfigSecret(ctx context.Context, name, namespace string, kubeConfigData []byte) error {
+func (r *CustomClusterController) createKubeConfigSecret(ctx context.Context, name string, customCluster *v1alpha1.CustomCluster, kubeConfigData []byte) error {
 	newSecret := &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      name,
-			Namespace: namespace,
+			Name:            name,
+			Namespace:       customCluster.Namespace,
+			OwnerReferences: []metav1.OwnerReference{generateOwnerRefFromCustomCluster(customCluster)},
 		},
 		Type: corev1.SecretTypeOpaque,
 		Data: map[string][]byte{
-			"admin.conf": kubeConfigData,
+			v1alpha1.ProvisionedKubeConfigKey: kubeConfigData,
 		},
 	}
 

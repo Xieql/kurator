@@ -37,6 +37,7 @@ import (
 
 	clusterv1alpha1 "kurator.dev/kurator/pkg/apis/cluster/v1alpha1"
 	fleetapi "kurator.dev/kurator/pkg/apis/fleet/v1alpha1"
+	infrav1alpha1 "kurator.dev/kurator/pkg/apis/infra/v1alpha1"
 )
 
 const (
@@ -82,6 +83,13 @@ func (f *FleetManager) SetupWithManager(mgr ctrl.Manager) error {
 		handler.EnqueueRequestsFromMapFunc(f.objectToFleetFunc),
 	); err != nil {
 		return fmt.Errorf("failed adding Watch for AttachedCluster: %v", err)
+	}
+
+	if err := c.Watch(
+		&source.Kind{Type: &infrav1alpha1.CustomCluster{}},
+		handler.EnqueueRequestsFromMapFunc(f.objectToFleetFunc),
+	); err != nil {
+		return fmt.Errorf("failed adding Watch for CustomCluster: %v", err)
 	}
 
 	return nil
