@@ -517,6 +517,8 @@ func (r *CustomClusterController) fetchProvisionedClusterKubeConfig(ctx context.
 
 	secretName := getKubeConfigSecretName(customCluster)
 
+	fmt.Printf("Current secretName is %v\n", secretName)
+
 	err = r.createKubeConfigSecret(ctx, secretName, customCluster, kubeConfigData)
 	if err != nil {
 		return err

@@ -102,8 +102,15 @@ func (f *FleetManager) reconcileClusters(ctx context.Context, fleet *fleetapi.Fl
 			readyClusters = append(readyClusters, currentCluster)
 		} else {
 			log.V(4).Info("cluster is not ready", "cluster", clusterKey)
+			log.Info("~~~~cluster is not ready", "cluster", clusterKey)
 			unreadyClusters++
 		}
+		log.V(1).Info("test", "test", "test")
+		log.V(2).Info("test", "test", "test")
+		log.V(3).Info("test", "test", "test")
+		log.V(4).Info("test", "test", "test")
+		log.V(5).Info("test", "test", "test")
+		log.Info("~~~test", "test", "test")
 	}
 
 	fleet.Status.ReadyClusters = int32(len(readyClusters))
