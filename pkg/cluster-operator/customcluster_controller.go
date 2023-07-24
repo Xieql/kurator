@@ -349,8 +349,8 @@ func (r *CustomClusterController) reconcileProvision(ctx context.Context, custom
 		customCluster.Status.Phase = v1alpha1.ProvisioningPhase
 	}
 
-	// The provisioning process will be successfully completed if the init worker is finished successfully.
-	if initWorker.Status.Phase == corev1.PodSucceeded {
+	// The provisioning process will be successfully completed if the init worker is finished successfully. If status is already ProvisionedPhase,skip it.
+	if initWorker.Status.Phase == corev1.PodSucceeded && customCluster.Status.Phase != v1alpha1.ProvisionedPhase {
 		if err := r.fetchProvisionedClusterKubeConfig(ctx, customCluster, customMachine); err != nil {
 			log.Error(err, "failed to fetch provisioned cluster kubeConfig")
 			conditions.MarkFalse(customCluster, v1alpha1.ObtainedKubeConfigCondition, v1alpha1.FailedFetchKubeConfigReason,
