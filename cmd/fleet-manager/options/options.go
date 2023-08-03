@@ -77,7 +77,7 @@ func (opt *Options) AddFlags(fs *pflag.FlagSet) {
 	fs.IntVar(
 		&opt.WebhookPort,
 		"webhook-port",
-		9443,
+		9222,
 		"Webhook Server port.",
 	)
 
