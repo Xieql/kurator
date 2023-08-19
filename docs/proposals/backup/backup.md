@@ -222,7 +222,7 @@ These API designs facilitate Kurator's integration with Velero to achieve the de
 
 Here's the preliminary design for the Unified Backup API:
 
-```
+```console
 apiVersion: backups.kurator.dev/v1alpha1
 kind: FleetBackup
 metadata:
@@ -264,7 +264,7 @@ status:
 
 Below is the initial design for the Unified Restore API:
 
-```
+```console
 apiVersion: backups.kurator.dev/v1alpha1
 kind: FleetRestore
 metadata:
@@ -298,7 +298,7 @@ status:
 
 Presenting the initial design for the Unified Migration API:
 
-```
+```console
 apiVersion: backups.kurator.dev/v1alpha1
 kind: FleetMigration
 metadata:
