@@ -37,6 +37,19 @@ This section is for explicitly listing the motivation, goals, and non-goals of
 this KEP.  Describe why the change is important and the benefits to users.
 -->
 
+#### User Stories (Optional)
+
+<!--
+Detail the things that people will be able to do if this KEP is implemented.
+Include as much detail as possible so that people can understand the "how" of
+the system. The goal here is to make this feel real for users without getting
+bogged down.
+-->
+
+##### Story 1
+
+##### Story 2
+
 #### Goals
 
 <!--
@@ -61,19 +74,6 @@ implementation. What is the desired outcome and how do we measure success?.
 The "Design Details" section below is for the real
 nitty-gritty.
 -->
-
-#### User Stories (Optional)
-
-<!--
-Detail the things that people will be able to do if this KEP is implemented.
-Include as much detail as possible so that people can understand the "how" of
-the system. The goal here is to make this feel real for users without getting
-bogged down.
--->
-
-##### Story 1
-
-##### Story 2
 
 #### Notes/Constraints/Caveats (Optional)
 
