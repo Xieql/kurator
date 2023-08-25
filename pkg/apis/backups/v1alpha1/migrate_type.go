@@ -101,3 +101,13 @@ type MigrateStatus struct {
 	// TargetClusterStatus provides a detailed status for each restore in each TargetCluster.
 	TargetClusterStatus []*velerov1.RestoreStatus `json:"targetClusterStatus,omitempty"`
 }
+
+// MigrateList contains a list of Migrate.
+// +kubebuilder:object:root=true
+// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+type MigrateList struct {
+	metav1.TypeMeta `json:",inline"`
+	metav1.ListMeta `json:"metadata,omitempty"`
+	Items           []Migrate `json:"items"`
+}
+

@@ -133,3 +133,13 @@ type BackupStatus struct {
 	// +optional
 	BackupDetails []*velerov1.BackupStatus `json:"backupDetails,omitempty"`
 }
+
+// BackupList contains a list of Backup.
+// +kubebuilder:object:root=true
+// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+type BackupList struct {
+	metav1.TypeMeta `json:",inline"`
+	metav1.ListMeta `json:"metadata,omitempty"`
+	Items           []Backup `json:"items"`
+}
+

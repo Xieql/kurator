@@ -116,3 +116,13 @@ type RestoreStatus struct {
 	// +optional
 	RestoreDetails []*velerov1.RestoreStatus `json:"restoreDetails,omitempty"`
 }
+
+// RestoreList contains a list of Restore.
+// +kubebuilder:object:root=true
+// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+type RestoreList struct {
+	metav1.TypeMeta `json:",inline"`
+	metav1.ListMeta `json:"metadata,omitempty"`
+	Items           []Restore `json:"items"`
+}
+
