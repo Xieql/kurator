@@ -17,7 +17,6 @@ limitations under the License.
 package v1alpha1
 
 import (
-	velerov1 "github.com/vmware-tanzu/velero/pkg/apis/velero/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	capiv1 "sigs.k8s.io/cluster-api/api/v1beta1"
 )
@@ -37,9 +36,6 @@ type Migrate struct {
 }
 
 type MigrateSpec struct {
-	// Storage details where the data should be stored.
-	Storage BackupStorage `json:"storage"`
-
 	// SourceCluster represents the source cluster for migration.
 	SourceCluster *Destination `json:"sourceCluster"`
 
@@ -96,10 +92,10 @@ type MigrateStatus struct {
 	Phase string `json:"phase,omitempty"`
 
 	// SourceClusterStatus provides a detailed status for backup in SourceCluster.
-	SourceClusterStatus *velerov1.BackupStatus `json:"sourceClusterStatus,omitempty"`
+	SourceClusterStatus *BackupDetails `json:"sourceClusterStatus,omitempty"`
 
 	// TargetClusterStatus provides a detailed status for each restore in each TargetCluster.
-	TargetClusterStatus []*velerov1.RestoreStatus `json:"targetClusterStatus,omitempty"`
+	TargetClusterStatus []*RestoreDetails `json:"targetClusterStatus,omitempty"`
 }
 
 // MigrateList contains a list of Migrate.
@@ -110,4 +106,3 @@ type MigrateList struct {
 	metav1.ListMeta `json:"metadata,omitempty"`
 	Items           []Migrate `json:"items"`
 }
-

@@ -39,59 +39,31 @@ type Backup struct {
 }
 
 type BackupSpec struct {
-	// Storage details where the backup data should be stored.
-	Storage BackupStorage `json:"storage"`
+	// TODO: consider add Storage setting for backup
 
 	// Schedule defines when to run the Backup using a Cron expression.
+	// A cron expression is a format used to specify the execution time of recurring tasks, consisting of multiple fields representing different time units.
+	// ┌───────────── minute (0 - 59)
+	// │ ┌───────────── hour (0 - 23)
+	// │ │ ┌───────────── day of the month (1 - 31)
+	// │ │ │ ┌───────────── month (1 - 12)
+	// │ │ │ │ ┌───────────── day of the week (0 - 6) (Sunday to Saturday;
+	// │ │ │ │ │                                   7 is also Sunday on some systems)
+	// │ │ │ │ │
+	// │ │ │ │ │
+	// * * * * *
+	// For example, "30 * * * *" represents execution at the 30th minute of every hour, and "10 10,14 * * *" represents execution at 10:10 AM and 2:10 PM every day.
 	// If not set, the backup will be executed only once.
 	// +optional
 	Schedule string `json:"schedule,omitempty"`
 
-	// Destination indicates the default clusters where backups should be executed.
-	// Can be overridden by individual Policies.
+	// Destination indicates the default clusters where backups should be performed.
 	// +optional
 	Destination *Destination `json:"destination,omitempty"`
 
-	// Policies are the rules defining how backups should be performed.
+	// Policy are the rules defining how backups should be performed.
 	// +optional
-	Policies []*BackupSyncPolicy `json:"policies,omitempty"`
-}
-
-type BackupStorage struct {
-	// Location specifies the location where the backup data will be stored.
-	Location BackupStorageLocation `json:"location"`
-
-	// Credentials to access the backup storage location.
-	Credentials string `json:"credentials"`
-}
-
-type BackupStorageLocation struct {
-	// Bucket specifies the storage bucket name.
-	Bucket string `json:"bucket"`
-	// Provider specifies the storage provider type (e.g., aws).
-	Provider string `json:"provider"`
-	// S3Url provides the endpoint URL for S3-compatible storage.
-	S3Url string `json:"s3Url"`
-	// Region specifies the region of the storage.
-	Region string `json:"region"`
-}
-
-type BackupSyncPolicy struct {
-	// Name of the BackupSyncPolicy.
-	// If not provided, a default name will be generated.
-	// This field is recommended for users to set, so that during the restore process, customized restoration can be performed based on this name.
-	// +optional
-	Name string `json:"name,omitempty"`
-
-	// Destination indicates where the backup should be executed.
-	// +optional
-	Destination Destination `json:"destination,omitempty"`
-
-	// Policy outlines the specific rules and filters applied during the backup process.
-	// It determines which resources are selected for backup and any specific conditions or procedures to follow.
-	// Users can customize this policy to ensure that the backup process aligns with their specific requirements and constraints.
-	// +optional
-	Policy BackupPolicy `json:"policy,omitempty"`
+	Policy *BackupPolicy `json:"policy,omitempty"`
 }
 
 // Note: partly copied from https://github.com/vmware-tanzu/velero/pkg/apis/backup_types.go
@@ -103,6 +75,8 @@ type BackupPolicy struct {
 	// +optional
 	ResourceFilter *ResourceFilter `json:"resourceFilter,omitempty"`
 
+	// TODO: consider SnapshotVolumes for backup
+
 	// TTL is a time.Duration-parseable string describing how long the Backup should be retained for.
 	// +optional
 	TTL metav1.Duration `json:"ttl,omitempty"`
@@ -110,6 +84,13 @@ type BackupPolicy struct {
 	// OrderedResources specifies the backup order of resources of specific Kind.
 	// The map key is the resource name and value is a list of object names separated by commas.
 	// Each resource name has format "namespace/objectname".  For cluster resources, simply use "objectname".
+	// For example, if you have a specific order for pods, such as "pod1, pod2, pod3" with all belonging to the "ns1" namespace,
+	// and a specific order for persistentvolumes, such as "pv4, pv8", you can use the orderedResources field in YAML format as shown below:
+	// ```yaml
+	// orderedResources:
+	//  pods: "ns1/pod1, ns1/pod2, ns1/pod3"
+	//  persistentvolumes: "pv4, pv8"
+	// ```
 	// +optional
 	// +nullable
 	OrderedResources map[string]string `json:"orderedResources,omitempty"`
@@ -129,9 +110,28 @@ type BackupStatus struct {
 	// +optional
 	Phase string `json:"phase,omitempty"`
 
-	// BackupDetails provides a detailed status for each backup in each cluster.
+	// Details provides a detailed status for each backup in each cluster.
 	// +optional
-	BackupDetails []*velerov1.BackupStatus `json:"backupDetails,omitempty"`
+	Details []*BackupDetails `json:"backupDetails,omitempty"`
+}
+
+type BackupDetails struct {
+	// ClusterName is the Name of the cluster where the backup is being performed.
+	// +optional
+	ClusterName string `json:"clusterName,omitempty"`
+
+	// ClusterKind is the kind of ClusterName recorded in Kurator.
+	// +optional
+	ClusterKind string `json:"clusterKind,omitempty"`
+
+	// BackupNameInCluster is the name of the backup being performed within this cluster.
+	// This BackupNameInCluster is unique in Storage.
+	// +optional
+	BackupNameInCluster string `json:"backupNameInCluster,omitempty"`
+
+	// BackupStatusInCluster is the current status of the backup performed within this cluster.
+	// +optional
+	BackupStatusInCluster *velerov1.BackupStatus `json:"backupStatusInCluster,omitempty"`
 }
 
 // BackupList contains a list of Backup.
@@ -142,4 +142,3 @@ type BackupList struct {
 	metav1.ListMeta `json:"metadata,omitempty"`
 	Items           []Backup `json:"items"`
 }
-

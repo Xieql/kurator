@@ -40,22 +40,14 @@ type RestoreSpec struct {
 	// BackupName specifies the backup on which this restore operation is based.
 	BackupName string `json:"backupName"`
 
-	// Policies defines the customization rules for the restore.
+	// Destination indicates the clusters where restore should be performed.
+	// +optional
+	Destination *Destination `json:"destination,omitempty"`
+
+	// Policy defines the customization rules for the restore.
 	// If null, the backup will be fully restored using default settings.
 	// +optional
-	Policies []*RestoreSyncPolicy `json:"policies,omitempty"`
-}
-
-type RestoreSyncPolicy struct {
-	// Name is the unique identifier for this restore policy. It should match the name in the backup policy.
-	// to ensure the restore policy corresponds to the correct backup policy.
-	// If a name provided by the user doesn't match any backup policy, the restore operation will fail
-	// and return a clear error message.
-	Name string `json:"name"`
-
-	// Policy indicates the rules and filters for the restore.
-	// +optional
-	Policy RestorePolicy `json:"policy,omitempty"`
+	Policy *RestorePolicy `json:"policy,omitempty"`
 }
 
 // Note: partly copied from https://github.com/vmware-tanzu/velero/pkg/apis/restore_types.go
@@ -112,9 +104,28 @@ type RestoreStatus struct {
 	// +optional
 	Phase string `json:"phase,omitempty"`
 
-	// RestoreDetails provides a detailed status for each restore in each cluster.
+	// Details provides a detailed status for each restore in each cluster.
 	// +optional
-	RestoreDetails []*velerov1.RestoreStatus `json:"restoreDetails,omitempty"`
+	Details []*RestoreDetails `json:"restoreDetails,omitempty"`
+}
+
+type RestoreDetails struct {
+	// ClusterName is the Name of the cluster where the restore is being performed.
+	// +optional
+	ClusterName string `json:"clusterName,omitempty"`
+
+	// ClusterKind is the kind of ClusterName recorded in Kurator.
+	// +optional
+	ClusterKind string `json:"clusterKind,omitempty"`
+
+	// RestoreNameInCluster is the name of the restore being performed within this cluster.
+	// This RestoreNameInCluster is unique in Storage.
+	// +optional
+	RestoreNameInCluster string `json:"restoreNameInCluster,omitempty"`
+
+	// RestoreStatusInCluster is the current status of the restore performed within this cluster.
+	// +optional
+	RestoreStatusInCluster *velerov1.RestoreStatus `json:"restoreStatusInCluster,omitempty"`
 }
 
 // RestoreList contains a list of Restore.
@@ -125,4 +136,3 @@ type RestoreList struct {
 	metav1.ListMeta `json:"metadata,omitempty"`
 	Items           []Restore `json:"items"`
 }
-
