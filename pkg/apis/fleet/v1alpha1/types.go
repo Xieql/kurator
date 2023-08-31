@@ -81,6 +81,8 @@ type PluginConfig struct {
 	Grafana *GrafanaConfig `json:"grafana,omitempty"`
 	// Policy defines the configuration for the ploicy management.
 	Policy *PolicyConfig `json:"policy,omitempty"`
+	// Backup defines the configuration for the backup engine(Velero).
+	Backup *BackupConfig `json:"backup,omitempty"`
 }
 
 type MetricConfig struct {
@@ -246,6 +248,47 @@ type PodSecurityPolicy struct {
 	// +kubebuilder:default=Audit
 	// +optional
 	ValidationFailureAction string `json:"validationFailureAction,omitempty"`
+}
+
+// BackupConfig defines the configuration for the Velero backup engine.
+type BackupConfig struct {
+	// Chart defines the helm chart config of the velero.
+	// default values is
+	//
+	// chart:
+	//   repository: https://vmware-tanzu.github.io/helm-charts
+	//   name: velero
+	//   version: 5.0.2
+	//
+	// +optional
+	Chart *ChartConfig `json:"chart,omitempty"`
+
+	// Storage details where the backup data should be stored.
+	// +required
+	Storage *ObjectStoreConfig `json:"storage"`
+
+	// VeleroImage Details of the container image to use in the Velero deployment & daemonset
+	// default values is
+	//
+	//  repository: velero/velero
+	//  tag: v1.11.1
+	//  pullPolicy: IfNotPresent
+	//
+	// +optional
+	VeleroImage apiextensionsv1.JSON `json:"veleroImage,omitempty"`
+
+	// InitContainers to add to the Velero deployment's pod spec.
+	// default values is
+	//
+	// - name: velero-plugin-for-aws
+	//   image: velero/velero-plugin-for-aws:v1.7.1
+	//   imagePullPolicy: IfNotPresent
+	//   volumeMounts:
+	//     - mountPath: /target
+	//       name: plugins
+	//
+	// +optional
+	InitContainers apiextensionsv1.JSON `json:"initContainers,omitempty"`
 }
 
 // FleetStatus defines the observed state of the fleet
