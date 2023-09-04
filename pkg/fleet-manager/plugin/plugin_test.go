@@ -231,7 +231,7 @@ func TestRenderThanos(t *testing.T) {
 	}
 }
 
-func TestRendPrometheus(t *testing.T) {
+func TestRenderPrometheus(t *testing.T) {
 	cases := []struct {
 		name  string
 		fleet types.NamespacedName
@@ -270,7 +270,7 @@ func TestRendPrometheus(t *testing.T) {
 
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			got, err := RendPrometheus(manifestFS, tc.fleet, tc.ref, FleetCluster{
+			got, err := RenderPrometheus(manifestFS, tc.fleet, tc.ref, FleetCluster{
 				Name:       "cluster1",
 				SecretName: "cluster1",
 				SecretKey:  "kubeconfig.yaml",

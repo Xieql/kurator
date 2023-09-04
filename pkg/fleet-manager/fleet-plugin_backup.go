@@ -29,16 +29,15 @@ import (
 	"kurator.dev/kurator/pkg/infra/util"
 )
 
-func (f *FleetManager) reconcileKyvernoPlugin(ctx context.Context, fleet *fleetv1a1.Fleet, fleetClusters map[ClusterKey]*fleetCluster) (kube.ResourceList, ctrl.Result, error) {
+func (f *FleetManager) reconcileVeleroPlugin(ctx context.Context, fleet *fleetv1a1.Fleet, fleetClusters map[ClusterKey]*fleetCluster) (kube.ResourceList, ctrl.Result, error) {
 	log := ctrl.LoggerFrom(ctx)
 
-	if fleet.Spec.Plugin.Policy == nil ||
-		fleet.Spec.Plugin.Policy.Kyverno == nil {
+	if fleet.Spec.Plugin.Backup == nil {
 		// reconcilePluginResources will delete all resources if plugin is nil
 		return nil, ctrl.Result{}, nil
 	}
 
-	kyvernoCfg := fleet.Spec.Plugin.Policy.Kyverno
+	veleroCfg := fleet.Spec.Plugin.Backup
 
 	fleetNN := types.NamespacedName{
 		Namespace: fleet.Namespace,
@@ -48,53 +47,26 @@ func (f *FleetManager) reconcileKyvernoPlugin(ctx context.Context, fleet *fleetv
 	fleetOwnerRef := ownerReference(fleet)
 	var resources kube.ResourceList
 	for key, cluster := range fleetClusters {
-		b, err := plugin.RenderKyverno(f.Manifests, fleetNN, fleetOwnerRef, plugin.FleetCluster{
+		//
+		b, err := plugin.RenderVelero(f.Manifests, fleetNN, fleetOwnerRef, plugin.FleetCluster{
 			Name:       key.Name,
 			SecretName: cluster.Secret,
 			SecretKey:  cluster.SecretKey,
-		}, fleet.Spec.Plugin.Policy.Kyverno)
+		}, veleroCfg)
+		//
 		if err != nil {
 			return nil, ctrl.Result{}, err
 		}
 
-		// apply kyverno resources
-		kyvernoResources, err := util.PatchResources(b)
+		// apply Velero resources
+		veleroResources, err := util.PatchResources(b)
 		if err != nil {
 			return nil, ctrl.Result{}, err
 		}
-		resources = append(resources, kyvernoResources...)
+		resources = append(resources, veleroResources...)
 	}
 
-	log.V(4).Info("wait for Kyverno helm release to be reconciled")
-	if !f.helmReleaseReady(ctx, fleet, resources) {
-		// wait for HelmRelease to be ready
-		return nil, ctrl.Result{
-			// HelmRelease check interval is 1m, so we set 30s here
-			RequeueAfter: 30 * time.Second,
-		}, nil
-	}
-
-	// After CRDs are created, start to install pod security policy
-	if kyvernoCfg.PodSecurity != nil {
-		for key, cluster := range fleetClusters {
-			// generate policies for pod security admission
-			b, err := plugin.RenderKyvernoPolicy(f.Manifests, fleetNN, fleetOwnerRef, plugin.FleetCluster{
-				Name:       key.Name,
-				SecretName: cluster.Secret,
-				SecretKey:  cluster.SecretKey,
-			}, kyvernoCfg)
-			if err != nil {
-				return nil, ctrl.Result{}, err
-			}
-
-			kyvernoPolicyResources, err := util.PatchResources(b)
-			if err != nil {
-				return nil, ctrl.Result{}, err
-			}
-			resources = append(resources, kyvernoPolicyResources...)
-		}
-	}
-
+	log.V(4).Info("wait for velero helm release to be reconciled")
 	if !f.helmReleaseReady(ctx, fleet, resources) {
 		// wait for HelmRelease to be ready
 		return nil, ctrl.Result{

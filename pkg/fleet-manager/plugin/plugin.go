@@ -18,6 +18,7 @@ package plugin
 
 import (
 	"encoding/json"
+	"fmt"
 	"io/fs"
 	"strings"
 
@@ -34,6 +35,7 @@ const (
 	MetricPluginName  = "metric"
 	GrafanaPluginName = "grafana"
 	KyvernoPluginName = "kyverno"
+	VeleroPluginName  = "velero"
 
 	ThanosComponentName        = "thanos"
 	PrometheusComponentName    = "prometheus"
@@ -174,7 +176,7 @@ func RenderThanos(fsys fs.FS, fleetNN types.NamespacedName, fleetRef *metav1.Own
 	return renderFleetPlugin(fsys, thanosCfg)
 }
 
-func RendPrometheus(fsys fs.FS, fleetName types.NamespacedName, fleetRef *metav1.OwnerReference, cluster FleetCluster, metricCfg *fleetv1a1.MetricConfig) ([]byte, error) {
+func RenderPrometheus(fsys fs.FS, fleetName types.NamespacedName, fleetRef *metav1.OwnerReference, cluster FleetCluster, metricCfg *fleetv1a1.MetricConfig) ([]byte, error) {
 	promChart, err := getFleetPluginChart(fsys, PrometheusComponentName)
 	if err != nil {
 		return nil, err
@@ -211,6 +213,61 @@ func RendPrometheus(fsys fs.FS, fleetName types.NamespacedName, fleetRef *metav1
 	}
 
 	return renderFleetPlugin(fsys, promCfg)
+}
+
+func RenderVelero(fsys fs.FS, fleetNN types.NamespacedName, fleetRef *metav1.OwnerReference, cluster FleetCluster, backupCfg *fleetv1a1.BackupConfig) ([]byte, error) {
+	c, err := getFleetPluginChart(fsys, VeleroPluginName)
+	if err != nil {
+		return nil, err
+	}
+
+	mergeChartConfig(c, backupCfg.Chart)
+
+	values := map[string]interface{}{
+		"configuration": map[string]interface{}{
+			"backupStorageLocation": map[string]interface{}{
+				"bucket":   backupCfg.Storage.Location.Bucket,
+				"provider": backupCfg.Storage.Location.Provider,
+				"config": map[string]interface{}{
+					"s3Url":            backupCfg.Storage.Location.S3Url,
+					"region":           backupCfg.Storage.Location.Region,
+					"s3ForcePathStyle": true,
+				},
+			},
+		},
+		"credentials": map[string]interface{}{
+			"secretContents": map[string]interface{}{
+				"cloud": fmt.Sprintf(
+					"[default]\naws_access_key_id=%s\naws_secret_access_key=%s",
+					backupCfg.Storage.Credentials.AccessKeyID,
+					backupCfg.Storage.Credentials.SecretAccessKey,
+				),
+			},
+		},
+	}
+
+	veleroImageValues, err1 := toMap(backupCfg.VeleroImage)
+	if err1 != nil {
+		return nil, err1
+	}
+
+	initContainersValues, err2 := toMap(backupCfg.InitContainers)
+	if err2 != nil {
+		return nil, err2
+	}
+
+	values = transform.MergeMaps(values, veleroImageValues)
+	values = transform.MergeMaps(values, initContainersValues)
+
+	return renderFleetPlugin(fsys, FleetPluginConfig{
+		Name:           KyvernoPluginName,
+		Component:      KyvernoComponentName,
+		Fleet:          fleetNN,
+		Cluster:        &cluster,
+		OwnerReference: fleetRef,
+		Chart:          *c,
+		Values:         values,
+	})
 }
 
 func mergeChartConfig(origin *ChartConfig, target *fleetv1a1.ChartConfig) {

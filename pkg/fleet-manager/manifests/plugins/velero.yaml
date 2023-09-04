@@ -1,0 +1,33 @@
+type: default
+repo: https://vmware-tanzu.github.io/helm-charts
+name: velero
+version: 5.0.2
+targetNamespace: velero
+values:
+  image:
+    repository: velero/velero
+    tag: v1.11.1
+  deployNodeAgent: true
+  defaultVolumesToFsBackup: true
+  snapshotsEnabled: false
+  configuration:
+    backupStorageLocation:
+      - bucket: velero
+        provider: aws
+        config:
+          s3Url: http://172.18.255.200:9000
+          region: minio
+          s3ForcePathStyle: true
+    volumeSnapshotLocation:
+  credentials:
+    secretContents:
+      cloud: |
+        [default]
+        aws_access_key_id=minio
+        aws_secret_access_key=minio123
+  initContainers:
+    - name: velero-plugin-for-aws
+      image: velero/velero-plugin-for-aws:v1.7.1
+      volumeMounts:
+        - mountPath: /target
+          name: plugins

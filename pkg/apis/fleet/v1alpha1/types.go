@@ -82,6 +82,7 @@ type PluginConfig struct {
 	// Policy defines the configuration for the ploicy management.
 	Policy *PolicyConfig `json:"policy,omitempty"`
 	// Backup defines the configuration for the backup engine(Velero).
+	// +optional
 	Backup *BackupConfig `json:"backup,omitempty"`
 }
 
