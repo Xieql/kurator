@@ -48,9 +48,9 @@ type ClusterSelector struct {
 	MatchLabels map[string]string `json:"matchLabels,omitempty"`
 }
 
-// Note: partly copied from https://github.com/"github.com/vmware-tanzu/velero/pkg/apis/backup_types.go
+// Note: partly copied from https://github.com/vmware-tanzu/velero/blob/v1.11.1/pkg/apis/velero/v1/backup_types.go
 type ResourceFilter struct {
-	// IncludedNamespaces is a slice of namespace names to include objects from.
+	// IncludedNamespaces is a list of namespace names to include objects from.
 	// If empty, all namespaces are included.
 	// +optional
 	// +nullable
@@ -61,9 +61,9 @@ type ResourceFilter struct {
 	// +nullable
 	ExcludedNamespaces []string `json:"excludedNamespaces,omitempty"`
 
-	// IncludedResources is a slice of resource names to include in the backup.
-	// For example, we can populate this string array with "deployments" and "configmaps", then we will select all resources of type deployments and configmaps,
-	// If empty, all resources are included.
+	// IncludedResources is a slice of API resource names to include in the backup.
+	// For example, we can populate this string array with ["deployments", "configmaps","clusterroles","storageclasses"], then we will select all resources of type deployments and configmaps.
+	// If empty, all API resources are included.
 	// Cannot work with IncludedClusterScopedResources, ExcludedClusterScopedResources, IncludedNamespaceScopedResources and ExcludedNamespaceScopedResources.
 	// +optional
 	// +nullable
@@ -82,7 +82,7 @@ type ResourceFilter struct {
 	IncludeClusterResources *bool `json:"includeClusterResources,omitempty"`
 
 	// IncludedClusterScopedResources is a slice of cluster-scoped resource type names to include in the backup.
-	// For example, we can populate this string array with "storageclasses" and "clusterroles", then we will select all resources of type storageclasses and clusterroles,
+	// For example, we can populate this string array with ["storageclasses", "clusterroles"], then we will select all resources of type storageclasses and clusterroles,
 	// If set to "*", all cluster-scoped resource types are included.
 	// The default value is empty, which means only related cluster-scoped resources are included.
 	// Cannot work with IncludedResources, ExcludedResources and IncludeClusterResources.
@@ -98,7 +98,7 @@ type ResourceFilter struct {
 	ExcludedClusterScopedResources []string `json:"excludedClusterScopedResources,omitempty"`
 
 	// IncludedNamespaceScopedResources is a slice of namespace-scoped resource type names to include in the backup.
-	// For example, we can populate this string array with "deployments" and "configmaps", then we will select all resources of type deployments and configmaps,
+	// For example, we can populate this string array with ["deployments", "configmaps"], then we will select all resources of type deployments and configmaps,
 	// The default value is "*".
 	// Cannot work with IncludedResources, ExcludedResources and IncludeClusterResources.
 	// +optional

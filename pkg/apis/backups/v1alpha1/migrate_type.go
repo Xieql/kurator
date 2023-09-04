@@ -37,6 +37,8 @@ type Migrate struct {
 
 type MigrateSpec struct {
 	// SourceCluster represents the source cluster for migration.
+	// The user needs to ensure that SourceCluster points to only ONE cluster.
+	// Because the current migration only supports migrating from one SourceCluster to one or more TargetCluster.
 	SourceCluster *Destination `json:"sourceCluster"`
 
 	// TargetCluster represents the target clusters for migration.
@@ -56,6 +58,13 @@ type MigratePolicy struct {
 	// OrderedResources specifies the backup order of resources of specific Kind.
 	// The map key is the resource name and value is a list of object names separated by commas.
 	// Each resource name has format "namespace/objectname".  For cluster resources, simply use "objectname".
+	// For example, if you have a specific order for pods, such as "pod1, pod2, pod3" with all belonging to the "ns1" namespace,
+	// and a specific order for persistentvolumes, such as "pv4, pv8", you can use the orderedResources field in YAML format as shown below:
+	// ```yaml
+	// orderedResources:
+	//  pods: "ns1/pod1, ns1/pod2, ns1/pod3"
+	//  persistentvolumes: "pv4, pv8"
+	// ```
 	// +optional
 	// +nullable
 	OrderedResources map[string]string `json:"orderedResources,omitempty"`
@@ -69,17 +78,12 @@ type MigratePolicy struct {
 	// If nil, no objects are included. Optional.
 	// +optional
 	// +nullable
-	MigrateStatus *RestoreStatusSpec `json:"migrateStatus,omitempty"`
+	MigrateStatus *ReserveStatusSpec `json:"migrateStatus,omitempty"`
 
 	// PreserveNodePorts specifies whether to migrate old nodePorts from source cluster to target cluster.
 	// +optional
 	// +nullable
 	PreserveNodePorts *bool `json:"preserveNodePorts,omitempty"`
-
-	// ItemOperationTimeout specifies the time used to wait for RestoreItemAction operations.
-	// The default value is 1 hour.
-	// +optional
-	ItemOperationTimeout metav1.Duration `json:"itemOperationTimeout,omitempty"`
 }
 
 type MigrateStatus struct {

@@ -65,24 +65,20 @@ type RestorePolicy struct {
 	// +optional
 	NamespaceMapping map[string]string `json:"namespaceMapping,omitempty"`
 
-	// RestoreStatus specifies which resources we should restore the status field.
-	// If nil, no objects are included.
+	// ReserveStatus specifies which resources we should restore the status field.
+	// If unset, no status will be restored.
 	// +optional
 	// +nullable
-	RestoreStatus *RestoreStatusSpec `json:"restoreStatus,omitempty"`
+	ReserveStatus *ReserveStatusSpec `json:"restoreStatus,omitempty"`
 
 	// PreserveNodePorts specifies whether to restore old nodePorts from backup.
+	// If not specified, default to false.
 	// +optional
 	// +nullable
 	PreserveNodePorts *bool `json:"preserveNodePorts,omitempty"`
-
-	// ItemOperationTimeout specifies the time used to wait for RestoreItemAction operations.
-	// The default value is 1 hour.
-	// +optional
-	ItemOperationTimeout metav1.Duration `json:"itemOperationTimeout,omitempty"`
 }
 
-type RestoreStatusSpec struct {
+type ReserveStatusSpec struct {
 	// IncludedResources specifies the resources to which will restore the status.
 	// If empty, it applies to all resources.
 	// +optional

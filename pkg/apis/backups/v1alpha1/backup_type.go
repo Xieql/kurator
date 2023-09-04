@@ -57,7 +57,7 @@ type BackupSpec struct {
 	// +optional
 	Schedule string `json:"schedule,omitempty"`
 
-	// Destination indicates the default clusters where backups should be performed.
+	// Destination indicates the clusters where backups should be performed.
 	// +optional
 	Destination *Destination `json:"destination,omitempty"`
 
@@ -66,8 +66,8 @@ type BackupSpec struct {
 	Policy *BackupPolicy `json:"policy,omitempty"`
 }
 
-// Note: partly copied from https://github.com/vmware-tanzu/velero/pkg/apis/backup_types.go
-// BackupSpec defines the specification for a backup.
+// Note: partly copied from https://github.com/vmware-tanzu/velero/blob/v1.11.1/pkg/apis/velero/v1/backup_types.go
+// BackupPolicy defines the specification for a backup policy.
 type BackupPolicy struct {
 	// ResourceFilter specifies which resources should be included in the backup.
 	// It acts as a selective criterion to determine which resources are relevant for backup.
@@ -94,11 +94,6 @@ type BackupPolicy struct {
 	// +optional
 	// +nullable
 	OrderedResources map[string]string `json:"orderedResources,omitempty"`
-
-	// ItemOperationTimeout specifies the time used to wait for asynchronous BackupItemAction operations.
-	// The default value is 1 hour.
-	// +optional
-	ItemOperationTimeout metav1.Duration `json:"itemOperationTimeout,omitempty"`
 }
 
 type BackupStatus struct {
