@@ -84,6 +84,20 @@ func getFleetPluginChart(fsys fs.FS, pluginName string) (*ChartConfig, error) {
 	return &c, nil
 }
 
+func getDefaultValuesFromYaml(fsys fs.FS, pluginName string) (map[string]interface{}, error) {
+	out, err := fs.ReadFile(fsys, "plugins/"+pluginName+".yaml")
+	if err != nil {
+		return nil, err
+	}
+
+	values := make(map[string]interface{})
+	if err := yaml.Unmarshal(out, &values); err != nil {
+		return nil, err
+	}
+
+	return values, nil
+}
+
 func renderFleetPlugin(fsys fs.FS, cfg FleetPluginConfig) ([]byte, error) {
 	out, err := fs.ReadFile(fsys, "plugin.tpl")
 	if err != nil {

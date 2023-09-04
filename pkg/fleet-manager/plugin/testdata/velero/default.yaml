@@ -1,0 +1,61 @@
+apiVersion: source.toolkit.fluxcd.io/v1beta2
+kind: HelmRepository
+metadata:
+  name: velero
+  namespace: default
+  labels:
+    app.kubernetes.io/managed-by: fleet-manager
+spec:
+  type: default
+  interval: 5m0s
+  url: https://vmware-tanzu.github.io/helm-charts
+---
+apiVersion: helm.toolkit.fluxcd.io/v2beta1
+kind: HelmRelease
+metadata:
+  name: velero
+  namespace: default
+  labels:
+    app.kubernetes.io/managed-by: fleet-manager
+spec:
+  chart:
+    spec:
+      chart: velero
+      version: 5.0.2
+      sourceRef:
+        kind: HelmRepository
+        name: velero
+  values:
+    image:
+      repository: velero/velero
+      tag: v1.11.1
+    deployNodeAgent: true
+    defaultVolumesToFsBackup: true
+    snapshotsEnabled: false
+    configuration:
+      backupStorageLocation:
+        - bucket: velero
+          provider: aws
+          config:
+            s3Url: http://172.18.255.200:9000
+            region: minio
+            s3ForcePathStyle: true
+      volumeSnapshotLocation:
+    credentials:
+      secretContents:
+        cloud: |
+          [default]
+          aws_access_key_id=minio
+          aws_secret_access_key=minio123
+    initContainers:
+      - name: velero-plugin-for-aws
+        image: velero/velero-plugin-for-aws:v1.7.1
+        volumeMounts:
+          - mountPath: /target
+            name: plugins
+  interval: 1m0s
+  install:
+    createNamespace: true
+  targetNamespace: "velero"
+  storageNamespace: "velero"
+  timeout: 15m0s

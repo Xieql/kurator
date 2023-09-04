@@ -216,14 +216,21 @@ func RenderPrometheus(fsys fs.FS, fleetName types.NamespacedName, fleetRef *meta
 }
 
 func RenderVelero(fsys fs.FS, fleetNN types.NamespacedName, fleetRef *metav1.OwnerReference, cluster FleetCluster, backupCfg *fleetv1a1.BackupConfig) ([]byte, error) {
+	// get and merge the chart config
 	c, err := getFleetPluginChart(fsys, VeleroPluginName)
 	if err != nil {
 		return nil, err
 	}
-
 	mergeChartConfig(c, backupCfg.Chart)
 
-	values := map[string]interface{}{
+	// get default values
+	defaultValues, err := getDefaultValuesFromYaml(fsys, VeleroPluginName)
+	if err != nil {
+		return nil, err
+	}
+
+	// get custom values
+	customValues := map[string]interface{}{
 		"configuration": map[string]interface{}{
 			"backupStorageLocation": map[string]interface{}{
 				"bucket":   backupCfg.Storage.Location.Bucket,
@@ -246,18 +253,18 @@ func RenderVelero(fsys fs.FS, fleetNN types.NamespacedName, fleetRef *metav1.Own
 		},
 	}
 
-	veleroImageValues, err1 := toMap(backupCfg.VeleroImage)
-	if err1 != nil {
-		return nil, err1
+	// replace default values with custom values
+	values := transform.MergeMaps(defaultValues, customValues)
+	veleroImageValues, err := toMap(backupCfg.VeleroImage)
+	if err != nil {
+		return nil, err
 	}
-
-	initContainersValues, err2 := toMap(backupCfg.InitContainers)
-	if err2 != nil {
-		return nil, err2
+	initContainersValues, err := toMap(backupCfg.InitContainers)
+	if err != nil {
+		return nil, err
 	}
-
-	values = transform.MergeMaps(values, veleroImageValues)
-	values = transform.MergeMaps(values, initContainersValues)
+	defaultValues = transform.MergeMaps(defaultValues, veleroImageValues)
+	defaultValues = transform.MergeMaps(defaultValues, initContainersValues)
 
 	return renderFleetPlugin(fsys, FleetPluginConfig{
 		Name:           KyvernoPluginName,
