@@ -288,7 +288,7 @@ type BackupStorage struct {
 	//
 	// - `access-key`: The access-key/account/username for object storage authentication.
 	// - `secret-key`: The secret-key/password for object storage authentication.
-	// 
+	//
 	// +required
 	SecretName string `json:"secretName"`
 }
