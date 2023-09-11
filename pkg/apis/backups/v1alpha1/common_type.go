@@ -26,12 +26,11 @@ type Destination struct {
 	// Fleet represents the name of a fleet which determines a set of clusters.
 	// If Fleet is set, it will be used to determine the target clusters.
 	// If users wish to specify clusters directly, they can use the Clusters field.
-	// +optional
-	Fleet string `json:"fleet,omitempty"`
+	// +required
+	Fleet string `json:"fleet"`
 
 	// Clusters allows users to directly specify a set of destination clusters.
 	// It should be used exclusively to select clusters described within the Fleet.
-	// If Fleet is set, it takes precedence over the Clusters field.
 	// +optional
 	Clusters []*corev1.ObjectReference `json:"clusters,omitempty"`
 }
