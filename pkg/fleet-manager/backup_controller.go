@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 /*
 Copyright Kurator Authors.
 
