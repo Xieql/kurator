@@ -44,6 +44,8 @@ const (
 	HuaWeiCloudObjStoreSecretName = "kurator-velero-obs"
 	GCPObjStoreSecretName         = "kurator-velero-gcs"
 	AzureObjStoreSecretName       = "kurator-velero-abs"
+
+	ObjStoreSecretNamespace = "velero"
 )
 
 // reconcileBackupPlugin reconciles the backup plugin configuration and installation across multiple clusters.
@@ -66,13 +68,15 @@ func (f *FleetManager) reconcileBackupPlugin(ctx context.Context, fleet *v1alpha
 	// handle provider-specific details
 	objStoreProvider := veleroCfg.Storage.Location.Provider
 	// newSecret is a variable used to store the newly created secret object which contains the necessary credentials for the object storage provider. The specific structure and content of the secret vary depending on the provider.
-	newSecret, err := f.getProviderDetails(ctx, veleroCfg.Storage.SecretName, objStoreProvider, fleetNN)
+	newSecret, err := f.buildNewSecret(ctx, veleroCfg.Storage.SecretName, objStoreProvider, fleetNN)
 	if err != nil {
 		return nil, ctrl.Result{}, err
 	}
 
 	fleetOwnerRef := ownerReference(fleet)
 	var resources kube.ResourceList
+
+	// Iterating through each fleet cluster to generate and apply Velero helm configurations.
 	for key, cluster := range fleetClusters {
 		// generate Velero helm config for each fleet cluster
 		b, err := plugin.RenderVelero(f.Manifests, fleetNN, fleetOwnerRef, plugin.FleetCluster{
@@ -84,6 +88,7 @@ func (f *FleetManager) reconcileBackupPlugin(ctx context.Context, fleet *v1alpha
 			return nil, ctrl.Result{}, err
 		}
 
+		// create a new secret in the current fleet cluster before initializing the backup plugin.
 		if err := createNewSecretInFleetCluster(cluster, newSecret); err != nil {
 			return nil, ctrl.Result{}, err
 		}
@@ -108,8 +113,8 @@ func (f *FleetManager) reconcileBackupPlugin(ctx context.Context, fleet *v1alpha
 	return resources, ctrl.Result{}, nil
 }
 
-// getProviderDetails retrieves the secret and provider values based on the specified object storage provider.
-func (f *FleetManager) getProviderDetails(ctx context.Context, secretName, objStoreProvider string, fleetNN types.NamespacedName) (*corev1.Secret, error) {
+// buildNewSecret generate a new secret for Velero based on the specified object storage provider.
+func (f *FleetManager) buildNewSecret(ctx context.Context, secretName, objStoreProvider string, fleetNN types.NamespacedName) (*corev1.Secret, error) {
 	var newSecret *corev1.Secret
 	var err error
 
@@ -141,7 +146,7 @@ func (f *FleetManager) buildAWSSecret(ctx context.Context, secretName string, fl
 	newSecret := &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      AWSObjStoreSecretName,
-			Namespace: fleetNN.Namespace,
+			Namespace: ObjStoreSecretNamespace,
 		},
 		Type: corev1.SecretTypeOpaque,
 		Data: map[string][]byte{
