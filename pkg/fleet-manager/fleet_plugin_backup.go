@@ -66,7 +66,6 @@ func (f *FleetManager) reconcileBackupPlugin(ctx context.Context, fleet *v1alpha
 	// handle provider-specific details
 	objStoreProvider := veleroCfg.Storage.Location.Provider
 	// newSecret is a variable used to store the newly created secret object which contains the necessary credentials for the object storage provider. The specific structure and content of the secret vary depending on the provider.
-	// providerValues is a map that stores default configurations associated with the specific provider. These configurations are necessary for the proper functioning of the Velero tool with the provider. Currently, this includes configurations for initContainers.
 	newSecret, err := f.getProviderDetails(ctx, veleroCfg.Storage.SecretName, objStoreProvider, fleetNN)
 	if err != nil {
 		return nil, ctrl.Result{}, err
@@ -82,6 +81,10 @@ func (f *FleetManager) reconcileBackupPlugin(ctx context.Context, fleet *v1alpha
 			SecretKey:  cluster.SecretKey,
 		}, veleroCfg, newSecret.Name)
 		if err != nil {
+			return nil, ctrl.Result{}, err
+		}
+
+		if err := createNewSecretInFleetCluster(cluster, newSecret); err != nil {
 			return nil, ctrl.Result{}, err
 		}
 
@@ -174,4 +177,23 @@ func getObjStoreCredentials(ctx context.Context, client client.Client, namespace
 	secretKey = string(secret.Data[SecretKey])
 
 	return accessKey, secretKey, nil
+}
+
+// createNewSecretInFleetCluster creates a new secret in the specified fleet cluster.
+// It takes a fleetCluster instance and a pre-built corev1.Secret instance as parameters.
+// It uses the kube client from the fleetCluster instance to create the new secret in the respective cluster.
+func createNewSecretInFleetCluster(cluster *fleetCluster, newSecret *corev1.Secret) error {
+	// Get the kubeclient.Interface instance
+	kubeClient := cluster.client.KubeClient()
+
+	// Get the namespace of the secret
+	namespace := newSecret.Namespace
+
+	// Create the new secret
+	_, err := kubeClient.CoreV1().Secrets(namespace).Create(context.TODO(), newSecret, metav1.CreateOptions{})
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
