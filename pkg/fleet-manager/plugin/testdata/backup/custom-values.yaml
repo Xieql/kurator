@@ -51,9 +51,8 @@ spec:
           s3Url: http://x.x.x.x:x
         provider: aws
     credentials:
-      secretContents:
-        useSecret: true,
-        existingSecret: kurator-velero-s3,
+      useSecret: true,
+      existingSecret: kurator-velero-s3
     defaultVolumesToFsBackup: true
     deployNodeAgent: true
     image:

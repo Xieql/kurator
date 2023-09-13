@@ -52,7 +52,7 @@ spec:
         provider: aws
     credentials:
       useSecret: true,
-      existingSecret: kurator-velero-s3,
+      existingSecret: kurator-velero-s3
     defaultVolumesToFsBackup: true
     deployNodeAgent: true
     image:
