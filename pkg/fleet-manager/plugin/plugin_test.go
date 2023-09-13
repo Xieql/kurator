@@ -287,10 +287,11 @@ func TestRenderPrometheus(t *testing.T) {
 
 func TestRenderVelero(t *testing.T) {
 	cases := []struct {
-		name  string
-		fleet types.NamespacedName
-		ref   *metav1.OwnerReference
-		in    *v1alpha1.BackupConfig
+		name          string
+		fleet         types.NamespacedName
+		ref           *metav1.OwnerReference
+		in            *v1alpha1.BackupConfig
+		newSecretName string
 	}{
 		{
 			name: "default",
@@ -315,6 +316,7 @@ func TestRenderVelero(t *testing.T) {
 					SecretName: "backup-secret",
 				},
 			},
+			newSecretName: "kurator-velero-s3",
 		},
 		{
 			name: "custom-values",
@@ -342,6 +344,7 @@ func TestRenderVelero(t *testing.T) {
 					Raw: []byte("{\"image\": {\n  \"repository\": \"velero/velero\",\n  \"tag\": \"v1.10.1\",\n  \"pullPolicy\": \"IfNotPresent\"\n}}"),
 				},
 			},
+			newSecretName: "kurator-velero-s3",
 		},
 	}
 
@@ -351,7 +354,7 @@ func TestRenderVelero(t *testing.T) {
 				Name:       "cluster1",
 				SecretName: "cluster1",
 				SecretKey:  "kubeconfig.yaml",
-			}, tc.in, "xxx")
+			}, tc.in, tc.newSecretName)
 			assert.NoError(t, err)
 
 			getExpected, err := getExpected("backup", tc.name)
