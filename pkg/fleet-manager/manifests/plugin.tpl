@@ -48,8 +48,7 @@ spec:
 {{- if or .Chart.Values  .Values }}
   values:
     {{ merge .Values .Chart.Values | toYaml | nindent 4 }}
-{{- end -}}
-  interval: 1m0s
+{{- end }}  interval: 1m0s
   install:
     createNamespace: true
   targetNamespace: "{{ .Chart.TargetNamespace }}"
