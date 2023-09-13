@@ -47,8 +47,8 @@ spec:
         name: "{{ .ResourceName }}"
 {{- if or .Chart.Values  .Values }}
   values:
-    {{ merge .Values .Chart.Values | toYaml | indent 4 -}}
-{{- end }}
+    {{ merge .Values .Chart.Values | toYaml | nindent 4 }}
+{{- end -}}
   interval: 1m0s
   install:
     createNamespace: true
