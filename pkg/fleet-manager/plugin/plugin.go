@@ -18,6 +18,7 @@ package plugin
 
 import (
 	"encoding/json"
+	"fmt"
 	"io/fs"
 	"strings"
 
@@ -243,11 +244,12 @@ func RenderVelero(
 
 	// get default values
 	defaultValues := c.Values
+	// providerValues is a map that stores default configurations associated with the specific provider. These configurations are necessary for the proper functioning of the Velero tool with the provider. Currently, this includes configurations for initContainers.
+	providerValues, err := getProviderValues(backupCfg.Storage.Location.Provider)
 	if err != nil {
 		return nil, err
 	}
 	// add providerValues to default values
-	providerValues := getProviderValues(backupCfg.Storage.Location.Provider)
 	defaultValues = transform.MergeMaps(defaultValues, providerValues)
 
 	// get custom values
@@ -320,18 +322,20 @@ func toMap(args apiextensionsv1.JSON) (map[string]interface{}, error) {
 	return m, nil
 }
 
-func getProviderValues(provider string) map[string]interface{} {
+// getProviderValues return the map that stores default configurations associated with the specific provider.
+// The provider parameter can be one of the following values: "aws", "huaweicloud", "gcp", "azure".
+func getProviderValues(provider string) (map[string]interface{}, error) {
 	switch provider {
-	case "AWS":
-		return buildAWSProviderValues()
-	case "HuaWeiCloud":
-		return buildHuaWeiCloudProviderValues()
-	case "GCP":
-		return buildGCPProviderValues()
-	case "Azure":
-		return buildAzureProviderValues()
+	case "aws":
+		return buildAWSProviderValues(), nil
+	case "huaweicloud":
+		return buildHuaWeiCloudProviderValues(), nil
+	case "gcp":
+		return buildGCPProviderValues(), nil
+	case "azure":
+		return buildAzureProviderValues(), nil
 	default:
-		return nil
+		return nil, fmt.Errorf("unknown objStoreProvider: %v", provider)
 	}
 }
 
