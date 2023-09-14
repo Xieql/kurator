@@ -217,14 +217,9 @@ func RenderPrometheus(fsys fs.FS, fleetName types.NamespacedName, fleetRef *meta
 }
 
 type veleroObjectStoreLocation struct {
-	Bucket   string                          `json:"bucket"`
-	Provider string                          `json:"provider"`
-	Config   veleroObjectStoreLocationConfig `json:"config"`
-}
-type veleroObjectStoreLocationConfig struct {
-	S3Url            string `json:"s3Url"`
-	Region           string `json:"region"`
-	S3ForcePathStyle bool   `json:"s3ForcePathStyle"`
+	Bucket   string                 `json:"bucket"`
+	Provider string                 `json:"provider"`
+	Config   map[string]interface{} `json:"config"`
 }
 
 func RenderVelero(
@@ -253,17 +248,23 @@ func RenderVelero(
 	defaultValues = transform.MergeMaps(defaultValues, providerValues)
 
 	// get custom values
-	customValues := map[string]interface{}{
+	customValues := map[string]interface{}{}
+	locationConfig := stringMapToInterfaceMap(backupCfg.Storage.Location.Config)
+	// generate velero config. "backupCfg.Storage.Location.Endpoint" and "backupCfg.Storage.Location.Region" will overwrite the value of "backupCfg.Storage.Location.config"
+	// because "backupCfg.Storage.Location.config" is optional, it should take effect only when current setting is not enough.
+	Config := transform.MergeMaps(locationConfig, map[string]interface{}{
+		"s3Url":            backupCfg.Storage.Location.Endpoint,
+		"region":           backupCfg.Storage.Location.Region,
+		"s3ForcePathStyle": true,
+	})
+	provider := getProviderFrombackupCfg(backupCfg)
+	configurationValues := map[string]interface{}{
 		"configuration": map[string]interface{}{
 			"backupStorageLocation": []veleroObjectStoreLocation{
 				{
 					Bucket:   backupCfg.Storage.Location.Bucket,
-					Provider: backupCfg.Storage.Location.Provider,
-					Config: veleroObjectStoreLocationConfig{
-						S3Url:            backupCfg.Storage.Location.Endpoint,
-						Region:           backupCfg.Storage.Location.Region,
-						S3ForcePathStyle: true,
-					},
+					Provider: provider,
+					Config:   Config,
 				},
 			},
 		},
@@ -272,6 +273,8 @@ func RenderVelero(
 			"existingSecret": veleroSecretName,
 		},
 	}
+	// add custom configurationValues to customValues
+	customValues = transform.MergeMaps(customValues, configurationValues)
 	extraValues, err := toMap(backupCfg.ExtraArgs)
 	if err != nil {
 		return nil, err
@@ -322,6 +325,15 @@ func toMap(args apiextensionsv1.JSON) (map[string]interface{}, error) {
 	return m, nil
 }
 
+func stringMapToInterfaceMap(args map[string]string) map[string]interface{} {
+	m := make(map[string]interface{})
+	for s, s2 := range args {
+		m[s] = s2
+	}
+
+	return m
+}
+
 // getProviderValues return the map that stores default configurations associated with the specific provider.
 // The provider parameter can be one of the following values: "aws", "huaweicloud", "gcp", "azure".
 func getProviderValues(provider string) (map[string]interface{}, error) {
@@ -363,13 +375,23 @@ func buildAWSProviderValues() map[string]interface{} {
 	return values
 }
 
-// TODO： accomplish those function after investigation
 func buildHuaWeiCloudProviderValues() map[string]interface{} {
-	return nil
+	return buildAWSProviderValues()
 }
+
+// TODO： accomplish those function after investigation
 func buildGCPProviderValues() map[string]interface{} {
 	return nil
 }
 func buildAzureProviderValues() map[string]interface{} {
 	return nil
+}
+
+func getProviderFrombackupCfg(backupCfg *fleetv1a1.BackupConfig) string {
+	provider := backupCfg.Storage.Location.Provider
+	// there no "huaweicloud" provider in velero
+	if provider == "huaweicloud" {
+		provider = "aws"
+	}
+	return provider
 }
