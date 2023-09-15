@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 /*
 Copyright Kurator Authors.
 
@@ -19,12 +18,12 @@ package fleet
 
 import (
 	"context"
+	"fmt"
 	"github.com/pkg/errors"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	utilerrors "k8s.io/apimachinery/pkg/util/errors"
-	"k8s.io/klog/v2"
 	"sigs.k8s.io/cluster-api/util/patch"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -38,43 +37,23 @@ import (
 // 应该早一点吧 plugin 安装的 文档写好，不然自己都忘记了
 
 // 问题1 ： 如何监控其他集群的资源，是否需要做特殊的配置。
-// 思路： 看 karmada 的 代码
+// 结论：轮询收集
 
-// 问题2  删除的时候， 各个资源上面的 backup 资源也要跟着删除，不然下次就没法创建同命文件了
+// 问题2  删除的时候， 各个资源上面的 backup 资源也要跟着删除，不然下次就没法创建同命文件了，
+// 思路：是的，所以创建的时候要加上 label，这样删除的时候把当前backup label的删除就行了
 
 // 问题3 对 参数 转换的方法 进行测试， 这是本特性的核心工作
+// 结论 ok
 
-// 问题4  destination 的问题， fleet 与 指定集群如果都设置了，只需要处理fleet
-
-// TODO： 尽管已经api说明中提醒了，但是 还是需要有 webhook 提示下
-// 会报NewBadRequest 但是体验不好
-//var allWarnings []string
-//if in.Spec.Destination != nil && in.Spec.Destination.Fleet != "" && len(in.Spec.Destination.Clusters) > 0 {
-//allWarnings = append(allWarnings, "Both Fleet and Clusters are set. Fleet will take precedence over Clusters.")
-//}
-//if len(allWarnings) > 0 {
-//return apierrors.NewBadRequest(fmt.Sprintf("Warnings: %v", allWarnings))
-//}
-// 会报 event：
-//type ApplicationWebhook struct {
-//	Client        client.Reader
-//	EventRecorder record.EventRecorder
-//}
-
-//func (wh *ApplicationWebhook) SetupWebhookWithManager(mgr ctrl.Manager) error {
-//	wh.EventRecorder = mgr.GetEventRecorderFor("application-webhook")
-//	return ctrl.NewWebhookManagedBy(mgr).
-//		For(&v1alpha1.Application{}).
-//		WithValidator(wh).
-//		Complete()
-//}
-
-//if in.Spec.Destination != nil && in.Spec.Destination.Fleet != "" && len(in.Spec.Destination.Clusters) > 0 {
-//	wh.EventRecorder.Event(in, corev1.EventTypeWarning, "ConfigurationWarning", "Both Fleet and Clusters are set. Fleet will take precedence over Clusters.")
-//}
-// 这样，当 Fleet 和 Clusters 同时被设置时，一个警告事件将被创建并记录在 Kubernetes 事件中，而不会影响用户的请求。用户可以通过检查事件来了解到这个警告。
+// 问题4  destination 的问题，
+// 结论，fleet 为 必填项目， 这样就不需要 webhook 检查destination， 但是 其 fleet 的ns 唯一还是要做检查的。
 
 // 问题5： 设置了集群，但是集群不在 fleet 中如何处理， 有的存在，有的不存在的情况下如何处理。
+// 结论，只要存在 有一个集群设置出错，就应该报错，然后返回报错信息。
+
+// new
+// 问题6 可以一个 controller  控制多个 资源么，
+// 结论： 当前的模板中是不行的，因为 	req ctrl.Request 只包含了 types.NamespacedName 信息，没有包含 kind 信息。 并且从controller 模型上，
 
 const (
 	BackupLabel     = "backup.kurator.dev/backup-name"
@@ -97,45 +76,91 @@ func (b *BackupManager) SetupWithManager(ctx context.Context, mgr ctrl.Manager, 
 }
 
 func (b *BackupManager) Reconcile(ctx context.Context, req ctrl.Request) (_ ctrl.Result, reterr error) {
-	backup := &backupapi.Backup{}
-	if err := b.Get(ctx, req.NamespacedName, backup); err != nil {
-		if apierrors.IsNotFound(err) {
-			return ctrl.Result{}, nil
-		}
-		return ctrl.Result{}, errors.Wrapf(err, "failed to get backup %s", req.NamespacedName)
-	}
+	var currentObject client.Object
+	var crdType string
+	counter := 0
 
 	log := ctrl.LoggerFrom(ctx)
-	log = log.WithValues("backup", klog.KObj(backup))
 
-	patchHelper, err := patch.NewHelper(backup, b.Client)
-	if err != nil {
-		return ctrl.Result{}, errors.Wrapf(err, "failed to init patch helper for backup %s", req.NamespacedName)
+	// Define the list of CRDs that this reconciler is responsible for
+	crds := []struct {
+		obj     client.Object
+		typeStr string
+	}{
+		{&backupapi.Backup{}, "backup"},
+		{&backupapi.Restore{}, "restore"},
+		{&backupapi.Migrate{}, "migrate"},
 	}
 
-	defer func() {
-		patchOpts := []patch.Option{}
-		if err := patchHelper.Patch(ctx, backup, patchOpts...); err != nil {
-			reterr = utilerrors.NewAggregate([]error{reterr, errors.Wrapf(err, "failed to patch backup %s", req.NamespacedName)})
+	// Loop through each CRD type and try to get the object with the given namespace and name
+	for _, crd := range crds {
+		err := b.Get(ctx, req.NamespacedName, crd.obj)
+		if err == nil {
+			counter++
+			currentObject = crd.obj
+			crdType = crd.typeStr
+		} else if !apierrors.IsNotFound(err) {
+			log.Error(err, fmt.Sprintf("Failed to get %s", crd.typeStr), "namespace", req.Namespace, "name", req.Name)
+			return ctrl.Result{}, err
 		}
-	}()
+	}
 
-	// Add finalizer if not exist to void the race condition.
-	if !controllerutil.ContainsFinalizer(backup, BackupFinalizer) {
-		controllerutil.AddFinalizer(backup, BackupFinalizer)
+	// Check if multiple instances of CRDs (backup, restore, migrate) with the same namespace and name were found.
+	// This scenario is prohibited in our current design as it could lead to ambiguous behavior during the reconciliation process.
+	if counter > 1 {
+		log.Error(nil, "Multiple CRDs(backup, restore, migrate) with the same namespace and name were found", "namespace", req.Namespace, "name", req.Name)
 		return ctrl.Result{}, nil
 	}
 
-	// fetch destination clusters
-	clusters, err := fetchDestinationCluster(ctx, b.Client, backup.Spec.Destination)
-
-	// Handle deletion reconciliation loop.
-	if backup.DeletionTimestamp != nil {
-		return b.reconcileDelete(backup)
+	// Check if no instances of the CRDs (backup, restore, migrate) were found with the specified namespace and name.
+	if counter == 0 {
+		log.Info("No CRD instance found for the given namespace and name", "namespace", req.Namespace, "name", req.Name)
+		return ctrl.Result{}, nil
 	}
 
-	// Handle normal loop.
-	return b.reconcile(ctx, backup, fleet)
+	// Initialize patch helper
+	patchHelper, err := patch.NewHelper(currentObject, b.Client)
+	if err != nil {
+		log.Error(err, "failed to init patch helper")
+	}
+	// Setup deferred function to handle patching the object at the end of the reconciler
+	defer func() {
+		patchOpts := []patch.Option{}
+		if err := patchHelper.Patch(ctx, currentObject, patchOpts...); err != nil {
+			reterr = utilerrors.NewAggregate([]error{reterr, errors.Wrapf(err, "failed to patch %s  %s", crdType, req.NamespacedName)})
+		}
+	}()
+
+	// Check and add finalizer if not present
+	if !controllerutil.ContainsFinalizer(currentObject, BackupFinalizer) {
+		controllerutil.AddFinalizer(currentObject, BackupFinalizer)
+		return ctrl.Result{}, nil
+	}
+
+	// Handle deletion timestamp being set, which indicates the object is being deleted
+	if currentObject.GetDeletionTimestamp() != nil {
+		switch crdType {
+		case "backup":
+			return b.reconcileDeleteBackup(ctx, currentObject.(*backupapi.Backup))
+		case "restore":
+			return b.reconcileDeleteRestore(ctx, currentObject.(*backupapi.Restore))
+		case "migrate":
+			return b.reconcileDeleteMigrate(ctx, currentObject.(*backupapi.Migrate))
+		}
+	}
+
+	// Handle the main reconcile logic based on the type of the CRD object found
+	switch crdType {
+	case "backup":
+		return b.reconcileBackup(ctx, currentObject.(*backupapi.Backup))
+	case "restore":
+		return b.reconcileRestore(ctx, currentObject.(*backupapi.Restore))
+	case "migrate":
+		return b.reconcileMigrate(ctx, currentObject.(*backupapi.Migrate))
+	}
+
+	log.Error(errors.New("unreachable code reached"), "This should not happen")
+	return ctrl.Result{}, nil
 }
 
 func (b *BackupManager) reconcile(ctx context.Context, backup *backupapi.Backup, fleet *fleetapi.Fleet) (ctrl.Result, error) {
