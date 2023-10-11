@@ -10,7 +10,8 @@ In this tutorial we’ll cover the basics of how to use [Fleet](https://kurator.
 
 ## Architecture
 
-Fleet's multi cluster policy management is built on top [Kyverno](https://kyverno.io/), the overall architecture is shown as below:
+
+Fleet's multi cluster  policy management is built on top [Kyverno](https://kyverno.io/), the overall architecture is shown as below:
 
 {{< image width="100%"
     link="./image/fleet-policy.drawio.svg"
