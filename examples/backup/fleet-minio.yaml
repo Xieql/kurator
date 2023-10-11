@@ -1,0 +1,20 @@
+apiVersion: fleet.kurator.dev/v1alpha1
+kind: Fleet
+metadata:
+  name: quickstart
+  namespace: default
+spec:
+  clusters:
+    - name: kurator-member1
+      kind: AttachedCluster
+    - name: kurator-member2
+      kind: AttachedCluster
+  plugin:
+    backup:
+      storage:
+        location:
+          bucket: velero
+          provider: aws
+          endpoint: http://172.18.255.200:9000
+          region: minio
+        secretName: minio-credentials
