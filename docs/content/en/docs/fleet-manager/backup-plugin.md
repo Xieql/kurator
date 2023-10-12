@@ -3,7 +3,7 @@ title: "Kurator Fleet Backup Plugin Configuration Guide"
 linkTitle: "Kurator Fleet Backup Plugin Configuration Guide"
 weight: 40
 description: >
-The easiest way to manage multi cluster backup plugin with fleet.
+  The easiest way to manage multi cluster backup plugin with fleet.
 ---
 
 To support Kurator's unified backup, restore, and migration features, it's imperative to first configure the backup plugin for [Fleet](https://kurator.dev/docs/references/fleet-api/#fleet). This guide will walk you through configuring the [Velero](https://velero.io/)-based backup plugin for Fleet, laying the groundwork for Kurator's unified backup, restore, and migration capabilities.
@@ -13,7 +13,7 @@ To support Kurator's unified backup, restore, and migration features, it's imper
 Before diving into the specifics, let's take a moment to understand the overall architecture and how various components interact with each other. Below is the architecture diagram of the Kurator Fleet Backup Plugin.
 
 {{< image width="100%"
-    link="./image/fleet-backup-plugin.png"
+    link="./image/backup-arch.svg"
     >}}
 
 The diagram illustrates:
@@ -24,6 +24,8 @@ The diagram illustrates:
 - **Interactions**: The arrows depict the flow of data and interactions between various components.
 
 With this architectural view in mind, let's proceed with the essential setup steps and configurations required to implement this architecture.
+
+
 
 ## Prerequisites
 
@@ -58,34 +60,68 @@ For more configuration options, please refer to the [Fleet API](https://kurator.
 ```console
 kubectl create secret generic kurator-member1 --from-file=kurator-member1.config=/root/.kube/kurator-member1.config
 kubectl create secret generic kurator-member2 --from-file=kurator-member2.config=/root/.kube/kurator-member2.config
-kubectl apply -f kurator/examples/backup/common/attachedcluster.yaml
+kubectl apply -f - <<EOF
+apiVersion: cluster.kurator.dev/v1alpha1
+kind: AttachedCluster
+metadata:
+  name: kurator-member1
+  namespace: default
+spec:
+  kubeconfig:
+    name: kurator-member1
+    key: kurator-member1.config
+---
+apiVersion: cluster.kurator.dev/v1alpha1
+kind: AttachedCluster
+metadata:
+  name: kurator-member2
+  namespace: default
+spec:
+  kubeconfig:
+    name: kurator-member2
+    key: kurator-member2.config
+EOF
 ```
 
 ## Create a Fleet with the Backup Plugin Enabled
 
 ### Use Minio
 
-If you opt to use Minio, apply the following configuration example:
+If you opt to use Minio, apply the following configuration:
 
 ```console
-kubectl apply -f examples/backup/fleet-minio.yaml
+kubectl apply -f - <<EOF
+apiVersion: fleet.kurator.dev/v1alpha1
+kind: Fleet
+metadata:
+  name: quickstart
+  namespace: default
+spec:
+  clusters:
+    - name: kurator-member1
+      kind: AttachedCluster
+    - name: kurator-member2
+      kind: AttachedCluster
+  plugin:
+    backup:
+      storage:
+        location:
+          bucket: velero
+          provider: aws
+          endpoint: http://172.18.255.200:9000
+          region: minio
+        secretName: minio-credentials
+EOF
 ```
 
 > **Note**: The `endpoint`(http://172.18.255.200:9000) in `fleet-minio.yaml` is depends on your minio service ip, check your minio service ip in [Minio installation guide](/docs/setup/install-minio).
 
 ### Use OBS
 
-If you choose to use OBS, apply the following configuration example:
+If you choose to use OBS, apply the following configuration:
 
 ```console
-kubectl apply -f examples/backup/fleet-obs.yaml
-```
-
-### Fleet Backup Plugin Configuration Explained
-
-Here's the details of `fleet-obs.yaml`:
-
-```yaml
+kubectl apply -f - <<EOF
 apiVersion: fleet.kurator.dev/v1alpha1
 kind: Fleet
 metadata:
@@ -106,13 +142,16 @@ spec:
           endpoint: http://obs.cn-south-1.myhuaweicloud.com
           region: cn-south-1
         secretName: obs-credentials
+EOF
 ```
+
+### Fleet Backup Plugin Configuration Explained
 
 Let's delve into the `spec` section of the above Fleet:
 
 - `clusters`: Contains the two `AttachedCluster` objects created earlier, indicating that the backup plugin will be installed on these two clusters.
   
-- `plugin`: The `backup` indicates the description of a backup plugin. Currently, it only contains configurations related to storage. For more configuration options, please refer to the [Fleet API](https://kurator.dev/docs/references/fleet-api/). 
+- `plugin`: The `backup` indicates the description of a backup plugin. Currently, it only contains storage related configurations. For more configuration options, please refer to the [Fleet API](https://kurator.dev/docs/references/fleet-api/). 
 
    Within this storage configuration, users should ensure that the details in the location field are accurate. This information primarily differentiates the configurations in fleet-obs.yaml from fleet-minio.yaml. Additionally, the secretName refers to the name of the secret that was established earlier within the same namespace.
 
