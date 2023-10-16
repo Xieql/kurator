@@ -16,6 +16,7 @@ package fleet
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	"github.com/pkg/errors"
 	velerov1 "github.com/vmware-tanzu/velero/pkg/apis/velero/v1"
@@ -99,7 +100,7 @@ func (b *BackupManager) reconcileBackup(ctx context.Context, backup *backupapi.B
 	}
 	// Apply velero backup resource in target clusters
 	result, err := b.reconcileBackupResources(ctx, backup, destinationClusters)
-	if err != nil || result.Requeue || result.RequeueAfter > 0 {
+	if err != nil {
 		return result, err
 	}
 	// Collect velero backup resource status to current backup
@@ -112,27 +113,42 @@ func (b *BackupManager) reconcileBackupResources(ctx context.Context, backup *ba
 
 	backupLabel := generateVeleroInstanceLabel(BackupNameLabel, backup.Name, backup.Spec.Destination.Fleet)
 
+	// Add tasks of syncVeleroObj func
+	var tasks []func() error
 	if isScheduleBackup(backup) {
 		// Handle scheduled backups
 		for clusterKey, clusterAccess := range destinationClusters {
-			veleroScheduleName := generateVeleroResourceName(clusterKey.Name, BackupKind, backup.Name)
+			veleroScheduleName := generateVeleroResourceName(clusterKey.Name, BackupKind, backup.Namespace, backup.Name)
 			veleroSchedule := buildVeleroScheduleInstance(&backup.Spec, backupLabel, veleroScheduleName)
-			if err := syncVeleroObj(ctx, clusterKey, clusterAccess, veleroSchedule); err != nil {
-				log.Error(err, "failed to create velero schedule instance for backup", "backupName", backup.Name)
-				return ctrl.Result{}, err
-			}
+			task := newSyncVeleroTaskFunc(ctx, clusterAccess, veleroSchedule)
+			tasks = append(tasks, task)
 		}
 	} else {
 		// Handle one time backups
 		for clusterKey, clusterAccess := range destinationClusters {
-			veleroBackupName := generateVeleroResourceName(clusterKey.Name, BackupKind, backup.Name)
+			veleroBackupName := generateVeleroResourceName(clusterKey.Name, BackupKind, backup.Namespace, backup.Name)
 			veleroBackup := buildVeleroBackupInstance(&backup.Spec, backupLabel, veleroBackupName)
-			if err := syncVeleroObj(ctx, clusterKey, clusterAccess, veleroBackup); err != nil {
-				log.Error(err, "failed to create velero backup instance for backup", "backupName", backup.Name)
-				return ctrl.Result{}, err
-			}
+			task := newSyncVeleroTaskFunc(ctx, clusterAccess, veleroBackup)
+			tasks = append(tasks, task)
 		}
 	}
+
+	// Parallel process syncVeleroObj func
+	errs := parallelProcess(tasks)
+	// Check for errors
+	var errorList []string
+	for _, err := range errs {
+		if err != nil {
+			log.Error(err, "Error encountered during parallel processing", "backupName", backup.Name)
+			errorList = append(errorList, err.Error())
+		}
+	}
+
+	if len(errorList) > 0 {
+		// Return all errs
+		return ctrl.Result{}, fmt.Errorf("encountered %d errors during processing: %s", len(errorList), strings.Join(errorList, "; "))
+	}
+
 	return ctrl.Result{}, nil
 }
 
@@ -158,7 +174,7 @@ func (b *BackupManager) reconcileOneTimeBackupStatus(ctx context.Context, backup
 
 	// Loop through each target cluster to retrieve the status of Velero backup resources using the client associated with the respective target cluster.
 	for clusterKey, clusterAccess := range destinationClusters {
-		name := generateVeleroResourceName(clusterKey.Name, BackupKind, backup.Name)
+		name := generateVeleroResourceName(clusterKey.Name, BackupKind, backup.Namespace, backup.Name)
 		veleroBackup := &velerov1.Backup{}
 
 		// Use the client of the target cluster to get the status of Velero backup resources
@@ -201,7 +217,7 @@ func (b *BackupManager) reconcileScheduleBackupStatus(ctx context.Context, sched
 
 	// Loop through each target cluster to retrieve the status of Velero backup created by schedule resources using the client associated with the respective target cluster.
 	for clusterKey, clusterAccess := range destinationClusters {
-		name := generateVeleroResourceName(clusterKey.Name, BackupKind, schedule.Name)
+		name := generateVeleroResourceName(clusterKey.Name, BackupKind, schedule.Namespace, schedule.Name)
 		veleroSchedule := &velerov1.Schedule{}
 		// Use the client of the target cluster to get the status of Velero backup resources
 		err := getResourceFromClusterClient(ctx, name, VeleroNamespace, *clusterAccess, veleroSchedule)
