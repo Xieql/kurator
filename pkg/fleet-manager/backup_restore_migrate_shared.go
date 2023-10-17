@@ -477,3 +477,36 @@ func syncVeleroRestoreStatus(ctx context.Context, destinationClusters map[Cluste
 
 	return ClusterDetails, nil
 }
+
+func buildVeleroRestoreInstanceUsingMigrate(migrateSpec *backupapi.MigrateSpec, labels map[string]string, veleroBackupName, veleroRestoreName string) *velerov1.Restore {
+	restoreParam := &backupapi.RestoreSpec{}
+	if migrateSpec.Policy != nil {
+		restoreParam.Policy = &backupapi.RestorePolicy{
+			NamespaceMapping:  migrateSpec.Policy.NamespaceMapping,
+			PreserveNodePorts: migrateSpec.Policy.PreserveNodePorts,
+			PreserveStatus:    migrateSpec.Policy.MigrateStatus,
+		}
+	}
+	return buildVeleroRestoreInstance(restoreParam, labels, veleroBackupName, veleroRestoreName)
+}
+
+// buildVeleroBackupInstanceUsingMigrate constructs a Velero Backup instance configured to perform a backup operation on the specified cluster using migrate config.
+func buildVeleroBackupInstanceUsingMigrate(migrateSpec *backupapi.MigrateSpec, labels map[string]string, veleroBackupName string) *velerov1.Backup {
+	// when using velero backup, only care about migrateSpec.Policy.ResourceFilter
+	backupParam := &backupapi.BackupSpec{}
+	if migrateSpec.Policy != nil {
+		backupParam.Policy = &backupapi.BackupPolicy{}
+		backupParam.Policy.ResourceFilter = migrateSpec.Policy.ResourceFilter
+	}
+	return buildVeleroBackupInstance(backupParam, labels, veleroBackupName)
+}
+
+// isMigrateSourceReady checks if the 'SourceReadyCondition' of a Migrate object is set to 'True'.
+func isMigrateSourceReady(migrate *backupapi.Migrate) bool {
+	for _, condition := range migrate.Status.Conditions {
+		if condition.Type == backupapi.SourceReadyCondition && condition.Status == "True" {
+			return true
+		}
+	}
+	return false
+}
