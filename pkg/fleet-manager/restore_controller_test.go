@@ -84,6 +84,7 @@ func createTestFleet(name, namespace string) *fleetapi.Fleet {
 		},
 	}
 }
+
 func TestReconcileRestore(t *testing.T) {
 	tests := []struct {
 		name       string

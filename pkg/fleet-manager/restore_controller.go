@@ -53,7 +53,7 @@ func (r *RestoreManager) Reconcile(ctx context.Context, req ctrl.Request) (_ ctr
 
 	if err := r.Client.Get(ctx, req.NamespacedName, restore); err != nil {
 		if apierrors.IsNotFound(err) {
-			log.Info("restore is not exist", "restore", req)
+			log.Info("Restore object not found")
 			return ctrl.Result{}, nil
 		}
 		return ctrl.Result{}, err
@@ -61,8 +61,9 @@ func (r *RestoreManager) Reconcile(ctx context.Context, req ctrl.Request) (_ ctr
 
 	patchHelper, err := patch.NewHelper(restore, r.Client)
 	if err != nil {
-		log.Error(err, "failed to init patch helper")
+		return ctrl.Result{}, errors.Wrapf(err, "failed to init patch helper for application %s", req.NamespacedName)
 	}
+
 	defer func() {
 		if err := patchHelper.Patch(ctx, restore); err != nil {
 			reterr = utilerrors.NewAggregate([]error{reterr, errors.Wrapf(err, "failed to patch %s  %s", restore.Name, req.NamespacedName)})
@@ -131,15 +132,15 @@ func (r *RestoreManager) reconcileRestoreResources(ctx context.Context, restore 
 		tasks = append(tasks, task)
 	}
 
-	g := &multierror.Group{}
+	errorGroup := &multierror.Group{}
 	for _, task := range tasks {
-		g.Go(task)
+		errorGroup.Go(task)
 	}
 
-	err := g.Wait().ErrorOrNil()
+	err := errorGroup.Wait().ErrorOrNil()
 
 	if err != nil {
-		log.Error(err, "Error encountered during sync velero obj when restore")
+		log.Error(err, "Error encountered during syncing Velero object during restore")
 		return ctrl.Result{}, fmt.Errorf("encountered errors during processing: %v", err)
 	}
 
