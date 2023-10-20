@@ -238,7 +238,7 @@ func (m *MigrateManager) reconcileMigrateRestore(ctx context.Context, migrate *b
 func (m *MigrateManager) reconcileDeleteMigrate(ctx context.Context, migrate *backupapi.Migrate) (ctrl.Result, error) {
 	log := ctrl.LoggerFrom(ctx)
 
-	// Fetch source clusters
+	// Fetch source clusters.
 	sourceCluster, err := fetchDestinationClusters(ctx, m.Client, migrate.Namespace, migrate.Spec.SourceCluster)
 	if err != nil {
 		log.Error(err, "failed to fetch source clusters when delete migrate", "migrateName", migrate.Name)
