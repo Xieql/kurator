@@ -6,8 +6,9 @@ description: >
   The easiest way to manage multi cluster Unified Backup, Restore, and Migration with Fleet.
 ---
 
-Kurator, an open-source distributed cloud-native platform, introduces a unified solution for backup, restore, and migration across multiple clusters in Fleet.
-This feature, integrated with [Velero](https://velero.io/), simplifies the process of managing backups, restoring data, and migrating resources across clusters through a streamlined one-click operation.
+Kurator introduces a unified solution for backup, restore, and migration of applications and their associated cluster resources across multiple clusters in Fleet. 
+
+Integrated with [Velero](https://velero.io/), this feature simplifies the process of managing application backups, restoring application data, and migrating both applications and cluster resources, all achievable through a streamlined one-click operation.
 
 
 ##  WorkFlow
