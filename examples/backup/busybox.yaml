@@ -27,6 +27,14 @@ spec:
   persistentVolumeReclaimPolicy: Retain
   local:
     path: /tmp
+  nodeAffinity:
+    required:
+      nodeSelectorTerms:
+        - matchExpressions:
+            - key: kubernetes.io/hostname
+              operator: In
+              values:
+                - kurator-host-control-plane
 ---
 apiVersion: v1
 kind: PersistentVolumeClaim
