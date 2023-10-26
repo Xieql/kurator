@@ -49,7 +49,7 @@ func InitControllers(ctx context.Context, opts *options.Options, mgr ctrl.Manage
 		Client: mgr.GetClient(),
 		Scheme: mgr.GetScheme(),
 	}).SetupWithManager(ctx, mgr, controller.Options{MaxConcurrentReconciles: opts.Concurrency, RecoverPanic: true}); err != nil {
-		log.Error(err, "unable to create controller", "controller", "Restore")
+		log.Error(err, "unable to create controller", "controller", "Migrate")
 		return err
 	}
 
