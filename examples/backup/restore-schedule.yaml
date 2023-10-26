@@ -1,0 +1,7 @@
+apiVersion: backup.kurator.dev/v1alpha1
+kind: Restore
+metadata:
+  name: schedule
+  namespace: default
+spec:
+  backupName: schedule-matchlabels
