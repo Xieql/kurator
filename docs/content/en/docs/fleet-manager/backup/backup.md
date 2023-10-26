@@ -167,7 +167,7 @@ spec:
         matchLabels:
           env: test
     ttl: 240h
-  schedule: 0 0 * * *
+  schedule: */5 * * * *
 status:
   backupDetails:
   - backupStatusInCluster: {}
@@ -180,6 +180,7 @@ Analyzing the provided output, let's dissect its sections for a clearer comprehe
 - **Cron Expression in `spec`**:
     - The `schedule` field within the `spec` uses a cron expression. This defines when a backup is to be performed.
     - Once set, the backup won't be executed immediately. Instead, it waits until the time specified by the cron expression.
+    - The current setting `*/5 * * * *` schedules backups every 5 minutes, which is a test interval. After testing, please promptly clean up this schedule.
 
 - **Destination in `spec`**:
     - The `destination` field under `spec` points to `kurator-member2`. This means the backup is specifically for this cluster within its fleet.
