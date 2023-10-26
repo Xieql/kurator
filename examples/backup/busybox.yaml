@@ -42,6 +42,7 @@ metadata:
   name: test-pvc
   namespace: kurator-backup
 spec:
+  storageClassName: ""  # using current pv setting, rather than dynamic pv
   accessModes:
     - ReadWriteOnce
   resources:
