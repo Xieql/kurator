@@ -116,26 +116,4 @@ type PipelineStatus struct {
 	// Phase describes the overall state of the Pipeline.
 	// +optional
 	Phase *string `json:"phase,omitempty"`
-
-	// TaskStatuses stores the status information of each Task in the Pipeline.
-	// +optional
-	TaskStatuses *[]TaskStatus `json:"taskStatuses,omitempty"`
-}
-
-// TaskStatus defines the status information of an individual Task.
-type TaskStatus struct {
-	// Name is the name of the Task.
-	Name string `json:"name"`
-
-	// Status describes the current state of the TaskRun.
-	// +optional
-	Status *tektonv1.TaskRunStatus `json:"Status,omitempty"`
-
-	// StartTime is the time when the Task started executing.
-	// +optional
-	StartTime *metav1.Time `json:"startTime,omitempty"`
-
-	// CompletionTime is the time when the Task completed execution.
-	// +optional
-	CompletionTime *metav1.Time `json:"completionTime,omitempty"`
 }
