@@ -116,4 +116,8 @@ type PipelineStatus struct {
 	// Phase describes the overall state of the Pipeline.
 	// +optional
 	Phase *string `json:"phase,omitempty"`
+
+	// EventListenerServiceURL provides a direct URL or address of the service
+	// +optional
+	EventListenerServiceURL string `json:"serviceURL,omitempty"`
 }
