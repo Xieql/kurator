@@ -16,28 +16,24 @@ limitations under the License.
 
 package render
 
-import (
-	"io/fs"
-)
-
-type TaskConfig struct {
-	// PipelineNamespace is the namespace of Pipeline. The Task will create at the same ns with the pipeline deployed
-	PipelineNamespace string
-	// taskType is set by user in Pipeline.TaskRef.TaskType
-	TaskType string
-	// Params is set by user in Pipeline.TaskRef.Params
-	Params map[string]string
-}
-
-// renderTask renders the Task configuration using a specified template.
-func renderTask(fsys fs.FS, cfg TaskConfig) ([]byte, error) {
-	return renderPipelineTemplate(fsys, generateTaskTemplateFileName(cfg.TaskType), generateTaskTemplateName(cfg.TaskType), cfg)
-}
-
-func generateTaskTemplateFileName(taskType string) string {
-	return taskType + ".tpl"
-}
-
-func generateTaskTemplateName(taskType string) string {
-	return "pipeline " + taskType + " template"
-}
+//type TaskConfig struct {
+//	// PipelineNamespace is the namespace of Pipeline. The Task will create at the same ns with the pipeline deployed
+//	PipelineNamespace string
+//	// taskType is set by user in Pipeline.TaskRef.TaskType
+//	TaskType string
+//	// Params is set by user in Pipeline.TaskRef.Params
+//	Params map[string]string
+//}
+//
+//// renderTask renders the Task configuration using a specified template.
+//func renderTask(fsys fs.FS, cfg TaskConfig) ([]byte, error) {
+//	return renderPipelineTemplate(fsys, generateTaskTemplateFileName(cfg.TaskType), generateTaskTemplateName(cfg.TaskType), cfg)
+//}
+//
+//func generateTaskTemplateFileName(taskType string) string {
+//	return taskType + ".tpl"
+//}
+//
+//func generateTaskTemplateName(taskType string) string {
+//	return "pipeline " + taskType + " template"
+//}
