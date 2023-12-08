@@ -29,20 +29,9 @@ type PipelineConfig struct {
 	PipelineName string
 	// PipelineNamespace is the namespace of Pipeline. The Task will create at the same ns with the pipeline deployed
 	PipelineNamespace string
-	Tasks             []TaskTemplate
+	TasksInfo             []string
 }
 
-type TaskTemplate struct {
-	// TaskType specifies the type of predefined task to be used.
-	// This field is required to select the appropriate PredefinedTask.
-	// +required
-	TaskType string `json:"taskType"`
-
-	// Params contains key-value pairs for task-specific parameters.
-	// The required parameters vary depending on the TaskType chosen.
-	// +optional
-	Params map[string]string `json:"params,omitempty"`
-}
 
 // renderPipeline renders the Task configuration using a specified template.
 func renderPipeline(fsys fs.FS, cfg TaskConfig) ([]byte, error) {
@@ -60,3 +49,27 @@ func (cfg PipelineConfig) TektonPipelineName() string {
 //func generateTaskTemplateName(taskType string) string {
 //	return "pipeline " + taskType + " template"
 //}
+
+GetInfoFromPredefinedTask
+
+GetInfoFromCustomTask
+
+
+
+
+type TaskTemplate struct {
+	// TaskType specifies the type of predefined task to be used.
+	// This field is required to select the appropriate PredefinedTask.
+	// +required
+	TaskType string `json:"taskType"`
+
+	// Params contains key-value pairs for task-specific parameters.
+	// The required parameters vary depending on the TaskType chosen.
+	// +optional
+	Params map[string]string `json:"params,omitempty"`
+}
+
+type CustomTask struct {}
+
+
+type CustomTask struct {}
