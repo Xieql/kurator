@@ -16,19 +16,23 @@ limitations under the License.
 
 package render
 
+import corev1 "k8s.io/api/core/v1"
+
 const (
 	CustomTaskTemplateFile = "custom-task.tpl"
 	CustomTaskTemplateName = "pipeline custom task template"
 )
 
 type CustomTaskConfig struct {
-	PipelineName      string
-	PipelineNamespace string
-	Image             string
-	Command           []string
-	Args              []string
-	WorkingDir        string
-	Script            string
+	PipelineName         string
+	PipelineNamespace    string
+	Image                string
+	Command              []string
+	Args                 []string
+	Env                  []corev1.EnvVar
+	ResourceRequirements corev1.ResourceRequirements
+	WorkingDir           string
+	Script               string
 }
 
 //

@@ -24,7 +24,7 @@ spec:
       taskRef:
         name: git-clone
       workspaces:
-        - name: output
+        - name: source
           workspace: kurator-pipeline-shared-data
         - name: basic-auth
           workspace: git-credentials
