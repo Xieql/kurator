@@ -21,6 +21,7 @@ import (
 )
 
 type TaskConfig struct {
+	PipelineName string
 	// PipelineNamespace is the namespace of Pipeline. The Task will create at the same ns with the pipeline deployed
 	PipelineNamespace string
 	// taskType is set by user in Pipeline.TaskRef.TaskType
