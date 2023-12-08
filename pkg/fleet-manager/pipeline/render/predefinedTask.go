@@ -20,19 +20,18 @@ import (
 	"io/fs"
 )
 
-type TaskConfig struct {
-	PipelineName string
-	// PipelineNamespace is the namespace of Pipeline. The Task will create at the same ns with the pipeline deployed
+type PredefinedTaskConfig struct {
+	PipelineName      string
 	PipelineNamespace string
-	// taskType is set by user in Pipeline.TaskRef.TaskType
-	TaskType string
-	// Params is set by user in Pipeline.TaskRef.Params
+	// name is set by user in Pipeline.PredefinedTask.Name
+	Name string
+	// Params is set by user in Pipeline.PredefinedTask.Params
 	Params map[string]string
 }
 
-// renderTask renders the Task configuration using a specified template.
-func renderTask(fsys fs.FS, cfg TaskConfig) ([]byte, error) {
-	return renderPipelineTemplate(fsys, generateTaskTemplateFileName(cfg.TaskType), generateTaskTemplateName(cfg.TaskType), cfg)
+// renderPredefinedTask renders the PredefinedTask configuration using a specified template.
+func renderPredefinedTask(fsys fs.FS, cfg PredefinedTaskConfig) ([]byte, error) {
+	return renderTemplate(fsys, generateTaskTemplateFileName(cfg.Name), generateTaskTemplateName(cfg.Name), cfg)
 }
 
 func generateTaskTemplateFileName(taskType string) string {
@@ -40,5 +39,5 @@ func generateTaskTemplateFileName(taskType string) string {
 }
 
 func generateTaskTemplateName(taskType string) string {
-	return "pipeline " + taskType + " template"
+	return "pipeline " + taskType + " task template"
 }

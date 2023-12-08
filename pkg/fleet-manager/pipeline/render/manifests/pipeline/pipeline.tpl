@@ -34,12 +34,4 @@ spec:
         - name: revision
           value: $(params.revision)
         {{ range .TaskInfos }}
-      - name: {{ .TaskName }}
-        taskRef:
-          name: {{ .TaskRefer }}
-          runAfter: ["{{ .LastTask }}"]
-        workspaces:
-          - name: source
-            workspace: kurator-pipeline-shared-data
-        {{ .AdditionalInfo }}
-        {{ end }}
+      {{ .TaskInfo }}

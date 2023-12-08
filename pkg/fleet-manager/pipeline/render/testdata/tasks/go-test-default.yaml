@@ -1,7 +1,7 @@
 apiVersion: tekton.dev/v1beta1
 kind: Task
 metadata:
-  name: golang-test
+  name: golang-test-test-pipeline
   namespace: default
   labels:
     app.kubernetes.io/version: "0.2"

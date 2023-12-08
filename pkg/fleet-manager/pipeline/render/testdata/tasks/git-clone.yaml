@@ -1,7 +1,7 @@
 apiVersion: tekton.dev/v1beta1
 kind: Task
 metadata:
-  name: git-clone
+  name: git-clone-test-pipeline
   namespace: kurator-pipeline
   labels:
     app.kubernetes.io/version: "0.9"

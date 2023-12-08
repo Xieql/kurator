@@ -25,8 +25,8 @@ import (
 	"sigs.k8s.io/yaml"
 )
 
-// renderPipelineTemplate reads, parses, and renders a template file using the provided configuration data.
-func renderPipelineTemplate(fsys fs.FS, tplFileName, tplName string, cfg interface{}) ([]byte, error) {
+// renderTemplate reads, parses, and renders a template file using the provided configuration data.
+func renderTemplate(fsys fs.FS, tplFileName, tplName string, cfg interface{}) ([]byte, error) {
 	out, err := fs.ReadFile(fsys, tplFileName)
 	if err != nil {
 		return nil, err

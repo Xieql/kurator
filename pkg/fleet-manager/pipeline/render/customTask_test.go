@@ -16,21 +16,14 @@ limitations under the License.
 
 package render
 
-const (
-	CustomTaskTemplateFile = "custom-task.tpl"
-	CustomTaskTemplateName = "pipeline custom task template"
-)
-
-type CustomTaskConfig struct {
-	PipelineName      string
-	PipelineNamespace string
-	Image             string
-	Command           []string
-	Args              []string
-	WorkingDir        string
-	Script            string
-}
-
+//type TaskConfig struct {
+//	// PipelineNamespace is the namespace of Pipeline. The Task will create at the same ns with the pipeline deployed
+//	PipelineNamespace string
+//	// taskType is set by user in Pipeline.TaskRef.TaskType
+//	TaskType string
+//	// Params is set by user in Pipeline.TaskRef.Params
+//	Params map[string]string
+//}
 //
 //// renderTask renders the Task configuration using a specified template.
 //func renderTask(fsys fs.FS, cfg TaskConfig) ([]byte, error) {
