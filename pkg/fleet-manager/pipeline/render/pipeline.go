@@ -25,6 +25,8 @@ import (
 const (
 	TektonPipelineNamePrefix = "tekton-"
 	GitCloneTask             = "git-clone"
+	PipelineTemplateFile     = "pipeline.tpl"
+	PipelineTemplateName     = "pipeline template"
 )
 
 type PipelineConfig struct {
@@ -32,32 +34,68 @@ type PipelineConfig struct {
 	PipelineName string
 	// PipelineNamespace is the namespace of Pipeline. The Task will create at the same ns with the pipeline deployed
 	PipelineNamespace string
-	TasksInfo         []string
+	TasksInfo         string
 }
 
-// renderPipeline renders the Task configuration using a specified template.
-func renderPipeline(fsys fs.FS, cfg TaskConfig) ([]byte, error) {
-	return renderPipelineTemplate(fsys, generateTaskTemplateFileName(cfg.TaskType), generateTaskTemplateName(cfg.TaskType), cfg)
-}
-
+// TektonPipelineName constructs the complete Tekton pipeline name by prefixing the pipeline name.
 func (cfg PipelineConfig) TektonPipelineName() string {
 	return TektonPipelineNamePrefix + cfg.PipelineName
 }
 
-//func generateTaskTemplateFileName(taskType string) string {
-//	return taskType + ".tpl"
-//}
-//
-//func generateTaskTemplateName(taskType string) string {
-//	return "pipeline " + taskType + " template"
-//}
-
-func GetPredefinedTaskInfo(task PredefinedTask, pipelineName string) string {
-
+// renderPipeline renders the full pipeline configuration as a YAML byte array using a specified template and PipelineConfig.
+func renderPipeline(fsys fs.FS, cfg PipelineConfig) ([]byte, error) {
+	return renderTemplate(fsys, PipelineTemplateFile, PipelineTemplateName, cfg)
 }
 
-func GetCustomTaskInfo(task CustomTask) string {
+// GenerateTaskInfo creates the YAML configuration info string from the PipelineTask slice.
+// This taskInfo string will be a part of PipelineConfig and will be rendered with the pipeline.tpl.
+// If the task from PipelineTask is a PredefinedTask, it will call the generatePredefinedTaskYAML function,
+// otherwise, it will call the generateCustomTaskYAML function.
+func GenerateTaskInfo(tasks []PipelineTask) (string, error) {
+	var tasksBuilder strings.Builder
+	lastTask := GitCloneTask
+	for _, task := range tasks {
+		var taskYaml string
+		if (task.CustomTask == nil && task.PredefinedTask == nil) || (task.CustomTask != nil && task.PredefinedTask != nil) {
+			return "", fmt.Errorf("only exactly one of 'PredefinedTask' or 'CustomTask' is set in 'PipelineTask'")
+		}
+		if task.PredefinedTask != nil {
+			taskYaml = generatePredefinedTaskYAML(task.Name, task.Name, lastTask, task.Retries)
+		}
+		taskYaml = generateCustomTaskYAML(task.CustomTask)
+		// make sure all tasks are strictly executed in the order defined by the user
+		fmt.Fprintf(&tasksBuilder, "  %s", taskYaml)
 
+	}
+	return tasksBuilder.String(), nil
+}
+
+// generatePredefinedTaskYAML constructs the YAML configuration for a single predefined task.
+func generatePredefinedTaskYAML(taskName, taskRefer, lastTask string, retries int) string {
+	var taskBuilder strings.Builder
+
+	// Add the task name and reference
+	fmt.Fprintf(&taskBuilder, "- name: %s\n  taskRef:\n    name: %s\n", taskName, taskRefer)
+
+	// Add the previous task this one depends on
+	fmt.Fprintf(&taskBuilder, "  runAfter: [\"%s\"]\n", lastTask)
+
+	taskBuilder.WriteString("  workspaces:\n    - name: source\n      workspace: kurator-pipeline-shared-data\n")
+
+	if retries > 0 {
+		fmt.Fprintf(&taskBuilder, "  retries: %d\n", retries)
+	}
+
+	return taskBuilder.String()
+}
+
+// generateCustomTaskYAML construct the YAML configuration for a single custom task.
+// TODO: Implement this function to handle custom tasks.
+func generateCustomTaskYAML(CustomTask *CustomTask) string {
+	var taskBuilder strings.Builder
+	// TODO: implement it
+
+	return taskBuilder.String()
 }
 
 type PipelineTask struct {
@@ -95,33 +133,3 @@ type TaskTemplate struct {
 type PredefinedTask struct{}
 
 type CustomTask struct{}
-
-type TaskInfo struct {
-	TaskName  string
-	TaskRefer string
-	LastTask  string
-	Retries   int
-}
-
-func GenerateTaskInfo(tasks []PipelineTask) string {
-	lastTask := GitCloneTask
-	for _, task := range tasks {
-
-	}
-}
-
-func GenerateTaskYAML(taskName, taskRefer, lastTask string, retries int) string {
-
-	var taskBuilder strings.Builder
-
-	fmt.Fprintf(&taskBuilder, "- name: %s\n  taskRef:\n    name: %s\n", taskName, taskRefer)
-
-	fmt.Fprintf(&taskBuilder, "  runAfter: [\"%s\"]\n", lastTask)
-
-	taskBuilder.WriteString("  workspaces:\n    - name: source\n      workspace: kurator-pipeline-shared-data\n")
-	if retries > 0 { // 检查 Retries 是否被显式设置
-		fmt.Fprintf(&taskBuilder, "  retries: %d\n", retries)
-	}
-
-	return taskBuilder.String()
-}

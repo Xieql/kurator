@@ -33,7 +33,7 @@ func TestRenderTask(t *testing.T) {
 	// Define test cases for various task templates and configurations.
 	cases := []struct {
 		name         string
-		cfg          TaskConfig
+		cfg          PredefinedTaskConfig
 		expectError  bool
 		expectedFile string
 	}{
@@ -42,7 +42,8 @@ func TestRenderTask(t *testing.T) {
 		// It will not include auth, because auth will add in pipeline.
 		{
 			name: "git-clone with basic parameters",
-			cfg: TaskConfig{
+			cfg: PredefinedTaskConfig{
+				PipelineName:      "test-pipeline",
 				PipelineNamespace: "kurator-pipeline",
 				TaskType:          "git-clone",
 				Params:            map[string]string{},
@@ -56,7 +57,8 @@ func TestRenderTask(t *testing.T) {
 		// It uses the default namespace and relies on all default parameter values.
 		{
 			name: "go-test with default parameters",
-			cfg: TaskConfig{
+			cfg: PredefinedTaskConfig{
+				PipelineName:      "test-pipeline",
 				PipelineNamespace: "default",
 				TaskType:          "go-test",
 				Params:            map[string]string{},
@@ -70,7 +72,8 @@ func TestRenderTask(t *testing.T) {
 		// targeting the './pkg/...' package path, and specifying the Linux ARM architecture.
 		{
 			name: "go-test with custom parameters - Go 1.20, ./pkg/..., Linux ARM",
-			cfg: TaskConfig{
+			cfg: PredefinedTaskConfig{
+				PipelineName:      "test-pipeline",
 				PipelineNamespace: "kurator-pipeline",
 				TaskType:          "go-test",
 				Params: map[string]string{
@@ -91,7 +94,7 @@ func TestRenderTask(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			fs := manifestFS
 
-			result, err := renderTask(fs, tc.cfg)
+			result, err := renderPredefinedTask(fs, tc.cfg)
 
 			// Test assertions
 			if tc.expectError {
