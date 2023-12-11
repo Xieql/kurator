@@ -33,5 +33,10 @@ spec:
           value: $(params.repo-url)
         - name: revision
           value: $(params.revision)
-        {{ range .TaskInfos }}
-      {{ .TaskInfo }}
+     {{ range .TaskInfos }}
+     {{ .TaskInfo }}
+    {{- if .TaskInfos }}
+    - name: {}
+    {{- range .TaskInfos }}
+      - {{ . }}
+    {{- end }}

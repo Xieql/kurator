@@ -41,12 +41,12 @@ func (rbac RBACConfig) ServiceAccountName() string {
 	return rbac.PipelineName
 }
 
-// RoleBindingName generates the role binding name using the service account name.
+// BroadResourceRoleBindingName generates the role binding name using the service account name.
 func (rbac RBACConfig) BroadResourceRoleBindingName() string {
 	return rbac.ServiceAccountName() + BroadResourceSuffix
 }
 
-// ClusterRoleBindingName generates the cluster role binding name using the service account name.
+// SecretRoleBindingName generates the cluster role binding name using the service account name.
 func (rbac RBACConfig) SecretRoleBindingName() string {
 	return rbac.ServiceAccountName() + SecretSuffix
 }

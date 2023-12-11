@@ -18,8 +18,8 @@ package render
 
 import (
 	"bytes"
-	"html/template"
 	"io/fs"
+	"text/template"
 
 	"github.com/Masterminds/sprig/v3"
 	"sigs.k8s.io/yaml"
