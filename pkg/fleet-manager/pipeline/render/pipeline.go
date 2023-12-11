@@ -34,7 +34,13 @@ type PipelineConfig struct {
 	PipelineName string
 	// PipelineNamespace is the namespace of Pipeline. The Task will create at the same ns with the pipeline deployed
 	PipelineNamespace string
-	TasksInfo         string
+	Tasks             []PipelineTaskConfig
+}
+
+type PipelineTaskConfig struct {
+	name     string
+	taskinfo string
+	retries  string
 }
 
 // TektonPipelineName constructs the complete Tekton pipeline name by prefixing the pipeline name.
