@@ -56,5 +56,5 @@ func renderRBAC(fsys fs.FS, cfg RBACConfig) ([]byte, error) {
 	if cfg.PipelineName == "" || cfg.PipelineNamespace == "" {
 		return nil, fmt.Errorf("invalid RBACConfig: PipelineName and PipelineNamespace must not be empty")
 	}
-	return renderPipelineTemplate(fsys, RBACTemplateFileName, RBACTemplateName, cfg)
+	return renderTemplate(fsys, RBACTemplateFileName, RBACTemplateName, cfg)
 }

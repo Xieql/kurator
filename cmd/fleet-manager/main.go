@@ -21,6 +21,7 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
+	"kurator.dev/kurator/cmd/fleet-manager/pipeline"
 	"net/http"
 	_ "net/http/pprof"
 	"os"
@@ -144,6 +145,10 @@ func run(ctx context.Context, opts *options.Options) error {
 
 	if err = backup.InitControllers(ctx, opts, mgr); err != nil {
 		return fmt.Errorf("backup init controllers fail, %w", err)
+	}
+
+	if err = pipeline.InitControllers(ctx, opts, mgr); err != nil {
+		return fmt.Errorf("pipeline init controllers fail, %w", err)
 	}
 
 	log.Info("starting manager", "version", version.Get().String())

@@ -23,7 +23,7 @@ import (
 type PredefinedTaskConfig struct {
 	PipelineName      string
 	PipelineNamespace string
-	// name is set by user in Pipeline.PredefinedTask.Name
+	// Name is set by user in Pipeline.PredefinedTask.Name
 	Name string
 	// Params is set by user in Pipeline.PredefinedTask.Params
 	Params map[string]string

@@ -16,13 +16,13 @@ spec:
     These Tasks are Git tasks to work with repositories used by other tasks
     in your Pipeline.
     The git-clone Task will clone a repo from the provided url into the
-    output Workspace. By default the repo will be cloned into the root of
+    source Workspace. By default the repo will be cloned into the root of
     your Workspace. You can clone into a subdirectory by setting this Task's
     subdirectory param. This Task also supports sparse checkouts. To perform
     a sparse checkout, pass a list of comma separated directory patterns to
     this Task's sparseCheckoutDirectories param.
   workspaces:
-  - name: output
+  - name: source
     description: The git repo will be cloned onto the volume backing this Workspace.
   - name: ssh-directory
     optional: true
@@ -72,7 +72,7 @@ spec:
     type: string
     default: "ca-bundle.crt"
   - name: subdirectory
-    description: Subdirectory inside the `output` Workspace to clone the repo into.
+    description: Subdirectory inside the `source` Workspace to clone the repo into.
     type: string
     default: ""
   - name: sparseCheckoutDirectories
@@ -151,8 +151,8 @@ spec:
       value: $(params.sparseCheckoutDirectories)
     - name: PARAM_USER_HOME
       value: $(params.userHome)
-    - name: WORKSPACE_OUTPUT_PATH
-      value: $(workspaces.output.path)
+    - name: WORKSPACE_SOURCE_PATH
+      value: $(workspaces.source.path)
     - name: WORKSPACE_SSH_DIRECTORY_BOUND
       value: $(workspaces.ssh-directory.bound)
     - name: WORKSPACE_SSH_DIRECTORY_PATH
@@ -191,7 +191,7 @@ spec:
             export GIT_SSL_CAINFO="${WORKSPACE_SSL_CA_DIRECTORY_PATH}/${PARAM_CRT_FILENAME}"
          fi
       fi
-      CHECKOUT_DIR="${WORKSPACE_OUTPUT_PATH}/${PARAM_SUBDIRECTORY}"
+      CHECKOUT_DIR="${WORKSPACE_SOURCE_PATH}/${PARAM_SUBDIRECTORY}"
       cleandir() {
         # Delete any existing contents of the repo directory if it exists.
         #
@@ -212,7 +212,7 @@ spec:
       test -z "${PARAM_HTTP_PROXY}" || export HTTP_PROXY="${PARAM_HTTP_PROXY}"
       test -z "${PARAM_HTTPS_PROXY}" || export HTTPS_PROXY="${PARAM_HTTPS_PROXY}"
       test -z "${PARAM_NO_PROXY}" || export NO_PROXY="${PARAM_NO_PROXY}"
-      git config --global --add safe.directory "${WORKSPACE_OUTPUT_PATH}"
+      git config --global --add safe.directory "${WORKSPACE_SOURCE_PATH}"
       /ko-app/git-init \
         -url="${PARAM_URL}" \
         -revision="${PARAM_REVISION}" \
