@@ -19,7 +19,7 @@ spec:
       - Name: { { .Name } }
         Value: { { .Value } }
       { { end } }
-      env:{{ .PipelineNamespace }}
+      Env: {{ .PipelineNamespace }}
       Command: {{ range .Command }}{{ . }} {{ end }}
       script: |
         {{ .PipelineNamespace }}

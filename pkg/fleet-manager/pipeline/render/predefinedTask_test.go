@@ -25,11 +25,10 @@ import (
 	"kurator.dev/kurator/pkg/fleet-manager/manifests"
 )
 
-var manifestFS = manifests.BuiltinOrDir("manifests/tasks")
-
 const expectedTaskFilePath = "testdata/tasks/"
 
-func TestRenderTask(t *testing.T) {
+func TestRenderPredefinedTask(t *testing.T) {
+	manifestFS := manifests.BuiltinOrDir("manifests/tasks")
 	// Define test cases for various task templates and configurations.
 	cases := []struct {
 		name         string
@@ -45,7 +44,7 @@ func TestRenderTask(t *testing.T) {
 			cfg: PredefinedTaskConfig{
 				PipelineName:      "test-pipeline",
 				PipelineNamespace: "kurator-pipeline",
-				TaskType:          "git-clone",
+				Name:              "git-clone",
 				Params:            map[string]string{},
 			},
 			expectError:  false,
@@ -60,7 +59,7 @@ func TestRenderTask(t *testing.T) {
 			cfg: PredefinedTaskConfig{
 				PipelineName:      "test-pipeline",
 				PipelineNamespace: "default",
-				TaskType:          "go-test",
+				Name:              "go-test",
 				Params:            map[string]string{},
 			},
 			expectError:  false,
@@ -75,7 +74,7 @@ func TestRenderTask(t *testing.T) {
 			cfg: PredefinedTaskConfig{
 				PipelineName:      "test-pipeline",
 				PipelineNamespace: "kurator-pipeline",
-				TaskType:          "go-test",
+				Name:              "go-test",
 				Params: map[string]string{
 					"packages": "./pkg/...",
 					"version":  "1.20",

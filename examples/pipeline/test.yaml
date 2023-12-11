@@ -1,0 +1,8 @@
+apiVersion: pipeline.kurator.dev/v1alpha1
+kind: Pipeline
+metadata:
+  name: minimal
+  namespace: default
+spec:
+  task:
+    - name: test
