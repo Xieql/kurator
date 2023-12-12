@@ -15,3 +15,64 @@ limitations under the License.
 */
 
 package render
+
+import (
+	pipelineapi "kurator.dev/kurator/pkg/apis/pipeline/v1alpha1"
+	"os"
+	"testing"
+
+	"github.com/stretchr/testify/assert"
+
+	"kurator.dev/kurator/pkg/fleet-manager/manifests"
+)
+
+func TestRenderPipelineWithTasks(t *testing.T) {
+	expectedRBACFilePath := "testdata/pipeline/"
+	manifestFS := manifests.BuiltinOrDir("manifests/pipeline/")
+	pipelineName := "test-pipeline"
+	pipelineNameSpace := "kurator-pipeline"
+	cases := []struct {
+		name         string
+		tasks        []pipelineapi.PipelineTask
+		expectError  bool
+		expectedFile string
+	}{
+		{
+			name: "valid pipeline configuration, contains tasks: git-clone, cat-readme, go-test",
+			tasks: []pipelineapi.PipelineTask{
+				{
+					Name:           "git-clone",
+					PredefinedTask: &pipelineapi.PredefinedTask{Name: GitCloneTask},
+				},
+				{
+					Name:       "cat-readme",
+					CustomTask: &pipelineapi.CustomTask{},
+				},
+				{
+					Name:           "go-test",
+					PredefinedTask: &pipelineapi.PredefinedTask{Name: GoTestTask},
+				},
+			},
+			expectError:  false,
+			expectedFile: "readme-test.yaml",
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			fs := manifestFS
+
+			result, err := renderPipelineWithTasks(fs, pipelineName, pipelineNameSpace, tc.tasks)
+
+			if tc.expectError {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
+
+				expected, err := os.ReadFile(expectedRBACFilePath + tc.expectedFile)
+				assert.NoError(t, err)
+				assert.Equal(t, string(expected), string(result))
+			}
+		})
+	}
+}

@@ -1,7 +1,7 @@
 apiVersion: tekton.dev/v1beta1
 kind: Task
 metadata:
-  name: git-clone-{{ .PipelineName }}
+  name: {{ .PredefinedTaskName }}
   namespace: {{ .PipelineNamespace }}
   labels:
     app.kubernetes.io/version: "0.9"

@@ -51,7 +51,7 @@ func renderCustomTask(fsys fs.FS, cfg CustomTaskConfig) ([]byte, error) {
 func createTaskConfig(taskName, pipelineName, pipelineNamespace string, task pipelineapi.CustomTask) CustomTaskConfig {
 	return CustomTaskConfig{
 		// in case different pipeline have the same name task.
-		CustomTaskName:    generateCustomTaskName(taskName, pipelineName),
+		CustomTaskName:    generatePipelineTaskName(taskName, pipelineName),
 		PipelineName:      pipelineName,
 		PipelineNamespace: pipelineNamespace,
 		Image:             task.Image,
@@ -62,9 +62,4 @@ func createTaskConfig(taskName, pipelineName, pipelineNamespace string, task pip
 		ResourceRequirements: &task.ResourceRequirements,
 		Script:               task.Script,
 	}
-}
-
-func generateCustomTaskName(taskName, pipelineName string) string {
-	// in case different pipeline have the same name task.
-	return taskName + "-" + pipelineName
 }

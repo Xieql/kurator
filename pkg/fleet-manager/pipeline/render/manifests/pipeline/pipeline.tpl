@@ -1,8 +1,8 @@
 apiVersion: tekton.dev/v1beta1
 kind: Pipeline
 metadata:
-  name: git-clone-and-cat-readme
-  namespace: kurator-pipeline
+  name: {{ .PipelineName}}
+  namespace: {{ .PipelineNamespace }}
 spec:
   description: |
     This is a universal pipeline with the following settings: 
@@ -15,14 +15,14 @@ spec:
       description: |
         This workspace is used by all tasks
   tasks:
-    - name: fetch-repo
-      # Key points about 'fetch-repo':
+    - name: git-clone
+      # Key points about 'git-clone':
       # - Fundamental for all tasks.
       # - Closely integrated with the trigger.
       # - Always the first task in the pipeline.
       # - Cannot be modified via templates.
       taskRef:
-        name: git-clone
+        name: git-clone-{{ .PipelineName }}
       workspaces:
         - name: source
           workspace: kurator-pipeline-shared-data
@@ -33,10 +33,4 @@ spec:
           value: $(params.repo-url)
         - name: revision
           value: $(params.revision)
-     {{ range .TaskInfos }}
-     {{ .TaskInfo }}
-    {{- if .TaskInfos }}
-    - name: {}
-    {{- range .TaskInfos }}
-      - {{ . }}
-    {{- end }}
+{{ .TasksInfo }}

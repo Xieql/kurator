@@ -23,15 +23,27 @@ import (
 type PredefinedTaskConfig struct {
 	PipelineName      string
 	PipelineNamespace string
-	// Name is set by user in Pipeline.PredefinedTask.Name
-	Name string
-	// Params is set by user in Pipeline.PredefinedTask.Params
+	// TaskName is set by user in `Pipeline.Tasks[i].Name`
+	TaskName string
+	// TemplateName is set by user in `Pipeline.Tasks[i].PredefinedTask.Name`
+	TemplateName string
+	// Params is set by user in `Pipeline.Tasks[i].PredefinedTask.Params`
 	Params map[string]string
+}
+
+// PredefinedTaskName generates the Tekton Task resource name for the predefined task
+func (cfg PredefinedTaskConfig) PredefinedTaskName() string {
+	return cfg.TaskName + "-" + cfg.PipelineName
+}
+
+// renderPredefinedTask renders the PredefinedTask configuration using a specified template.
+func renderPredefinedTaskWithT(fsys fs.FS, cfg PredefinedTaskConfig) ([]byte, error) {
+	return renderTemplate(fsys, generateTaskTemplateFileName(cfg.TemplateName), generateTaskTemplateName(cfg.TemplateName), cfg)
 }
 
 // renderPredefinedTask renders the PredefinedTask configuration using a specified template.
 func renderPredefinedTask(fsys fs.FS, cfg PredefinedTaskConfig) ([]byte, error) {
-	return renderTemplate(fsys, generateTaskTemplateFileName(cfg.Name), generateTaskTemplateName(cfg.Name), cfg)
+	return renderTemplate(fsys, generateTaskTemplateFileName(cfg.TemplateName), generateTaskTemplateName(cfg.TemplateName), cfg)
 }
 
 func generateTaskTemplateFileName(Name string) string {
