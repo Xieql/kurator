@@ -25,6 +25,13 @@ import (
 	"sigs.k8s.io/yaml"
 )
 
+const (
+	// GoTestTask is the predefined task template name of go test task
+	GoTestTask = "go-test"
+	// GitCloneTask is the predefined task template name of git clone task
+	GitCloneTask = "git-clone"
+)
+
 // renderTemplate reads, parses, and renders a template file using the provided configuration data.
 func renderTemplate(fsys fs.FS, tplFileName, tplName string, cfg interface{}) ([]byte, error) {
 	out, err := fs.ReadFile(fsys, tplFileName)
@@ -63,4 +70,9 @@ func toYaml(value interface{}) string {
 	}
 
 	return string(y)
+}
+
+// generatePipelineTaskName generate a unique name in case different pipeline have the same name task.
+func generatePipelineTaskName(taskName, pipelineName string) string {
+	return taskName + "-" + pipelineName
 }

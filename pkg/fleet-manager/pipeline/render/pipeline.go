@@ -20,122 +20,92 @@ import (
 	"fmt"
 	"io/fs"
 	"strings"
+
+	pipelineapi "kurator.dev/kurator/pkg/apis/pipeline/v1alpha1"
 )
 
 const (
-	TektonPipelineNamePrefix = "tekton-"
-	GitCloneTask             = "git-clone"
-	PipelineTemplateFile     = "pipeline.tpl"
-	PipelineTemplateName     = "pipeline template"
+	PipelineTemplateFile = "pipeline.tpl"
+	PipelineTemplateName = "pipeline template"
 )
 
 type PipelineConfig struct {
-	// PipelineName is the name of Pipeline. The Task will create at the same ns with the pipeline deployed
+	// PipelineName specifies the name of the pipeline. Tasks are created in the same namespace as the deployed pipeline.
 	PipelineName string
-	// PipelineNamespace is the namespace of Pipeline. The Task will create at the same ns with the pipeline deployed
+
+	// PipelineNamespace defines the namespace of the pipeline. Tasks are created in this namespace.
 	PipelineNamespace string
-	Tasks             []PipelineTaskConfig
+
+	// TasksInfo contains the necessary information to integrate tasks into the pipeline.
+	TasksInfo string
 }
 
-type PipelineTaskConfig struct {
-	name     string
-	taskinfo string
-	retries  string
+// renderPipeline renders the full pipeline configuration as a YAML byte array using a specified template and **Pipeline.Tasks**.
+func renderPipelineWithTasks(fsys fs.FS, pipelineName, pipelineNameSpace string, tasks []pipelineapi.PipelineTask) ([]byte, error) {
+	tasksInfo, err := GenerateTasksInfo(pipelineName, tasks)
+	if err != nil {
+		return nil, err
+	}
+
+	cfg := PipelineConfig{
+		PipelineName:      pipelineName,
+		PipelineNamespace: pipelineNameSpace,
+		TasksInfo:         tasksInfo,
+	}
+
+	return renderPipeline(fsys, cfg)
 }
 
-// TektonPipelineName constructs the complete Tekton pipeline name by prefixing the pipeline name.
-func (cfg PipelineConfig) TektonPipelineName() string {
-	return TektonPipelineNamePrefix + cfg.PipelineName
-}
-
-// renderPipeline renders the full pipeline configuration as a YAML byte array using a specified template and PipelineConfig.
+// renderPipeline renders the full pipeline configuration as a YAML byte array using a specified template and **PipelineConfig**.
 func renderPipeline(fsys fs.FS, cfg PipelineConfig) ([]byte, error) {
 	return renderTemplate(fsys, PipelineTemplateFile, PipelineTemplateName, cfg)
 }
 
-// GenerateTaskInfo creates the YAML configuration info string from the PipelineTask slice.
-// This taskInfo string will be a part of PipelineConfig and will be rendered with the pipeline.tpl.
-// If the task from PipelineTask is a PredefinedTask, it will call the generatePredefinedTaskYAML function,
-// otherwise, it will call the generateCustomTaskYAML function.
-func GenerateTaskInfo(tasks []PipelineTask) (string, error) {
+// GenerateTasksInfo constructs TasksInfo, detailing the integration of tasks into a given pipeline.
+// 这个方法这样实现的原因在于 我们 要求第一个任务必须固定为 git clone。
+func GenerateTasksInfo(pipelineName string, tasks []pipelineapi.PipelineTask) (string, error) {
 	var tasksBuilder strings.Builder
+	// lastTask record the current taskAfter task. git-clone always the first task, so it will be the lastTask for second task.
 	lastTask := GitCloneTask
 	for _, task := range tasks {
+		// skip the first git-clone task.
+		if task.Name == GitCloneTask {
+			continue
+		}
 		var taskYaml string
 		if (task.CustomTask == nil && task.PredefinedTask == nil) || (task.CustomTask != nil && task.PredefinedTask != nil) {
-			return "", fmt.Errorf("only exactly one of 'PredefinedTask' or 'CustomTask' is set in 'PipelineTask'")
+			return "", fmt.Errorf("only exactly one of 'PredefinedTask' or 'CustomTask' must be set in 'PipelineTask'")
 		}
-		if task.PredefinedTask != nil {
-			taskYaml = generatePredefinedTaskYAML(task.Name, task.Name, lastTask, task.Retries)
-		}
-		taskYaml = generateCustomTaskYAML(task.CustomTask)
-		// make sure all tasks are strictly executed in the order defined by the user
+		taskYaml = generateTaskInfo(task.Name, generatePipelineTaskName(task.Name, pipelineName), lastTask, task.Retries)
+		// add taskYaml to tasksBuilder
 		fmt.Fprintf(&tasksBuilder, "  %s", taskYaml)
-
+		// ensure task execution order as defined by the user
+		lastTask = task.Name
 	}
 	return tasksBuilder.String(), nil
 }
 
-// generatePredefinedTaskYAML constructs the YAML configuration for a single predefined task.
-func generatePredefinedTaskYAML(taskName, taskRefer, lastTask string, retries int) string {
+// generateTaskInfo formats a single task's information, including its dependencies and retries, for inclusion in a pipeline.
+// - taskName the name of current pipeline task
+// - taskRefer is the name of Tekton task which this pipeline task referred
+// - lastTask is 当前任务的前一个任务，这个变量用来约束任务按照用户设定的顺序执行
+// - retries is 用户设定的该任务失败重试次数
+func generateTaskInfo(taskName, taskRefer, lastTask string, retries int) string {
 	var taskBuilder strings.Builder
 
-	// Add the task name and reference
-	fmt.Fprintf(&taskBuilder, "- name: %s\n  taskRef:\n    name: %s\n", taskName, taskRefer)
+	// define task name and reference
+	fmt.Fprintf(&taskBuilder, "  - name: %s\n      taskRef:\n        name: %s\n", taskName, taskRefer)
 
-	// Add the previous task this one depends on
-	fmt.Fprintf(&taskBuilder, "  runAfter: [\"%s\"]\n", lastTask)
+	// dpecify dependency on the preceding task
+	fmt.Fprintf(&taskBuilder, "      runAfter: [\"%s\"]\n", lastTask)
 
-	taskBuilder.WriteString("  workspaces:\n    - name: source\n      workspace: kurator-pipeline-shared-data\n")
+	// add fixed workspace configuration
+	taskBuilder.WriteString("      workspaces:\n        - name: source\n          workspace: kurator-pipeline-shared-data\n")
 
+	// Include retry configuration if applicable
 	if retries > 0 {
 		fmt.Fprintf(&taskBuilder, "  retries: %d\n", retries)
 	}
 
 	return taskBuilder.String()
 }
-
-// generateCustomTaskYAML construct the YAML configuration for a single custom task.
-// TODO: Implement this function to handle custom tasks.
-func generateCustomTaskYAML(CustomTask *CustomTask) string {
-	var taskBuilder strings.Builder
-	// TODO: implement it
-
-	return taskBuilder.String()
-}
-
-type PipelineTask struct {
-	// Name is the name of the task.
-	Name string `json:"name"`
-
-	// PredefinedTask allows users to select a predefined task.
-	// Users can choose a predefined from a set list and fill in their own parameters.
-	// +optional
-	PredefinedTask *PredefinedTask `json:"predefinedTask,omitempty"`
-
-	// CustomTask enables defining a task directly within the CRD if TaskRef is not used.
-	// This should only be used when TaskRef is not provided.
-	// +optional
-	CustomTask *CustomTask `json:"customTask,omitempty"`
-
-	// Retries represents how many times this task should be retried in case of task failure.
-	// default values is zero.
-	// +optional
-	Retries int `json:"retries,omitempty"`
-}
-
-type TaskTemplate struct {
-	// TaskType specifies the type of predefined task to be used.
-	// This field is required to select the appropriate PredefinedTask.
-	// +required
-	TaskType string `json:"taskType"`
-
-	// Params contains key-value pairs for task-specific parameters.
-	// The required parameters vary depending on the TaskType chosen.
-	// +optional
-	Params map[string]string `json:"params,omitempty"`
-}
-
-type PredefinedTask struct{}
-
-type CustomTask struct{}
