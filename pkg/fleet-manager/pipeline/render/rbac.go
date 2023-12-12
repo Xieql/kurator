@@ -36,7 +36,7 @@ type RBACConfig struct {
 	PipelineNamespace string // Kubernetes namespace where the pipeline is deployed.
 }
 
-// ServiceAccountName generates the service account name using the pipeline name and namespace.
+// ServiceAccountName generates the service account name using the pipeline name \
 func (rbac RBACConfig) ServiceAccountName() string {
 	return rbac.PipelineName
 }
