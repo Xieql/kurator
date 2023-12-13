@@ -150,6 +150,8 @@ func (p *PipelineManager) reconcileCreateRBAC(ctx context.Context, rbacConfig re
 
 	// apply rbac resources
 	if _, err := util.PatchResources(rbac); err != nil {
+		log.Error(err, "unable to PatchResources ", "rbac", rbac)
+
 		return ctrl.Result{}, errors.Wrapf(err, "failed to apply rbac resources")
 	}
 
