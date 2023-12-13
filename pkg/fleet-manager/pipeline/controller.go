@@ -143,7 +143,7 @@ func (p *PipelineManager) reconcileCreateRBAC(ctx context.Context, rbacConfig re
 	log.Info("~~~~~~~~~~~~~~~~~~~reconcileCreateRBAC ", "pipeline", ctx)
 	log.Info("~~~~~~~~~~~~~~~~~~~WalkDir ", "pipeline", ctx)
 
-	manifestFileSystem := manifests.BuiltinOrDir("")
+	manifestFileSystem := manifests.BuiltinOrDir("rbac/")
 
 	err := fs.WalkDir(manifestFileSystem, ".", func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
