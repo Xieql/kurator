@@ -23,7 +23,7 @@ import (
 
 const (
 	// RBACTemplateFileName is the name of the RBAC template file.
-	RBACTemplateFileName = "rbac.tpl"
+	RBACTemplateFileName = "rbac/rbac.tpl"
 	RBACTemplateName     = "pipeline rbac template"
 	SecretSuffix         = "-secret"
 	BroadResourceSuffix  = "-broad-resource"
