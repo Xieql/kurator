@@ -9,7 +9,7 @@ spec:
     - name: git-clone
       predefinedTask:
         name: git-clone
-        Params:
+        params:
           git-secret-name: git-credentials
     - name: cat-readme
       customTask:
@@ -20,5 +20,5 @@ spec:
     - name: go-test
       predefinedTask:
         name: go-test
-        Params:
+        params:
           packages: " ./..."
