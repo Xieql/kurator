@@ -155,11 +155,11 @@ func (p *PipelineManager) reconcileCreateRBAC(ctx context.Context, rbacConfig re
 	if err != nil {
 		return ctrl.Result{}, err
 	}
-	manifestFileSystem = manifests.BuiltinOrDir("/rbac")
+	manifestFileSystem = manifests.BuiltinOrDir("/rbac/")
 
 	rbac, err := render.RenderRBAC(manifestFileSystem, rbacConfig)
 	if err != nil {
-		log.Error(err, "unable to create controller", "controller", "Application")
+		log.Error(err, "unable to RenderRBAC controller", "controller", "Application")
 		return ctrl.Result{}, err
 	}
 
