@@ -140,6 +140,7 @@ func (p *PipelineManager) reconcilePipeline(ctx context.Context, pipeline *pipel
 func (p *PipelineManager) reconcileCreateRBAC(ctx context.Context, rbacConfig render.RBACConfig) (ctrl.Result, error) {
 	log := ctrl.LoggerFrom(ctx)
 	log.Info("~~~~~~~~~~~~~~~~~~~reconcileCreateRBAC ", "pipeline", ctx)
+	log.Info("~~~~~~~~~~~~~~~~~~~WalkDir ", "pipeline", ctx)
 
 	manifestFileSystem := manifests.BuiltinOrDir("")
 
