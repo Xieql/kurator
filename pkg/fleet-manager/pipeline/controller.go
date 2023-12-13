@@ -33,6 +33,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
+	"time"
 )
 
 const (
@@ -107,12 +108,14 @@ func (p *PipelineManager) reconcilePipeline(ctx context.Context, pipeline *pipel
 		PipelineNamespace: pipeline.Name,
 	}
 
-	// rbac 必须先于其他资源创建。之后，pipeline、task、triggers 等资源在创建阶段，不严格要求创建顺序。在使用阶段，需要确保所有资源创建完成
-	if !p.isRBACResourceReady(ctx, rbacConfig) {
-		res, err := p.reconcileCreateRBAC(ctx, rbacConfig)
-		if err != nil || res.Requeue || res.RequeueAfter > 0 {
-			return res, err
-		}
+	//// rbac 必须先于其他资源创建。之后，pipeline、task、triggers 等资源在创建阶段，不严格要求创建顺序。在使用阶段，需要确保所有资源创建完成
+	//if !p.isRBACResourceReady(ctx, rbacConfig) {
+	//
+	//}
+	result, err1 := p.reconcileCreateRBAC(ctx, rbacConfig)
+	time.Sleep(1 * time.Second)
+	if err1 != nil || result.Requeue || result.RequeueAfter > 0 {
+		return result, err1
 	}
 
 	// Apply Tekton tasks,
