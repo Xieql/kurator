@@ -22,20 +22,21 @@ import (
 	"os"
 )
 
-// FS embeds the manifests
+// PipelineFS embeds the manifests
 //
+//go:embed *
 //go:embed rbac/*
 //go:embed custom-task/*
 //go:embed predefined-task/*
 //go:embed pipeline/*
 //go:embed trigger/*
-var FS embed.FS
+var PipelineFS embed.FS
 
 // BuiltinOrDir returns a FS for the provided directory. If no directory is passed, the compiled in
 // FS will be used
 func BuiltinOrDir(dir string) fs.FS {
 	if dir == "" {
-		return FS
+		return PipelineFS
 	}
 	return os.DirFS(dir)
 }
