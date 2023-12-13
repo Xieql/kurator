@@ -15,9 +15,7 @@ package pipeline
 
 import (
 	"context"
-	"fmt"
 	"github.com/pkg/errors"
-	"io/fs"
 	v1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -144,20 +142,8 @@ func (p *PipelineManager) reconcilePipeline(ctx context.Context, pipeline *pipel
 func (p *PipelineManager) reconcileCreateRBAC(ctx context.Context, rbacConfig render.RBACConfig) (ctrl.Result, error) {
 	log := ctrl.LoggerFrom(ctx)
 	log.Info("~~~~~~~~~~~~~~~~~~~reconcileCreateRBAC ", "pipeline", ctx)
-	log.Info("~~~~~~~~~~~~~~~~~~~WalkDir ", "pipeline", ctx)
 
 	manifestFileSystem := manifests.BuiltinOrDir("rbac/")
-
-	err := fs.WalkDir(manifestFileSystem, ".", func(path string, d fs.DirEntry, err error) error {
-		if err != nil {
-			return err
-		}
-		fmt.Println(path)
-		return nil
-	})
-	if err != nil {
-		return ctrl.Result{}, err
-	}
 
 	rbac, err := render.RenderRBAC(manifestFileSystem, rbacConfig)
 	if err != nil {
