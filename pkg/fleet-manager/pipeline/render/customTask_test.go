@@ -46,6 +46,7 @@ func TestRenderCustomTask(t *testing.T) {
 				PipelineName:      "test-pipeline",
 				PipelineNamespace: "default",
 				Image:             "zshusers/zsh:4.3.15",
+				// TODO: ???
 				Script: "#!/usr/bin/env zsh\n" +
 					"        cat $(workspaces.source.path)/README.md",
 			},
