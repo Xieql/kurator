@@ -155,7 +155,7 @@ func (p *PipelineManager) reconcileCreateRBAC(ctx context.Context, rbacConfig re
 	if err != nil {
 		return ctrl.Result{}, err
 	}
-	manifestFileSystem = manifests.BuiltinOrDir("/rbac/")
+	manifestFileSystem = manifests.BuiltinOrDir("rbac/")
 
 	rbac, err := render.RenderRBAC(manifestFileSystem, rbacConfig)
 	if err != nil {
