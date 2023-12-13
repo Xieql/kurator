@@ -15,7 +15,9 @@ package pipeline
 
 import (
 	"context"
+	"fmt"
 	"github.com/pkg/errors"
+	"io/fs"
 	v1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -140,6 +142,21 @@ func (p *PipelineManager) reconcilePipeline(ctx context.Context, pipeline *pipel
 func (p *PipelineManager) reconcileCreateRBAC(ctx context.Context, rbacConfig render.RBACConfig) (ctrl.Result, error) {
 	log := ctrl.LoggerFrom(ctx)
 	log.Info("~~~~~~~~~~~~~~~~~~~reconcileCreateRBAC ", "pipeline", ctx)
+
+	basicFS := manifests.BuiltinOrDir("")
+
+	err2 := fs.WalkDir(basicFS, ".", func(path string, d fs.DirEntry, err error) error {
+		if err != nil {
+			log.Error(err, " func(path string, d fs.DirEntry, err error) error")
+			return err
+		}
+		fmt.Println(path)
+		return nil
+	})
+	if err2 != nil {
+		log.Error(err2, " unable to WalkDir")
+		return ctrl.Result{}, err2
+	}
 
 	manifestFileSystem := manifests.BuiltinOrDir("rbac/")
 	rbac, err := render.RenderRBAC(manifestFileSystem, rbacConfig)
