@@ -24,7 +24,7 @@ import (
 
 // FS embeds the manifests
 //
-//go:embed * rbac custom-task predefined-task pipeline trigger /*
+//go:embed * rbac custom-task predefined-task pipeline trigger/*
 var FS embed.FS
 
 // BuiltinOrDir returns a FS for the provided directory. If no directory is passed, the compiled in
