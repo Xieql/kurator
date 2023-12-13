@@ -26,6 +26,7 @@ import (
 	"kurator.dev/kurator/pkg/fleet-manager/manifests"
 	"kurator.dev/kurator/pkg/fleet-manager/pipeline/render"
 	"kurator.dev/kurator/pkg/infra/util"
+	"os"
 	"sigs.k8s.io/cluster-api/util/patch"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -138,6 +139,13 @@ func (p *PipelineManager) reconcilePipeline(ctx context.Context, pipeline *pipel
 func (p *PipelineManager) reconcileCreateRBAC(ctx context.Context, rbacConfig render.RBACConfig) (ctrl.Result, error) {
 	log := ctrl.LoggerFrom(ctx)
 	log.Info("~~~~~~~~~~~~~~~~~~~reconcileCreateRBAC ", "pipeline", ctx)
+
+	dir, err := os.Getwd()
+	if err != nil {
+		return ctrl.Result{}, err
+	}
+	log.Info("Current Working Directory:", dir)
+
 	manifestFileSystem := manifests.BuiltinOrDir("render/manifests/rbac/")
 	rbac, err := render.RenderRBAC(manifestFileSystem, rbacConfig)
 	if err != nil {
