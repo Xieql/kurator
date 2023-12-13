@@ -24,6 +24,7 @@ import (
 	utilerrors "k8s.io/apimachinery/pkg/util/errors"
 	pipelineapi "kurator.dev/kurator/pkg/apis/pipeline/v1alpha1"
 	"kurator.dev/kurator/pkg/fleet-manager/pipeline/render"
+	"kurator.dev/kurator/pkg/fleet-manager/pipeline/render/manifests"
 	"kurator.dev/kurator/pkg/infra/util"
 	"sigs.k8s.io/cluster-api/util/patch"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -138,7 +139,7 @@ func (p *PipelineManager) reconcileCreateRBAC(ctx context.Context, rbacConfig re
 	log := ctrl.LoggerFrom(ctx)
 	log.Info("~~~~~~~~~~~~~~~~~~~reconcileCreateRBAC ", "pipeline", ctx)
 
-	manifestFileSystem := render.BuiltinOrDir("rbac/")
+	manifestFileSystem := manifests.BuiltinOrDir("")
 	rbac, err := render.RenderRBAC(manifestFileSystem, rbacConfig)
 	if err != nil {
 		return ctrl.Result{}, err
@@ -185,7 +186,7 @@ func (p *PipelineManager) createPredefinedTask(ctx context.Context, task pipelin
 		Params:            nil,
 	}
 
-	manifestFileSystem := render.BuiltinOrDir("PredefinedTask/")
+	manifestFileSystem := manifests.BuiltinOrDir("PredefinedTask/")
 	taskResource, err := render.RenderPredefinedTask(manifestFileSystem, cfg)
 	if err != nil {
 		return err
@@ -203,7 +204,7 @@ func (p *PipelineManager) createCustomTask(ctx context.Context, task pipelineapi
 	log := ctrl.LoggerFrom(ctx)
 	log.Info("~~~~~~~~~~~~~~~~~~~createCustomTask ", "pipeline", ctx)
 
-	manifestFileSystem := render.BuiltinOrDir("custom-task/")
+	manifestFileSystem := manifests.BuiltinOrDir("custom-task/")
 	taskResource, err := render.RenderCustomTaskWithPipeline(manifestFileSystem, task.Name, pipeline.Name, pipeline.Namespace, *task.CustomTask)
 	if err != nil {
 		return err
@@ -220,7 +221,7 @@ func (p *PipelineManager) createCustomTask(ctx context.Context, task pipelineapi
 func (p *PipelineManager) reconcileCreatePipeline(ctx context.Context, pipeline *pipelineapi.Pipeline) (ctrl.Result, error) {
 	log := ctrl.LoggerFrom(ctx)
 	log.Info("~~~~~~~~~~~~~~~~~~~reconcileCreatePipeline ", "pipeline", ctx)
-	manifestFileSystem := render.BuiltinOrDir("pipeline/")
+	manifestFileSystem := manifests.BuiltinOrDir("pipeline/")
 	pipelineResource, err := render.RenderPipelineWithTasks(manifestFileSystem, pipeline.Name, pipeline.Namespace, pipeline.Spec.Tasks)
 	if err != nil {
 		return ctrl.Result{}, err
@@ -238,7 +239,7 @@ func (p *PipelineManager) reconcileCreatePipeline(ctx context.Context, pipeline 
 func (p *PipelineManager) reconcileCreateTrigger(ctx context.Context, pipeline *pipelineapi.Pipeline) (ctrl.Result, error) {
 	log := ctrl.LoggerFrom(ctx)
 	log.Info("~~~~~~~~~~~~~~~~~~~reconcileCreateTrigger ", "pipeline", ctx)
-	manifestFileSystem := render.BuiltinOrDir("trigger/")
+	manifestFileSystem := manifests.BuiltinOrDir("trigger/")
 
 	cfg := render.TriggerConfig{
 		PipelineName:      pipeline.Name,
