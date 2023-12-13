@@ -50,7 +50,7 @@ func TestRenderTrigger(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			fs := manifestFS
 
-			result, err := renderTrigger(fs, tc.cfg)
+			result, err := RenderTrigger(fs, tc.cfg)
 
 			if tc.expectError {
 				assert.Error(t, err)

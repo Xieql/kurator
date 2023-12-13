@@ -95,7 +95,7 @@ func TestRenderPredefinedTask(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			fs := manifestFS
 
-			result, err := renderPredefinedTask(fs, tc.cfg)
+			result, err := RenderPredefinedTask(fs, tc.cfg)
 
 			// Test assertions
 			if tc.expectError {

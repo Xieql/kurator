@@ -41,7 +41,7 @@ type PipelineConfig struct {
 }
 
 // renderPipeline renders the full pipeline configuration as a YAML byte array using a specified template and **Pipeline.Tasks**.
-func renderPipelineWithTasks(fsys fs.FS, pipelineName, pipelineNameSpace string, tasks []pipelineapi.PipelineTask) ([]byte, error) {
+func RenderPipelineWithTasks(fsys fs.FS, pipelineName, pipelineNameSpace string, tasks []pipelineapi.PipelineTask) ([]byte, error) {
 	tasksInfo, err := GenerateTasksInfo(pipelineName, tasks)
 	if err != nil {
 		return nil, err

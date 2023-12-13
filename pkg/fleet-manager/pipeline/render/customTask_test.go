@@ -145,7 +145,7 @@ func TestRenderCustomTask(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			fs := manifestFS
 
-			result, err := renderCustomTask(fs, tc.cfg)
+			result, err := RenderCustomTaskWithConfig(fs, tc.cfg)
 
 			// Test assertions
 			if tc.expectError {

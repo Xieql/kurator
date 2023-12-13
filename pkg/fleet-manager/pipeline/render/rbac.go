@@ -51,8 +51,8 @@ func (rbac RBACConfig) SecretRoleBindingName() string {
 	return rbac.ServiceAccountName() + SecretSuffix
 }
 
-// renderRBAC renders the RBAC configuration using a specified template.
-func renderRBAC(fsys fs.FS, cfg RBACConfig) ([]byte, error) {
+// RenderRBAC renders the RBAC configuration using a specified template.
+func RenderRBAC(fsys fs.FS, cfg RBACConfig) ([]byte, error) {
 	if cfg.PipelineName == "" || cfg.PipelineNamespace == "" {
 		return nil, fmt.Errorf("invalid RBACConfig: PipelineName and PipelineNamespace must not be empty")
 	}

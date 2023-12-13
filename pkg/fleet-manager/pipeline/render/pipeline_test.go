@@ -62,7 +62,7 @@ func TestRenderPipelineWithTasks(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			fs := manifestFS
 
-			result, err := renderPipelineWithTasks(fs, pipelineName, pipelineNameSpace, tc.tasks)
+			result, err := RenderPipelineWithTasks(fs, pipelineName, pipelineNameSpace, tc.tasks)
 
 			if tc.expectError {
 				assert.Error(t, err)
