@@ -79,7 +79,7 @@ func TestRenderRBAC(t *testing.T) {
 				fs = manifests.BuiltinOrDir("invalid-path")
 			}
 
-			result, err := renderRBAC(fs, tc.cfg)
+			result, err := RenderRBAC(fs, tc.cfg)
 
 			if tc.expectError {
 				assert.Error(t, err)

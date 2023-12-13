@@ -36,13 +36,8 @@ func (cfg PredefinedTaskConfig) PredefinedTaskName() string {
 	return cfg.TaskName + "-" + cfg.PipelineName
 }
 
-// renderPredefinedTask renders the PredefinedTask configuration using a specified template.
-func renderPredefinedTaskWithT(fsys fs.FS, cfg PredefinedTaskConfig) ([]byte, error) {
-	return renderTemplate(fsys, generateTaskTemplateFileName(cfg.TemplateName), generateTaskTemplateName(cfg.TemplateName), cfg)
-}
-
-// renderPredefinedTask renders the PredefinedTask configuration using a specified template.
-func renderPredefinedTask(fsys fs.FS, cfg PredefinedTaskConfig) ([]byte, error) {
+// RenderPredefinedTask renders the PredefinedTask configuration using a specified template.
+func RenderPredefinedTask(fsys fs.FS, cfg PredefinedTaskConfig) ([]byte, error) {
 	return renderTemplate(fsys, generateTaskTemplateFileName(cfg.TemplateName), generateTaskTemplateName(cfg.TemplateName), cfg)
 }
 

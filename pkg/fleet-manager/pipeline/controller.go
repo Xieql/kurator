@@ -16,16 +16,21 @@ package pipeline
 import (
 	"context"
 	"github.com/pkg/errors"
+	v1 "k8s.io/api/core/v1"
+	rbacv1 "k8s.io/api/rbac/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/types"
 	utilerrors "k8s.io/apimachinery/pkg/util/errors"
+	pipelineapi "kurator.dev/kurator/pkg/apis/pipeline/v1alpha1"
+	"kurator.dev/kurator/pkg/fleet-manager/manifests"
+	"kurator.dev/kurator/pkg/fleet-manager/pipeline/render"
+	"kurator.dev/kurator/pkg/infra/util"
 	"sigs.k8s.io/cluster-api/util/patch"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
-
-	pipelineapi "kurator.dev/kurator/pkg/apis/pipeline/v1alpha1"
 )
 
 const (
@@ -94,19 +99,159 @@ func (p *PipelineManager) reconcilePipeline(ctx context.Context, pipeline *pipel
 	log := ctrl.LoggerFrom(ctx)
 	log.Info("~~~~~~~~~~~~~~~~~~~reconcilePipeline ", "pipeline", ctx)
 
-	// Apply Tekton rbac, tasks, pipeline and trigger resource from Kurator pipeline
-	result, err := p.reconcileTektonResources(ctx, pipeline)
-	if err != nil || result.Requeue || result.RequeueAfter > 0 {
-		return result, err
+	rbacConfig := render.RBACConfig{
+		PipelineName:      pipeline.Name,
+		PipelineNamespace: pipeline.Name,
 	}
+
+	// rbac 必须先于其他资源创建。之后，pipeline、task、triggers 等资源在创建阶段，不严格要求创建顺序。在使用阶段，需要确保所有资源创建完成
+	if !p.isRBACResourceReady(ctx, rbacConfig) {
+		res, err := p.reconcileCreateRBAC(ctx, rbacConfig)
+		if err != nil || res.Requeue || res.RequeueAfter > 0 {
+			return res, err
+		}
+	}
+
+	// Apply Tekton tasks,
+	res, err := p.reconcileCreateTasks(ctx, pipeline)
+	if err != nil || res.Requeue || res.RequeueAfter > 0 {
+		return res, err
+	}
+
+	// Apply Tekton pipeline
+	res, err = p.reconcileCreatePipeline(ctx, pipeline)
+	if err != nil || res.Requeue || res.RequeueAfter > 0 {
+		return res, err
+	}
+
+	// Apply Tekton trigger
+	res, err = p.reconcileCreateTrigger(ctx, pipeline)
+	if err != nil || res.Requeue || res.RequeueAfter > 0 {
+		return res, err
+	}
+
 	// update status
 	return p.reconcilePipelineStatus(ctx, pipeline)
 }
 
-// reconcilePipelineResources converts the pipeline resources into Tekton resource and apply them.
-func (p *PipelineManager) reconcileTektonResources(ctx context.Context, pipeline *pipelineapi.Pipeline) (ctrl.Result, error) {
+// reconcileCreateRBAC converts the pipeline resources into Tekton resource and apply them.
+func (p *PipelineManager) reconcileCreateRBAC(ctx context.Context, rbacConfig render.RBACConfig) (ctrl.Result, error) {
 	log := ctrl.LoggerFrom(ctx)
-	log.Info("~~~~~~~~~~~~~~~~~~~reconcileTektonResources ", "pipeline", ctx)
+	log.Info("~~~~~~~~~~~~~~~~~~~reconcileCreateRBAC ", "pipeline", ctx)
+	manifestFileSystem := manifests.BuiltinOrDir("manifests/rbac/")
+	rbac, err := render.RenderRBAC(manifestFileSystem, rbacConfig)
+	if err != nil {
+		return ctrl.Result{}, err
+	}
+	// apply rbac resources
+	if _, err := util.PatchResources(rbac); err != nil {
+		return ctrl.Result{}, errors.Wrapf(err, "failed to apply rbac resources")
+	}
+
+	return ctrl.Result{}, nil
+}
+
+// reconcileCreateTasks converts the pipeline resources into Tekton resource and apply them.
+func (p *PipelineManager) reconcileCreateTasks(ctx context.Context, pipeline *pipelineapi.Pipeline) (ctrl.Result, error) {
+	log := ctrl.LoggerFrom(ctx)
+	log.Info("~~~~~~~~~~~~~~~~~~~reconcileCreateRBAC ", "pipeline", ctx)
+
+	for _, task := range pipeline.Spec.Tasks {
+		if task.PredefinedTask != nil {
+			err := p.createPredefinedTask(ctx, task, pipeline)
+			return ctrl.Result{}, err
+		} else {
+			err := p.createCustomTask(ctx, task, pipeline)
+			if err != nil {
+				return ctrl.Result{}, err
+			}
+		}
+	}
+
+	return ctrl.Result{}, nil
+}
+
+// createPredefinedTask converts the pipeline resources into Tekton resource and apply them.
+func (p *PipelineManager) createPredefinedTask(ctx context.Context, task pipelineapi.PipelineTask, pipeline *pipelineapi.Pipeline) error {
+	log := ctrl.LoggerFrom(ctx)
+	log.Info("~~~~~~~~~~~~~~~~~~~createPredefinedTask ", "pipeline", ctx)
+
+	cfg := render.PredefinedTaskConfig{
+		PipelineName:      pipeline.Name,
+		PipelineNamespace: pipeline.Namespace,
+		TaskName:          task.Name,
+		TemplateName:      string(task.PredefinedTask.Name),
+		Params:            nil,
+	}
+
+	manifestFileSystem := manifests.BuiltinOrDir("manifests/PredefinedTask/")
+	taskResource, err := render.RenderPredefinedTask(manifestFileSystem, cfg)
+	if err != nil {
+		return err
+	}
+	// apply rbac resources
+	if _, err := util.PatchResources(taskResource); err != nil {
+		return errors.Wrapf(err, "failed to apply rbac resources")
+	}
+
+	return nil
+}
+
+// createCustomTask converts the pipeline resources into Tekton resource and apply them.
+func (p *PipelineManager) createCustomTask(ctx context.Context, task pipelineapi.PipelineTask, pipeline *pipelineapi.Pipeline) error {
+	log := ctrl.LoggerFrom(ctx)
+	log.Info("~~~~~~~~~~~~~~~~~~~createCustomTask ", "pipeline", ctx)
+
+	manifestFileSystem := manifests.BuiltinOrDir("manifests/custom-task/")
+	taskResource, err := render.RenderCustomTaskWithPipeline(manifestFileSystem, task.Name, pipeline.Name, pipeline.Namespace, *task.CustomTask)
+	if err != nil {
+		return err
+	}
+	// apply custom task resources
+	if _, err := util.PatchResources(taskResource); err != nil {
+		return errors.Wrapf(err, "failed to apply rbac resources")
+	}
+
+	return nil
+}
+
+// reconcileCreatePipeline converts the pipeline resources into Tekton resource and apply them.
+func (p *PipelineManager) reconcileCreatePipeline(ctx context.Context, pipeline *pipelineapi.Pipeline) (ctrl.Result, error) {
+	log := ctrl.LoggerFrom(ctx)
+	log.Info("~~~~~~~~~~~~~~~~~~~reconcileCreatePipeline ", "pipeline", ctx)
+	manifestFileSystem := manifests.BuiltinOrDir("manifests/pipeline/")
+	pipelineResource, err := render.RenderPipelineWithTasks(manifestFileSystem, pipeline.Name, pipeline.Namespace, pipeline.Spec.Tasks)
+	if err != nil {
+		return ctrl.Result{}, err
+	}
+
+	// apply pipeline resources
+	if _, err := util.PatchResources(pipelineResource); err != nil {
+		return ctrl.Result{}, errors.Wrapf(err, "failed to apply rbac resources")
+	}
+
+	return ctrl.Result{}, nil
+}
+
+// reconcileCreateTrigger converts the pipeline resources into Tekton resource and apply them.
+func (p *PipelineManager) reconcileCreateTrigger(ctx context.Context, pipeline *pipelineapi.Pipeline) (ctrl.Result, error) {
+	log := ctrl.LoggerFrom(ctx)
+	log.Info("~~~~~~~~~~~~~~~~~~~reconcileCreateTrigger ", "pipeline", ctx)
+	manifestFileSystem := manifests.BuiltinOrDir("manifests/trigger/")
+
+	cfg := render.TriggerConfig{
+		PipelineName:      pipeline.Name,
+		PipelineNamespace: pipeline.Namespace,
+	}
+	triggerResource, err := render.RenderTrigger(manifestFileSystem, cfg)
+	if err != nil {
+		return ctrl.Result{}, err
+	}
+
+	// apply pipeline resources
+	if _, err := util.PatchResources(triggerResource); err != nil {
+		return ctrl.Result{}, errors.Wrapf(err, "failed to apply rbac resources")
+	}
 
 	return ctrl.Result{}, nil
 }
@@ -131,4 +276,31 @@ func (p *PipelineManager) reconcileDeletePipeline(ctx context.Context, pipeline 
 	controllerutil.RemoveFinalizer(pipeline, PipelineFinalizer)
 
 	return ctrl.Result{}, nil
+}
+
+// isRBACResourceReady checks if the necessary RBAC resources are ready in the specified namespace.
+func (p *PipelineManager) isRBACResourceReady(ctx context.Context, rbacConfig render.RBACConfig) bool {
+	// Check for the existence of the ServiceAccount
+	sa := &v1.ServiceAccount{}
+	err := p.Client.Get(ctx, types.NamespacedName{Name: rbacConfig.PipelineName, Namespace: rbacConfig.PipelineNamespace}, sa)
+	if err != nil {
+		return false
+	}
+
+	// Check for the existence of the RoleBinding for broad resources
+	broadResourceRoleBinding := &rbacv1.RoleBinding{}
+	err = p.Client.Get(ctx, types.NamespacedName{Name: rbacConfig.BroadResourceRoleBindingName(), Namespace: rbacConfig.PipelineNamespace}, broadResourceRoleBinding)
+	if err != nil {
+		return false
+	}
+
+	// Check for the existence of the RoleBinding for secret resources
+	secretResourceRoleBinding := &rbacv1.RoleBinding{}
+	err = p.Client.Get(ctx, types.NamespacedName{Name: rbacConfig.SecretRoleBindingName(), Namespace: rbacConfig.PipelineNamespace}, secretResourceRoleBinding)
+	if err != nil {
+		return false
+	}
+
+	// If all resources are found, return true
+	return true
 }

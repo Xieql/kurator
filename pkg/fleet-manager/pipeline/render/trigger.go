@@ -35,6 +35,6 @@ func (cfg TriggerConfig) ServiceAccountName() string {
 	return cfg.PipelineName
 }
 
-func renderTrigger(fsys fs.FS, cfg TriggerConfig) ([]byte, error) {
+func RenderTrigger(fsys fs.FS, cfg TriggerConfig) ([]byte, error) {
 	return renderTemplate(fsys, TriggerTemplateFile, TriggerTemplateName, cfg)
 }
