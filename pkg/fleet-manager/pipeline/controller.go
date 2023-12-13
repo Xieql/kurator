@@ -100,6 +100,7 @@ func (p *PipelineManager) Reconcile(ctx context.Context, req ctrl.Request) (_ ct
 func (p *PipelineManager) reconcilePipeline(ctx context.Context, pipeline *pipelineapi.Pipeline) (ctrl.Result, error) {
 	log := ctrl.LoggerFrom(ctx)
 	log.Info("~~~~~~~~~~~~~~~~~~~reconcilePipeline ", "pipeline", ctx)
+	log.Info("~~~~~~~~~~~~~~~~~~~!!!!! ", "pipeline", ctx)
 
 	rbacConfig := render.RBACConfig{
 		PipelineName:      pipeline.Name,
