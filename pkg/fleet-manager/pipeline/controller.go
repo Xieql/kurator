@@ -23,10 +23,9 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	utilerrors "k8s.io/apimachinery/pkg/util/errors"
 	pipelineapi "kurator.dev/kurator/pkg/apis/pipeline/v1alpha1"
-	"kurator.dev/kurator/pkg/fleet-manager/manifests"
 	"kurator.dev/kurator/pkg/fleet-manager/pipeline/render"
+	"kurator.dev/kurator/pkg/fleet-manager/pipeline/render/manifests"
 	"kurator.dev/kurator/pkg/infra/util"
-	"os"
 	"sigs.k8s.io/cluster-api/util/patch"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -140,17 +139,12 @@ func (p *PipelineManager) reconcileCreateRBAC(ctx context.Context, rbacConfig re
 	log := ctrl.LoggerFrom(ctx)
 	log.Info("~~~~~~~~~~~~~~~~~~~reconcileCreateRBAC ", "pipeline", ctx)
 
-	dir, err := os.Getwd()
-	if err != nil {
-		return ctrl.Result{}, err
-	}
-	log.Info("Current Working Directory:", dir)
-
-	manifestFileSystem := manifests.BuiltinOrDir("render/manifests/rbac/")
+	manifestFileSystem := manifests.BuiltinOrDir("pipeline/render/manifests/rbac/")
 	rbac, err := render.RenderRBAC(manifestFileSystem, rbacConfig)
 	if err != nil {
 		return ctrl.Result{}, err
 	}
+
 	// apply rbac resources
 	if _, err := util.PatchResources(rbac); err != nil {
 		return ctrl.Result{}, errors.Wrapf(err, "failed to apply rbac resources")
