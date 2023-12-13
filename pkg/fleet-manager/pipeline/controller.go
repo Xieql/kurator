@@ -304,21 +304,18 @@ func (p *PipelineManager) isRBACResourceReady(ctx context.Context, rbacConfig re
 	if err != nil {
 		return false
 	}
-
 	// Check for the existence of the RoleBinding for broad resources
 	broadResourceRoleBinding := &rbacv1.RoleBinding{}
 	err = p.Client.Get(ctx, types.NamespacedName{Name: rbacConfig.BroadResourceRoleBindingName(), Namespace: rbacConfig.PipelineNamespace}, broadResourceRoleBinding)
 	if err != nil {
 		return false
 	}
-
 	// Check for the existence of the RoleBinding for secret resources
 	secretResourceRoleBinding := &rbacv1.RoleBinding{}
 	err = p.Client.Get(ctx, types.NamespacedName{Name: rbacConfig.SecretRoleBindingName(), Namespace: rbacConfig.PipelineNamespace}, secretResourceRoleBinding)
 	if err != nil {
 		return false
 	}
-
 	// If all resources are found, return true
 	return true
 }
