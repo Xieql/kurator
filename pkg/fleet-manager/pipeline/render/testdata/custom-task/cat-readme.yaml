@@ -17,3 +17,4 @@ spec:
       script: |
         #!/usr/bin/env zsh
         cat $(workspaces.source.path)/README.md
+        ...

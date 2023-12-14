@@ -14,9 +14,11 @@ spec:
     - name: cat-readme
       customTask:
         image: zshusers/zsh:4.3.15
-        script: |
-          #!/usr/bin/env zsh
-          cat $(workspaces.source.path)/README.md
+        command:
+          - /bin/sh
+          - -c
+        args:
+          - "cat $(workspaces.source.path)/README.md"
     - name: go-test
       predefinedTask:
         name: go-test
