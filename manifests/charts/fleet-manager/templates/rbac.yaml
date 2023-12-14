@@ -100,16 +100,15 @@ rules:
   - apiGroups:
       - "rbac.authorization.k8s.io"
     resources:
-      - clusterrolebindings
-      - rolebindings
+      - '*'
     verbs:
-      - get
       - create
-      - update
-      - patch
-      - delete
-      - deletecollection
+      - get
       - list
+      - patch
+      - update
+      - watch
+      - delete
   - apiGroups:
       - ""
     resources:
