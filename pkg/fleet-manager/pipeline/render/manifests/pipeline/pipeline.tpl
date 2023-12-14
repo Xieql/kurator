@@ -14,6 +14,11 @@ spec:
     - name: kurator-pipeline-shared-data
       description: |
         This workspace is used by all tasks
+    - name: git-credentials
+      description: |
+        A Workspace containing a .gitconfig and .git-credentials file. These
+        will be copied to the user's home before any git commands are run. Any
+        other files in this Workspace are ignored.
   tasks:
     - name: git-clone
       # Key points about 'git-clone':
