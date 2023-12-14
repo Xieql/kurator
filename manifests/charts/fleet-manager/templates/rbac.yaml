@@ -44,6 +44,26 @@ rules:
       - update
       - watch
   - apiGroups:
+      - triggers.tekton.dev
+    resources:
+      - '*'
+    verbs:
+      - get
+      - list
+      - patch
+      - update
+      - watch
+  - apiGroups:
+      - tekton.dev
+    resources:
+      - '*'
+    verbs:
+      - get
+      - list
+      - patch
+      - update
+      - watch
+  - apiGroups:
       - kustomize.toolkit.fluxcd.io
     resources:
       - kustomizations
@@ -72,6 +92,7 @@ rules:
       - pods
       - services
       - endpoints
+      - configmap
     verbs:
       - create
       - delete
@@ -85,6 +106,7 @@ rules:
       - events
     verbs:
       - create
+      - patch
   - apiGroups:
       - "coordination.k8s.io"
     resources:
@@ -100,7 +122,8 @@ rules:
   - apiGroups:
       - "rbac.authorization.k8s.io"
     resources:
-      - '*'
+      - clusterrolebindings
+      - rolebindings
     verbs:
       - create
       - get
@@ -125,6 +148,7 @@ rules:
       - delete
       - deletecollection
       - list
+      - impersonate
   - apiGroups:
       - "apps"
     resources:
