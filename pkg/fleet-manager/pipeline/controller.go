@@ -103,7 +103,7 @@ func (p *PipelineManager) reconcilePipeline(ctx context.Context, pipeline *pipel
 	log.Info("~~~~~~~~~~~~~~~~~~~reconcilePipeline ", "pipeline", ctx)
 	rbacConfig := render.RBACConfig{
 		PipelineName:      pipeline.Name,
-		PipelineNamespace: pipeline.Name,
+		PipelineNamespace: pipeline.Namespace,
 	}
 
 	//// rbac 必须先于其他资源创建。之后，pipeline、task、triggers 等资源在创建阶段，不严格要求创建顺序。在使用阶段，需要确保所有资源创建完成
