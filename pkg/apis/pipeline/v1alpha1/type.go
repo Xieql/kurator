@@ -154,7 +154,7 @@ type CustomTask struct {
 	// Cannot be updated.
 	// More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/
 	// +optional
-	ResourceRequirements corev1.ResourceRequirements `json:"computeResources,omitempty"`
+	ResourceRequirements *corev1.ResourceRequirements `json:"computeResources,omitempty"`
 
 	// Script is the contents of an executable file to execute.
 	// If Script is not empty, the CustomTask cannot have a Command and the Args will be passed to the Script.
