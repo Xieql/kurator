@@ -10,6 +10,12 @@ spec:
       2. All tasks are strictly executed in the order defined by the user, with each task starting only after the previous one is completed. 
       3. There is only one workspace, which is used by all tasks. The PVC for this workspace will be configured in the trigger.
   params:
+    - name: repo-url
+      type: string
+      description: The git repository URL to clone from.
+    - name: revision
+      type: string
+      description: The git branch to clone.
   workspaces:
     - name: kurator-pipeline-shared-data
       description: |
