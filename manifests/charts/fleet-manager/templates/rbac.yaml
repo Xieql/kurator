@@ -104,9 +104,12 @@ rules:
       - rolebindings
     verbs:
       - get
+      - create
       - update
+      - patch
+      - delete
+      - deletecollection
       - list
-      - watch
   - apiGroups:
       - ""
     resources:
