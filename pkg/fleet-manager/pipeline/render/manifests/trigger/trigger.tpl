@@ -62,6 +62,6 @@ spec:
   serviceAccountName: {{ .ServiceAccountName }}
   triggers:
     - bindings:
-        - ref: {{ .PipelineName }}-pipelinebinding
+        - ref: {{ .PipelineName }}-triggerbinding
       template:
         ref: {{ .PipelineName }}-triggertemplate
