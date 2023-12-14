@@ -184,7 +184,9 @@ func (p *PipelineManager) reconcileCreateTasks(ctx context.Context, pipeline *pi
 	for _, task := range pipeline.Spec.Tasks {
 		if task.PredefinedTask != nil {
 			err := p.createPredefinedTask(ctx, task, pipeline)
-			return ctrl.Result{}, err
+			if err != nil {
+				return ctrl.Result{}, err
+			}
 		} else {
 			err := p.createCustomTask(ctx, task, pipeline)
 			if err != nil {
