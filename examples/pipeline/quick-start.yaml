@@ -4,7 +4,7 @@ metadata:
   name: quick-start
   namespace: kurator-pipeline
 spec:
-  description: "this is a quick-start pipeline, it will show how to use customTask and predefined Task in a pipeline"
+  description: "this is a quick-start pipeline, it shows how to use customTask and predefined Task in a pipeline"
   tasks:
     - name: git-clone
       predefinedTask:
