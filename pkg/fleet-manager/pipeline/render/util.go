@@ -19,6 +19,7 @@ package render
 import (
 	"bytes"
 	"io/fs"
+	"kurator.dev/kurator/pkg/fleet-manager/pipeline/render/manifests"
 	"text/template"
 
 	"github.com/Masterminds/sprig/v3"
@@ -31,6 +32,8 @@ const (
 	// GitCloneTask is the predefined task template name of git clone task
 	GitCloneTask = "git-clone"
 )
+
+var manifestFS = manifests.BuiltinOrDir("manifests/rbac/")
 
 // renderTemplate reads, parses, and renders a template file using the provided configuration data.
 func renderTemplate(fsys fs.FS, tplFileName, tplName string, cfg interface{}) ([]byte, error) {

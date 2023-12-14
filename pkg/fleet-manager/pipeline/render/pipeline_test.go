@@ -22,13 +22,10 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-
-	"kurator.dev/kurator/pkg/fleet-manager/manifests"
 )
 
 func TestRenderPipelineWithTasks(t *testing.T) {
-	expectedRBACFilePath := "testdata/pipeline/"
-	manifestFS := manifests.BuiltinOrDir("manifests/pipeline/")
+	expectedPipelineFilePath := "testdata/pipeline/"
 	pipelineName := "test-pipeline"
 	pipelineNameSpace := "kurator-pipeline"
 	cases := []struct {
@@ -69,7 +66,7 @@ func TestRenderPipelineWithTasks(t *testing.T) {
 			} else {
 				assert.NoError(t, err)
 
-				expected, err := os.ReadFile(expectedRBACFilePath + tc.expectedFile)
+				expected, err := os.ReadFile(expectedPipelineFilePath + tc.expectedFile)
 				assert.NoError(t, err)
 				assert.Equal(t, string(expected), string(result))
 			}

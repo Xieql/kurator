@@ -21,13 +21,10 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-
-	"kurator.dev/kurator/pkg/fleet-manager/manifests"
 )
 
 func TestRenderPredefinedTask(t *testing.T) {
 	expectedTaskFilePath := "testdata/predefined-task/"
-	manifestFS := manifests.BuiltinOrDir("manifests/predefined-task/")
 	// Define test cases for various task templates and configurations.
 	cases := []struct {
 		name         string

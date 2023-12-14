@@ -25,7 +25,7 @@ import (
 )
 
 const (
-	PipelineTemplateFile = "pipeline.tpl"
+	PipelineTemplateFile = "pipeline/pipeline.tpl"
 	PipelineTemplateName = "pipeline template"
 )
 
@@ -40,7 +40,7 @@ type PipelineConfig struct {
 	TasksInfo string
 }
 
-// renderPipeline renders the full pipeline configuration as a YAML byte array using a specified template and **Pipeline.Tasks**.
+// RenderPipelineWithTasks renders the full pipeline configuration as a YAML byte array using a specified template and **Pipeline.Tasks**.
 func RenderPipelineWithTasks(fsys fs.FS, pipelineName, pipelineNameSpace string, tasks []pipelineapi.PipelineTask) ([]byte, error) {
 	tasksInfo, err := GenerateTasksInfo(pipelineName, tasks)
 	if err != nil {
