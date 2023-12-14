@@ -24,3 +24,26 @@ spec:
         name: go-test
         params:
           packages: " ./..."
+    - name: golangci-lint
+      predefinedTask:
+        name: golangci-lint
+        params:
+          packages: " ./..."
+          flags:
+            - --verbose
+    - name: build-image
+      predefinedTask:
+        name: kaniko
+        params:
+          image-name: "ghcr.io/kurator-dev/podinfo:test-version"
+          extra-args:
+            - --skip-tls-verify
+    - name: echo-image-digest
+      customTask:
+        image: ubuntu
+        script: |
+          echo $(params.digest)
+          case .$(params.digest) in
+            ".sha"*) exit 0 ;;
+            *)       echo "Digest value is not correct" && exit 1 ;;
+          esac
