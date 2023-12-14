@@ -63,6 +63,7 @@ rules:
       - patch
       - update
       - watch
+      - create
   - apiGroups:
       - kustomize.toolkit.fluxcd.io
     resources:
