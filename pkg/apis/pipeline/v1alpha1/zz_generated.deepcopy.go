@@ -46,7 +46,11 @@ func (in *CustomTask) DeepCopyInto(out *CustomTask) {
 			(*in)[i].DeepCopyInto(&(*out)[i])
 		}
 	}
-	in.ResourceRequirements.DeepCopyInto(&out.ResourceRequirements)
+	if in.ResourceRequirements != nil {
+		in, out := &in.ResourceRequirements, &out.ResourceRequirements
+		*out = new(v1.ResourceRequirements)
+		(*in).DeepCopyInto(*out)
+	}
 	return
 }
 
