@@ -93,7 +93,7 @@ rules:
       - pods
       - services
       - endpoints
-      - configmap
+      - configmaps
     verbs:
       - create
       - delete
