@@ -42,7 +42,7 @@ func RenderPredefinedTask(fsys fs.FS, cfg PredefinedTaskConfig) ([]byte, error) 
 }
 
 func generateTaskTemplateFileName(Name string) string {
-	return "predefinde-task/" + Name + ".tpl"
+	return "predefined-task/" + Name + ".tpl"
 }
 
 func generateTaskTemplateName(taskType string) string {
