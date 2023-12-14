@@ -53,6 +53,7 @@ rules:
       - patch
       - update
       - watch
+      - create
   - apiGroups:
       - tekton.dev
     resources:
