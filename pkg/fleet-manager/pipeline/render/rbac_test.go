@@ -28,7 +28,6 @@ import (
 const expectedRBACFilePath = "testdata/rbac/"
 
 func TestRenderRBAC(t *testing.T) {
-	manifestFS := manifests.BuiltinOrDir("manifests/rbac/")
 	// Define test cases including both valid and error scenarios.
 	cases := []struct {
 		name         string

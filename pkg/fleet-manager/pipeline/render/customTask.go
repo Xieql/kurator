@@ -24,7 +24,7 @@ import (
 )
 
 const (
-	CustomTaskTemplateFile = "custom-task.tpl"
+	CustomTaskTemplateFile = "custom-task/custom-task.tpl"
 	CustomTaskTemplateName = "pipeline custom task template"
 )
 

@@ -21,14 +21,10 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-
-	"kurator.dev/kurator/pkg/fleet-manager/manifests"
 )
 
 func TestRenderTrigger(t *testing.T) {
 	expectedRBACFilePath := "testdata/trigger/"
-	manifestFS := manifests.BuiltinOrDir("manifests/trigger/")
-
 	cases := []struct {
 		name         string
 		cfg          TriggerConfig

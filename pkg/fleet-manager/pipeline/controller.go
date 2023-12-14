@@ -58,7 +58,7 @@ func (p *PipelineManager) Reconcile(ctx context.Context, req ctrl.Request) (_ ct
 	log := ctrl.LoggerFrom(ctx)
 	pipeline := &pipelineapi.Pipeline{}
 	log.Info("~~~~~~~~~~~~~~~~~~~Reconcile ", "pipeline", ctx)
-	log.Info("~!!!!!!!!!!! resource * !!!!!!!!!!!!!!!! ", "pipeline", ctx)
+	log.Info("~!!!!!!!!!!! all  fs ready * !!!!!!!!!!!!!!!! ", "pipeline", ctx)
 
 	if err := p.Client.Get(ctx, req.NamespacedName, pipeline); err != nil {
 		if apierrors.IsNotFound(err) {

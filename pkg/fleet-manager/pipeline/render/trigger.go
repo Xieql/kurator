@@ -21,7 +21,7 @@ import (
 )
 
 const (
-	TriggerTemplateFile = "trigger.tpl"
+	TriggerTemplateFile = "trigger/trigger.tpl"
 	TriggerTemplateName = "pipeline trigger template"
 )
 
