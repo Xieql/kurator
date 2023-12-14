@@ -43,17 +43,17 @@ type CustomTaskConfig struct {
 func RenderCustomTaskWithPipeline(fsys fs.FS, taskName, pipelineName, pipelineNamespace string, task pipelineapi.CustomTask) ([]byte, error) {
 	cfg := CustomTaskConfig{
 		// in case different pipeline have the same name task.
-		CustomTaskName:    generatePipelineTaskName(taskName, pipelineName),
-		PipelineName:      pipelineName,
-		PipelineNamespace: pipelineNamespace,
-		Image:             task.Image,
-		Command:           task.Command,
-		Args:              task.Args,
-		Env:               task.Env,
-		// use `&task.ResourceRequirements` instead of `task.ResourceRequirements` to simplify rendering.
-		ResourceRequirements: &task.ResourceRequirements,
+		CustomTaskName:       generatePipelineTaskName(taskName, pipelineName),
+		PipelineName:         pipelineName,
+		PipelineNamespace:    pipelineNamespace,
+		Image:                task.Image,
+		Command:              task.Command,
+		Args:                 task.Args,
+		Env:                  task.Env,
+		ResourceRequirements: task.ResourceRequirements,
 		Script:               task.Script,
 	}
+	
 	return renderTemplate(fsys, CustomTaskTemplateFile, CustomTaskTemplateName, cfg)
 }
 
