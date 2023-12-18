@@ -1,0 +1,49 @@
+apiVersion: pipeline.kurator.dev/v1alpha1
+kind: Pipeline
+metadata:
+  name: quick-start
+  namespace: kurator-pipeline
+spec:
+  description: "this is a quick-start pipeline, it shows how to use customTask and predefined Task in a pipeline"
+  tasks:
+    - name: git-clone
+      predefinedTask:
+        name: git-clone
+        params:
+          git-secret-name: git-credentials
+    - name: cat-readme
+      customTask:
+        image: zshusers/zsh:4.3.15
+        command:
+          - /bin/sh
+          - -c
+        args:
+          - "cat $(workspaces.source.path)/README.md"
+    - name: go-test
+      predefinedTask:
+        name: go-test
+        params:
+          packages: " ./..."
+    - name: golangci-lint
+      predefinedTask:
+        name: golangci-lint
+        params:
+          packages: " ./..."
+          flags:
+            - --verbose
+    - name: build-image
+      predefinedTask:
+        name: kaniko
+        params:
+          image-name: "ghcr.io/kurator-dev/podinfo:test-version"
+          extra-args:
+            - --skip-tls-verify
+    - name: echo-image-digest
+      customTask:
+        image: ubuntu
+        script: |
+          echo $(params.digest)
+          case .$(params.digest) in
+            ".sha"*) exit 0 ;;
+            *)       echo "Digest value is not correct" && exit 1 ;;
+          esac
