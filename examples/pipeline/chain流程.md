@@ -24,7 +24,7 @@ cosign generate-key-pair k8s://tekton-chains/signing-secrets
 ### 配置 镜像仓库认证
 
 ```
-docker login ghcr.io -u xieql -p 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
+docker login ghcr.io -u xieql -p xxx
 ```
 
 登录成功后会有一个提示
