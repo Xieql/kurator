@@ -107,14 +107,13 @@ func (p *PipelineManager) reconcilePipeline(ctx context.Context, pipeline *pipel
 		PipelineNamespace: pipeline.Namespace,
 	}
 
-	//// rbac 必须先于其他资源创建。之后，pipeline、task、triggers 等资源在创建阶段，不严格要求创建顺序。在使用阶段，需要确保所有资源创建完成
-	//if !p.isRBACResourceReady(ctx, rbacConfig) {
-	//
-	//}
-	result, err1 := p.reconcileCreateRBAC(ctx, rbacConfig)
-	time.Sleep(1 * time.Second)
-	if err1 != nil || result.Requeue || result.RequeueAfter > 0 {
-		return result, err1
+	// rbac 必须先于其他资源创建。之后，pipeline、task、triggers 等资源在创建阶段，不严格要求创建顺序。在使用阶段，需要确保所有资源创建完成
+	if !p.isRBACResourceReady(ctx, rbacConfig) {
+		result, err1 := p.reconcileCreateRBAC(ctx, rbacConfig)
+		time.Sleep(1 * time.Second)
+		if err1 != nil || result.Requeue || result.RequeueAfter > 0 {
+			return result, err1
+		}
 	}
 
 	// Apply Tekton tasks,
