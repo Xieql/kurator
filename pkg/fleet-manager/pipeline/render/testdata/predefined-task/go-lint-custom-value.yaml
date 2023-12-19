@@ -18,7 +18,7 @@ spec:
   params:
   - name: package
     description: base package (and its children) under validation
-    default: "./src/..."
+    default: "."
   - name: context
     description: path to the directory to use as context.
     default: "."

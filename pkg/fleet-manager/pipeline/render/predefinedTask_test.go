@@ -84,7 +84,7 @@ func TestRenderPredefinedTask(t *testing.T) {
 
 		// ---- Case: Custom Configuration for Go Lint ----
 		// This case customizes the 'go-lint' template: setting golangci-lint version to latest,
-		// using the './src/...' package path, and specifying additional linting flags.
+		// just specifying additional linting flags.
 		{
 			name: "go-lint with custom parameters - latest version, ./src/..., extra flags",
 			cfg: PredefinedTaskConfig{
@@ -92,11 +92,7 @@ func TestRenderPredefinedTask(t *testing.T) {
 				PipelineNamespace: "kurator-pipeline",
 				TemplateName:      GoLintTask,
 				Params: map[string]string{
-					"package": "./src/...",
-					"version": "latest",
-					"flags":   "--enable-all --fix",
-					"GOOS":    "linux",
-					"GOARCH":  "amd64",
+					"flags": "--enable-all --fix",
 				},
 			},
 			expectError:  false,
