@@ -21,6 +21,7 @@ import (
 	v1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	utilerrors "k8s.io/apimachinery/pkg/util/errors"
@@ -105,6 +106,7 @@ func (p *PipelineManager) reconcilePipeline(ctx context.Context, pipeline *pipel
 	rbacConfig := render.RBACConfig{
 		PipelineName:      pipeline.Name,
 		PipelineNamespace: pipeline.Namespace,
+		OwnerReference:    generatePipelineOwnerRef(pipeline),
 	}
 
 	// rbac 必须先于其他资源创建。之后，pipeline、task、triggers 等资源在创建阶段，不严格要求创建顺序。在使用阶段，需要确保所有资源创建完成
@@ -326,4 +328,13 @@ func (p *PipelineManager) isRBACResourceReady(ctx context.Context, rbacConfig re
 	}
 	// If all resources are found, return true
 	return true
+}
+
+func generatePipelineOwnerRef(pipeline *pipelineapi.Pipeline) metav1.OwnerReference {
+	return metav1.OwnerReference{
+		APIVersion: pipeline.APIVersion,
+		Kind:       pipeline.Kind,
+		Name:       pipeline.Name,
+		UID:        pipeline.UID,
+	}
 }

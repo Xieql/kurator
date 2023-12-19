@@ -33,7 +33,7 @@ const (
 	GitCloneTask = "git-clone"
 )
 
-var manifestFS = manifests.BuiltinOrDir("manifests/rbac/")
+var manifestFS = manifests.BuiltinOrDir("manifests")
 
 // renderTemplate reads, parses, and renders a template file using the provided configuration data.
 func renderTemplate(fsys fs.FS, tplFileName, tplName string, cfg interface{}) ([]byte, error) {

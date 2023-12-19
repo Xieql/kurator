@@ -19,6 +19,7 @@ package render
 import (
 	"fmt"
 	"io/fs"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 const (
@@ -34,6 +35,7 @@ const (
 type RBACConfig struct {
 	PipelineName      string // Name of the pipeline.
 	PipelineNamespace string // Kubernetes namespace where the pipeline is deployed.
+	OwnerReference    *metav1.OwnerReference
 }
 
 // ServiceAccountName generates the service account name using the pipeline name \
