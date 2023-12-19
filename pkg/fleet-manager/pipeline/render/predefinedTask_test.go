@@ -110,8 +110,8 @@ func TestRenderPredefinedTask(t *testing.T) {
 		{
 			name: "advanced go-lint custom configuration - version 1.25.0, ./cmd/..., specific flags",
 			cfg: PredefinedTaskConfig{
-				PipelineName:      "advanced-test-pipeline",
-				PipelineNamespace: "advanced-kurator-pipeline",
+				PipelineName:      "test-pipeline",
+				PipelineNamespace: "kurator-pipeline",
 				TemplateName:      GoLintTask,
 				Params: map[string]string{
 					"package": "./cmd/...",
