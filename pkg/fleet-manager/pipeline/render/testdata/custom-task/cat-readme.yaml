@@ -9,12 +9,13 @@ spec:
     The workspace is automatically and exclusively created named "source",
     and assigned to the workspace of the pipeline in which this task is located.
   workspaces:
-    - name: source
-      description: The workspace where user to run user-custom task.
+  - name: source
+    description: The workspace where user to run user-custom task.
   steps:
-    - name: cat-readme-test-pipeline
-      image: zshusers/zsh:4.3.15
-      script: |
-        #!/usr/bin/env zsh
-        cat $(workspaces.source.path)/README.md
-        ...
+  - name: cat-readme-test-pipeline
+    image: zshusers/zsh:4.3.15
+    command:
+    - /bin/sh
+    - -c
+    args:
+    - cat $(workspaces.source.path)/README.md

@@ -98,13 +98,13 @@ func generateTaskInfo(taskName, taskRefer, lastTask string, retries int) string 
 	var taskBuilder strings.Builder
 
 	// define task name and reference
-	fmt.Fprintf(&taskBuilder, "  - name: %s\n      taskRef:\n        name: %s\n", taskName, taskRefer)
+	fmt.Fprintf(&taskBuilder, "- name: %s\n    taskRef:\n      name: %s\n", taskName, taskRefer)
 
 	// dpecify dependency on the preceding task
-	fmt.Fprintf(&taskBuilder, "      runAfter: [\"%s\"]\n", lastTask)
+	fmt.Fprintf(&taskBuilder, "    runAfter: [\"%s\"]\n", lastTask)
 
 	// add fixed workspace configuration
-	taskBuilder.WriteString("      workspaces:\n        - name: source\n          workspace: kurator-pipeline-shared-data\n")
+	taskBuilder.WriteString("    workspaces:\n    - name: source\n      workspace: kurator-pipeline-shared-data\n")
 
 	// Include retry configuration if applicable
 	if retries > 0 {

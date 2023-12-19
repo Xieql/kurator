@@ -43,9 +43,13 @@ func TestRenderCustomTask(t *testing.T) {
 				PipelineName:      "test-pipeline",
 				PipelineNamespace: "default",
 				Image:             "zshusers/zsh:4.3.15",
-				// TODO: ???
-				Script: "#!/usr/bin/env zsh\n" +
-					"        cat $(workspaces.source.path)/README.md",
+				Command: []string{
+					"/bin/sh",
+					"-c",
+				},
+				Args: []string{
+					"cat $(workspaces.source.path)/README.md",
+				},
 			},
 			expectError:  false,
 			expectedFile: "cat-readme.yaml",
@@ -54,6 +58,7 @@ func TestRenderCustomTask(t *testing.T) {
 			name: "minimal-configuration",
 			cfg: CustomTaskConfig{
 				TaskName:          "minimal-task",
+				PipelineName:      "test-pipeline",
 				PipelineNamespace: "default",
 				Image:             "alpine:latest",
 			},
@@ -97,6 +102,7 @@ func TestRenderCustomTask(t *testing.T) {
 			name: "with-environment-variables-test-pipeline",
 			cfg: CustomTaskConfig{
 				TaskName:          "env-task",
+				PipelineName:      "test-pipeline",
 				PipelineNamespace: "default",
 				Image:             "node:14",
 				Env:               []corev1.EnvVar{{Name: "NODE_ENV", Value: "production"}},
@@ -108,6 +114,7 @@ func TestRenderCustomTask(t *testing.T) {
 			name: "with-resource-requirements-test-pipeline",
 			cfg: CustomTaskConfig{
 				TaskName:          "resource-task",
+				PipelineName:      "test-pipeline",
 				PipelineNamespace: "default",
 				Image:             "golang:1.16",
 				ResourceRequirements: &corev1.ResourceRequirements{
@@ -128,6 +135,7 @@ func TestRenderCustomTask(t *testing.T) {
 			name: "with-commands-and-arguments-test-pipeline",
 			cfg: CustomTaskConfig{
 				TaskName:          "cmd-args",
+				PipelineName:      "test-pipeline",
 				PipelineNamespace: "default",
 				Image:             "ubuntu:latest",
 				Command:           []string{"/bin/bash", "-c"},
