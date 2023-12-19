@@ -10,6 +10,8 @@ metadata:
     name: "{{ .OwnerReference.Name }}"
     uid: "{{ .OwnerReference.UID }}"
 {{- end }}
+secrets:
+  - name: "registry-credentials"
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding

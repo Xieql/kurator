@@ -1,30 +1,20 @@
 apiVersion: v1
 kind: ServiceAccount
 metadata:
-  name: "example-with-owner"
-  namespace: "default"
-  ownerReferences:
-  - apiVersion: "v1"
-    kind: "Deployment"
-    name: "example-deployment"
-    uid: "12345678-1234-1234-1234-123456789abc"
+  name: "chain-test"
+  namespace: "chain-test"
 secrets:
   - name: "registry-credentials"
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
 metadata:
-  name: "example-with-owner-broad-resource"
-  namespace: "default"
-  ownerReferences:
-  - apiVersion: "v1"
-    kind: "Deployment"
-    name: "example-deployment"
-    uid: "12345678-1234-1234-1234-123456789abc"
+  name: "example"
+  namespace: "chain-test"
 subjects:
-- kind: ServiceAccount
-  name: "example-with-owner"
-  namespace: "default"
+  - kind: ServiceAccount
+    name: "example"
+    namespace: "chain-test"
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
@@ -33,17 +23,12 @@ roleRef:
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
-  name: "example-with-owner-secret"
-  namespace: "default"
-  ownerReferences:
-  - apiVersion: "v1"
-    kind: "Deployment"
-    name: "example-deployment"
-    uid: "12345678-1234-1234-1234-123456789abc"
+  name: "example"
+  namespace: "chain-test"
 subjects:
-- kind: ServiceAccount
-  name: "example-with-owner"
-  namespace: "default"
+  - kind: ServiceAccount
+    name: "example"
+    namespace: "chain-test"
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole

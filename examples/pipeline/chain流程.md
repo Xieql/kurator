@@ -83,6 +83,7 @@ metadata:
   name: kaniko-run
   namespace: chain-test
 spec:
+  serviceaccount: 
   taskRef:
     name: kaniko-chains
   params:
@@ -94,9 +95,6 @@ spec:
   - name: dockerconfig
     secret:
       secretName: registry-credentials
-  podTemplate:
-    imagePullSecrets:
-    - name: chain-credentials
 " | kubectl apply -f - -n chain-test
 
 ```
@@ -282,6 +280,11 @@ echo 'eyJfdHlwZSI6Imh0dHBzOi8vaW4tdG90by5pby9TdGF0ZW1lbnQvdjAuMSIsInByZWRpY2F0ZV
 
 
 ## clean up
+
+删除ns
+```
+k delete ns tekton-chains
+```
 
 删除cosign密钥
 ```

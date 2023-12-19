@@ -32,7 +32,8 @@ const (
 	GoTestTask = "go-test"
 	// GitCloneTask is the predefined task template name of git clone task
 	GitCloneTask = "git-clone"
-	GoLintTask   = "go-lint"
+	// GoLintTask is the predefined task template name of golangci lint task
+	GoLintTask = "go-lint"
 )
 
 var manifestFS = manifests.BuiltinOrDir("manifests")
