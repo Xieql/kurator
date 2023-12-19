@@ -1,8 +1,8 @@
 apiVersion: tekton.dev/v1beta1
 kind: Task
 metadata:
-  name: {{ .PredefinedTaskName }}
-  namespace: { { .PipelineNamespace } }
+  name: go-lint-test-pipeline
+  namespace: kurator-pipeline
   labels:
     app.kubernetes.io/version: "0.2"
   annotations:
@@ -11,13 +11,6 @@ metadata:
     tekton.dev/tags: lint
     tekton.dev/displayName: "golangci lint"
     tekton.dev/platforms: "linux/amd64"
-{{- if .OwnerReference }}
-  ownerReferences:
-  - apiVersion: "{{ .OwnerReference.APIVersion }}"
-    kind: "{{ .OwnerReference.Kind }}"
-    name: "{{ .OwnerReference.Name }}"
-    uid: "{{ .OwnerReference.UID }}"
-{{- end }}
 spec:
   description: >-
     This Task is Golang task to validate Go projects.
@@ -25,34 +18,34 @@ spec:
   params:
   - name: package
     description: base package (and its children) under validation
-    default: "{{ default `.` .Params.package }}"
+    default: "./src/..."
   - name: context
     description: path to the directory to use as context.
-    default: "{{ default `.` .Params.context }}"
+    default: "."
   - name: flags
-    description: flags to use for the test command
-    default: "{{ default `--verbose` .Params.flags }}"
+    description: flags to use for the lint command
+    default: "--enable-all --fix"
   - name: version
     description: golangci-lint version to use
-    default: "{{ default `latest` .Params.version }}"
+    default: "latest"
   - name: GOOS
     description: "running program's operating system target"
-    default: "{{ default `linux` .Params.GOOS }}"
+    default: "linux"
   - name: GOARCH
     description: "running program's architecture target"
-    default: "{{ default `amd64` .Params.GOARCH }}"
+    default: "amd64"
   - name: GO111MODULE
     description: "value of module support"
-    default: "{{ default `auto` .Params.GO111MODULE }}"
+    default: "auto"
   - name: GOCACHE
     description: "Go caching directory path"
-    default: "{{ default `` .Params.GOCACHE }}"
+    default: ""
   - name: GOMODCACHE
     description: "Go mod caching directory path"
-    default: "{{ default `` .Params.GOMODCACHE }}"
+    default: ""
   - name: GOLANGCI_LINT_CACHE
     description: "golangci-lint cache path"
-    default: "{{ default `` .Params.GOLANGCI_LINT_CACHE }}"
+    default: ""
   workspaces:
   - name: source
     mountPath: /workspace/src/$(params.package)

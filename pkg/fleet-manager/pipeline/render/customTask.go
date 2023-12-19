@@ -30,7 +30,7 @@ const (
 )
 
 type CustomTaskConfig struct {
-	CustomTaskName       string
+	TaskName             string
 	PipelineName         string
 	PipelineNamespace    string
 	Image                string
@@ -42,11 +42,15 @@ type CustomTaskConfig struct {
 	OwnerReference       *metav1.OwnerReference
 }
 
+// CustomTaskName is the name of Predefined task object, in case different pipeline have the same name task.
+func (cfg CustomTaskConfig) CustomTaskName() string {
+	return generatePipelineTaskName(cfg.TaskName, cfg.PipelineName)
+}
+
 // RenderCustomTaskWithPipeline renders the full CustomTask configuration as a YAML byte array using **pipelineapi.CustomTask**.
 func RenderCustomTaskWithPipeline(fsys fs.FS, taskName, pipelineName, pipelineNamespace string, task pipelineapi.CustomTask, ownerReference *metav1.OwnerReference) ([]byte, error) {
 	cfg := CustomTaskConfig{
-		// in case different pipeline have the same name task.
-		CustomTaskName:       generatePipelineTaskName(taskName, pipelineName),
+		TaskName:             taskName,
 		PipelineName:         pipelineName,
 		PipelineNamespace:    pipelineNamespace,
 		Image:                task.Image,
@@ -63,7 +67,7 @@ func RenderCustomTaskWithPipeline(fsys fs.FS, taskName, pipelineName, pipelineNa
 
 // RenderCustomTaskWithConfig renders the full CustomTask configuration as a YAML byte array using **CustomTaskConfig**.
 func RenderCustomTaskWithConfig(fsys fs.FS, cfg CustomTaskConfig) ([]byte, error) {
-	if cfg.Image == "" || cfg.CustomTaskName == "" {
+	if cfg.Image == "" || cfg.CustomTaskName() == "" {
 		return nil, fmt.Errorf("invalid RBACConfig: PipelineName and PipelineNamespace must not be empty")
 	}
 	return renderTemplate(fsys, CustomTaskTemplateFile, CustomTaskTemplateName, cfg)

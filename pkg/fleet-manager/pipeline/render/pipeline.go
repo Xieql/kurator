@@ -66,7 +66,7 @@ func renderPipeline(fsys fs.FS, cfg PipelineConfig) ([]byte, error) {
 
 // GenerateTasksInfo constructs TasksInfo, detailing the integration of tasks into a given pipeline.
 // 这个方法这样实现的原因在于 我们 要求第一个任务必须固定为 git clone。
-// TODO: 重构方法，现在的可读性太差了。可以在模板中分别填写，两种任务这里的格式没区别，可以用数组完成
+// TODO: 重构方法，现在的可读性太差了。可以尝试在模板中分别填写，两种任务这里的格式没区别，可以用数组完成
 func GenerateTasksInfo(pipelineName string, tasks []pipelineapi.PipelineTask) (string, error) {
 	var tasksBuilder strings.Builder
 	// lastTask record the current taskAfter task. git-clone always the first task, so it will be the lastTask for second task.

@@ -39,7 +39,7 @@ func TestRenderCustomTask(t *testing.T) {
 		{
 			name: "cat-readme",
 			cfg: CustomTaskConfig{
-				CustomTaskName:    "cat-readme-test-pipeline",
+				TaskName:          "cat-readme",
 				PipelineName:      "test-pipeline",
 				PipelineNamespace: "default",
 				Image:             "zshusers/zsh:4.3.15",
@@ -53,7 +53,7 @@ func TestRenderCustomTask(t *testing.T) {
 		{
 			name: "minimal-configuration",
 			cfg: CustomTaskConfig{
-				CustomTaskName:    "minimal-task-test-pipeline",
+				TaskName:          "minimal-task",
 				PipelineNamespace: "default",
 				Image:             "alpine:latest",
 			},
@@ -63,7 +63,7 @@ func TestRenderCustomTask(t *testing.T) {
 		{
 			name: "complete-configuration",
 			cfg: CustomTaskConfig{
-				CustomTaskName:    "complete-task-test-pipeline",
+				TaskName:          "complete-task",
 				PipelineName:      "test-pipeline",
 				PipelineNamespace: "default",
 				Image:             "python:3.8",
@@ -96,7 +96,7 @@ func TestRenderCustomTask(t *testing.T) {
 		{
 			name: "with-environment-variables-test-pipeline",
 			cfg: CustomTaskConfig{
-				CustomTaskName:    "env-task-test-pipeline",
+				TaskName:          "env-task",
 				PipelineNamespace: "default",
 				Image:             "node:14",
 				Env:               []corev1.EnvVar{{Name: "NODE_ENV", Value: "production"}},
@@ -107,7 +107,7 @@ func TestRenderCustomTask(t *testing.T) {
 		{
 			name: "with-resource-requirements-test-pipeline",
 			cfg: CustomTaskConfig{
-				CustomTaskName:    "resource-task-test-pipeline",
+				TaskName:          "resource-task",
 				PipelineNamespace: "default",
 				Image:             "golang:1.16",
 				ResourceRequirements: &corev1.ResourceRequirements{
@@ -127,7 +127,7 @@ func TestRenderCustomTask(t *testing.T) {
 		{
 			name: "with-commands-and-arguments-test-pipeline",
 			cfg: CustomTaskConfig{
-				CustomTaskName:    "cmd-args-task-test-pipeline",
+				TaskName:          "cmd-args",
 				PipelineNamespace: "default",
 				Image:             "ubuntu:latest",
 				Command:           []string{"/bin/bash", "-c"},

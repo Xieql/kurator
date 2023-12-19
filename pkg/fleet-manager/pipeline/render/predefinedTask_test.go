@@ -82,6 +82,49 @@ func TestRenderPredefinedTask(t *testing.T) {
 			expectedFile: "go-test-custom-value.yaml",
 		},
 
+		// ---- Case: Custom Configuration for Go Lint ----
+		// This case customizes the 'go-lint' template: setting golangci-lint version to latest,
+		// using the './src/...' package path, and specifying additional linting flags.
+		{
+			name: "go-lint with custom parameters - latest version, ./src/..., extra flags",
+			cfg: PredefinedTaskConfig{
+				PipelineName:      "test-pipeline",
+				PipelineNamespace: "kurator-pipeline",
+				TemplateName:      GoLintTask,
+				Params: map[string]string{
+					"package": "./src/...",
+					"version": "latest",
+					"flags":   "--enable-all --fix",
+					"GOOS":    "linux",
+					"GOARCH":  "amd64",
+				},
+			},
+			expectError:  false,
+			expectedFile: "go-lint-custom-value.yaml",
+		},
+
+		// ---- Case: Advanced Custom Configuration for Go Lint ----
+		// This case customizes the 'go-lint' template for a more complex scenario: setting
+		// golangci-lint version to a specific older version (1.25.0), targeting a specific
+		// package path './cmd/...', and specifying custom linting flags for that context.
+		{
+			name: "advanced go-lint custom configuration - version 1.25.0, ./cmd/..., specific flags",
+			cfg: PredefinedTaskConfig{
+				PipelineName:      "advanced-test-pipeline",
+				PipelineNamespace: "advanced-kurator-pipeline",
+				TemplateName:      GoLintTask,
+				Params: map[string]string{
+					"package": "./cmd/...",
+					"version": "1.25.0",
+					"flags":   "--enable=govet --enable=errcheck",
+					"GOOS":    "linux",
+					"GOARCH":  "arm",
+				},
+			},
+			expectError:  false,
+			expectedFile: "go-lint-advanced-config.yaml",
+		},
+
 		// TODO: Add more test cases here for different task templates or configurations...
 	}
 
