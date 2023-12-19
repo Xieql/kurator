@@ -18,6 +18,8 @@ import (
 	"fmt"
 	"github.com/pkg/errors"
 	"io/fs"
+	"time"
+
 	v1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -25,16 +27,16 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	utilerrors "k8s.io/apimachinery/pkg/util/errors"
-	pipelineapi "kurator.dev/kurator/pkg/apis/pipeline/v1alpha1"
-	"kurator.dev/kurator/pkg/fleet-manager/pipeline/render"
-	"kurator.dev/kurator/pkg/fleet-manager/pipeline/render/manifests"
-	"kurator.dev/kurator/pkg/infra/util"
 	"sigs.k8s.io/cluster-api/util/patch"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
-	"time"
+
+	pipelineapi "kurator.dev/kurator/pkg/apis/pipeline/v1alpha1"
+	"kurator.dev/kurator/pkg/fleet-manager/pipeline/render"
+	"kurator.dev/kurator/pkg/fleet-manager/pipeline/render/manifests"
+	"kurator.dev/kurator/pkg/infra/util"
 )
 
 const (
@@ -330,8 +332,8 @@ func (p *PipelineManager) isRBACResourceReady(ctx context.Context, rbacConfig re
 	return true
 }
 
-func generatePipelineOwnerRef(pipeline *pipelineapi.Pipeline) metav1.OwnerReference {
-	return metav1.OwnerReference{
+func generatePipelineOwnerRef(pipeline *pipelineapi.Pipeline) *metav1.OwnerReference {
+	return &metav1.OwnerReference{
 		APIVersion: pipeline.APIVersion,
 		Kind:       pipeline.Kind,
 		Name:       pipeline.Name,
