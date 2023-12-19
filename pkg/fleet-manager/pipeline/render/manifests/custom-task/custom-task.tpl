@@ -3,6 +3,13 @@ kind: Task
 metadata:
   name: {{ .CustomTaskName }}
   namespace: {{ .PipelineNamespace }}
+{{- if .OwnerReference }}
+  ownerReferences:
+  - apiVersion: "{{ .OwnerReference.APIVersion }}"
+    kind: "{{ .OwnerReference.Kind }}"
+    name: "{{ .OwnerReference.Name }}"
+    uid: "{{ .OwnerReference.UID }}"
+{{- end }}
 spec:
   description: >-
     This task is a user-custom, single-step task.

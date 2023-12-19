@@ -20,6 +20,7 @@ import (
 	"fmt"
 	"io/fs"
 	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	pipelineapi "kurator.dev/kurator/pkg/apis/pipeline/v1alpha1"
 )
 
@@ -38,9 +39,11 @@ type CustomTaskConfig struct {
 	Env                  []corev1.EnvVar
 	ResourceRequirements *corev1.ResourceRequirements
 	Script               string
+	OwnerReference       *metav1.OwnerReference
 }
 
-func RenderCustomTaskWithPipeline(fsys fs.FS, taskName, pipelineName, pipelineNamespace string, task pipelineapi.CustomTask) ([]byte, error) {
+// RenderCustomTaskWithPipeline renders the full CustomTask configuration as a YAML byte array using **pipelineapi.CustomTask**.
+func RenderCustomTaskWithPipeline(fsys fs.FS, taskName, pipelineName, pipelineNamespace string, task pipelineapi.CustomTask, ownerReference *metav1.OwnerReference) ([]byte, error) {
 	cfg := CustomTaskConfig{
 		// in case different pipeline have the same name task.
 		CustomTaskName:       generatePipelineTaskName(taskName, pipelineName),
@@ -52,11 +55,13 @@ func RenderCustomTaskWithPipeline(fsys fs.FS, taskName, pipelineName, pipelineNa
 		Env:                  task.Env,
 		ResourceRequirements: task.ResourceRequirements,
 		Script:               task.Script,
+		OwnerReference:       ownerReference,
 	}
-	
+
 	return renderTemplate(fsys, CustomTaskTemplateFile, CustomTaskTemplateName, cfg)
 }
 
+// RenderCustomTaskWithConfig renders the full CustomTask configuration as a YAML byte array using **CustomTaskConfig**.
 func RenderCustomTaskWithConfig(fsys fs.FS, cfg CustomTaskConfig) ([]byte, error) {
 	if cfg.Image == "" || cfg.CustomTaskName == "" {
 		return nil, fmt.Errorf("invalid RBACConfig: PipelineName and PipelineNamespace must not be empty")

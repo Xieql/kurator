@@ -3,6 +3,13 @@ kind: TriggerTemplate
 metadata:
   name: {{ .PipelineName }}-triggertemplate
   namespace: {{ .PipelineNamespace }}
+{{- if .OwnerReference }}
+  ownerReferences:
+  - apiVersion: "{{ .OwnerReference.APIVersion }}"
+    kind: "{{ .OwnerReference.Kind }}"
+    name: "{{ .OwnerReference.Name }}"
+    uid: "{{ .OwnerReference.UID }}"
+{{- end }}
 spec:
   params:
     - name: gitrevision
@@ -44,6 +51,13 @@ kind: TriggerBinding
 metadata:
   name: {{ .PipelineName }}-triggerbinding
   namespace: {{ .PipelineNamespace}}
+{{- if .OwnerReference }}
+  ownerReferences:
+  - apiVersion: "{{ .OwnerReference.APIVersion }}"
+    kind: "{{ .OwnerReference.Kind }}"
+    name: "{{ .OwnerReference.Name }}"
+    uid: "{{ .OwnerReference.UID }}"
+{{- end }}
 spec:
   params:
     - name: gitrevision
@@ -58,6 +72,13 @@ kind: EventListener
 metadata:
   name: {{ .PipelineName }}-listener
   namespace: {{ .PipelineNamespace}}
+{{- if .OwnerReference }}
+  ownerReferences:
+  - apiVersion: "{{ .OwnerReference.APIVersion }}"
+    kind: "{{ .OwnerReference.Kind }}"
+    name: "{{ .OwnerReference.Name }}"
+    uid: "{{ .OwnerReference.UID }}"
+{{- end }}
 spec:
   serviceAccountName: {{ .ServiceAccountName }}
   triggers:

@@ -18,25 +18,38 @@ package render
 
 import (
 	"io/fs"
+	pipelineapi "kurator.dev/kurator/pkg/apis/pipeline/v1alpha1"
+
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 type PredefinedTaskConfig struct {
-	PipelineName      string
-	PipelineNamespace string
-	// TaskName is set by user in `Pipeline.Tasks[i].Name`
-	TaskName string
+	PredefinedTaskName string
+	PipelineName       string
+	PipelineNamespace  string
 	// TemplateName is set by user in `Pipeline.Tasks[i].PredefinedTask.Name`
 	TemplateName string
 	// Params is set by user in `Pipeline.Tasks[i].PredefinedTask.Params`
-	Params map[string]string
+	Params         map[string]string
+	OwnerReference *metav1.OwnerReference
 }
 
-// PredefinedTaskName generates the Tekton Task resource name for the predefined task
-func (cfg PredefinedTaskConfig) PredefinedTaskName() string {
-	return cfg.TaskName + "-" + cfg.PipelineName
+// RenderPredefinedTaskWithPipeline renders the full PredefinedTask configuration as a YAML byte array using **pipelineapi.CustomTask**.
+func RenderPredefinedTaskWithPipeline(fsys fs.FS, taskName, pipelineName, pipelineNamespace string, task pipelineapi.PredefinedTask, ownerReference *metav1.OwnerReference) ([]byte, error) {
+	cfg := PredefinedTaskConfig{
+		// in case different pipeline have the same name task.
+		PredefinedTaskName: generatePipelineTaskName(taskName, pipelineName),
+		PipelineName:       pipelineName,
+		PipelineNamespace:  pipelineNamespace,
+		TemplateName:       string(task.Name),
+		Params:             task.Params,
+		OwnerReference:     ownerReference,
+	}
+
+	return renderTemplate(fsys, CustomTaskTemplateFile, CustomTaskTemplateName, cfg)
 }
 
-// RenderPredefinedTask renders the PredefinedTask configuration using a specified template.
+// RenderPredefinedTask renders the full PredefinedTask configuration as a YAML byte array using **PredefinedTaskConfig**.
 func RenderPredefinedTask(fsys fs.FS, cfg PredefinedTaskConfig) ([]byte, error) {
 	return renderTemplate(fsys, generateTaskTemplateFileName(cfg.TemplateName), generateTaskTemplateName(cfg.TemplateName), cfg)
 }

@@ -40,7 +40,6 @@ func TestRenderPredefinedTask(t *testing.T) {
 			cfg: PredefinedTaskConfig{
 				PipelineName:      "test-pipeline",
 				PipelineNamespace: "kurator-pipeline",
-				TaskName:          "git-clone",
 				TemplateName:      "git-clone",
 				Params:            map[string]string{},
 			},
@@ -56,7 +55,6 @@ func TestRenderPredefinedTask(t *testing.T) {
 			cfg: PredefinedTaskConfig{
 				PipelineName:      "test-pipeline",
 				PipelineNamespace: "default",
-				TaskName:          GoTestTask,
 				TemplateName:      GoTestTask,
 				Params:            map[string]string{},
 			},
@@ -72,7 +70,6 @@ func TestRenderPredefinedTask(t *testing.T) {
 			cfg: PredefinedTaskConfig{
 				PipelineName:      "test-pipeline",
 				PipelineNamespace: "kurator-pipeline",
-				TaskName:          GoTestTask,
 				TemplateName:      GoTestTask,
 				Params: map[string]string{
 					"packages": "./pkg/...",

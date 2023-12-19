@@ -3,6 +3,13 @@ kind: Pipeline
 metadata:
   name: {{ .PipelineName}}
   namespace: {{ .PipelineNamespace }}
+{{- if .OwnerReference }}
+  ownerReferences:
+  - apiVersion: "{{ .OwnerReference.APIVersion }}"
+    kind: "{{ .OwnerReference.Kind }}"
+    name: "{{ .OwnerReference.Name }}"
+    uid: "{{ .OwnerReference.UID }}"
+{{- end }}
 spec:
   description: |
     This is a universal pipeline with the following settings: 

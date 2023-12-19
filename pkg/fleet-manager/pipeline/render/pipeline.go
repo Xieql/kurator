@@ -19,6 +19,7 @@ package render
 import (
 	"fmt"
 	"io/fs"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"strings"
 
 	pipelineapi "kurator.dev/kurator/pkg/apis/pipeline/v1alpha1"
@@ -37,11 +38,12 @@ type PipelineConfig struct {
 	PipelineNamespace string
 
 	// TasksInfo contains the necessary information to integrate tasks into the pipeline.
-	TasksInfo string
+	TasksInfo      string
+	OwnerReference *metav1.OwnerReference
 }
 
 // RenderPipelineWithTasks renders the full pipeline configuration as a YAML byte array using a specified template and **Pipeline.Tasks**.
-func RenderPipelineWithTasks(fsys fs.FS, pipelineName, pipelineNameSpace string, tasks []pipelineapi.PipelineTask) ([]byte, error) {
+func RenderPipelineWithTasks(fsys fs.FS, pipelineName, pipelineNameSpace string, tasks []pipelineapi.PipelineTask, ownerReference *metav1.OwnerReference) ([]byte, error) {
 	tasksInfo, err := GenerateTasksInfo(pipelineName, tasks)
 	if err != nil {
 		return nil, err
@@ -51,6 +53,7 @@ func RenderPipelineWithTasks(fsys fs.FS, pipelineName, pipelineNameSpace string,
 		PipelineName:      pipelineName,
 		PipelineNamespace: pipelineNameSpace,
 		TasksInfo:         tasksInfo,
+		OwnerReference:    ownerReference,
 	}
 
 	return renderPipeline(fsys, cfg)

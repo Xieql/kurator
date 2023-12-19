@@ -18,6 +18,7 @@ package render
 
 import (
 	"io/fs"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 const (
@@ -28,6 +29,7 @@ const (
 type TriggerConfig struct {
 	PipelineName      string
 	PipelineNamespace string
+	OwnerReference    *metav1.OwnerReference
 }
 
 // ServiceAccountName is the service account used by trigger

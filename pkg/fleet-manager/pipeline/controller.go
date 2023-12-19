@@ -209,9 +209,9 @@ func (p *PipelineManager) createPredefinedTask(ctx context.Context, task pipelin
 	cfg := render.PredefinedTaskConfig{
 		PipelineName:      pipeline.Name,
 		PipelineNamespace: pipeline.Namespace,
-		TaskName:          task.Name,
 		TemplateName:      string(task.PredefinedTask.Name),
 		Params:            nil,
+		OwnerReference:    generatePipelineOwnerRef(pipeline),
 	}
 
 	manifestFileSystem := manifests.BuiltinOrDir("")
@@ -233,7 +233,7 @@ func (p *PipelineManager) createCustomTask(ctx context.Context, task pipelineapi
 	log.Info("~~~~~~~~~~~~~~~~~~~createCustomTask ", "pipeline", ctx)
 
 	manifestFileSystem := manifests.BuiltinOrDir("")
-	taskResource, err := render.RenderCustomTaskWithPipeline(manifestFileSystem, task.Name, pipeline.Name, pipeline.Namespace, *task.CustomTask)
+	taskResource, err := render.RenderCustomTaskWithPipeline(manifestFileSystem, task.Name, pipeline.Name, pipeline.Namespace, *task.CustomTask, generatePipelineOwnerRef(pipeline))
 	if err != nil {
 		return err
 	}
@@ -250,7 +250,7 @@ func (p *PipelineManager) reconcileCreatePipeline(ctx context.Context, pipeline 
 	log := ctrl.LoggerFrom(ctx)
 	log.Info("~~~~~~~~~~~~~~~~~~~reconcileCreatePipeline ", "pipeline", ctx)
 	manifestFileSystem := manifests.BuiltinOrDir("")
-	pipelineResource, err := render.RenderPipelineWithTasks(manifestFileSystem, pipeline.Name, pipeline.Namespace, pipeline.Spec.Tasks)
+	pipelineResource, err := render.RenderPipelineWithTasks(manifestFileSystem, pipeline.Name, pipeline.Namespace, pipeline.Spec.Tasks, generatePipelineOwnerRef(pipeline))
 	if err != nil {
 		return ctrl.Result{}, err
 	}
@@ -272,6 +272,7 @@ func (p *PipelineManager) reconcileCreateTrigger(ctx context.Context, pipeline *
 	cfg := render.TriggerConfig{
 		PipelineName:      pipeline.Name,
 		PipelineNamespace: pipeline.Namespace,
+		OwnerReference:    generatePipelineOwnerRef(pipeline),
 	}
 	triggerResource, err := render.RenderTrigger(manifestFileSystem, cfg)
 	if err != nil {

@@ -19,11 +19,12 @@ package render
 import (
 	"bytes"
 	"io/fs"
-	"kurator.dev/kurator/pkg/fleet-manager/pipeline/render/manifests"
 	"text/template"
 
 	"github.com/Masterminds/sprig/v3"
 	"sigs.k8s.io/yaml"
+
+	"kurator.dev/kurator/pkg/fleet-manager/pipeline/render/manifests"
 )
 
 const (
