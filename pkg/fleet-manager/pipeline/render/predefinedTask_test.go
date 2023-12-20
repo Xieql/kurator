@@ -17,6 +17,7 @@ limitations under the License.
 package render
 
 import (
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"os"
 	"testing"
 
@@ -91,9 +92,7 @@ func TestRenderPredefinedTask(t *testing.T) {
 				PipelineName:      "test-pipeline",
 				PipelineNamespace: "kurator-pipeline",
 				TemplateName:      GoLintTask,
-				Params: map[string]string{
-					"flags": "--enable-all --fix",
-				},
+				Params:            map[string]string{},
 			},
 			expectError:  false,
 			expectedFile: "go-lint-custom-value.yaml",
@@ -119,6 +118,27 @@ func TestRenderPredefinedTask(t *testing.T) {
 			},
 			expectError:  false,
 			expectedFile: "go-lint-advanced-config.yaml",
+		},
+
+		// ---- Case: default Configuration for build and upload image ----
+		{
+			name: "Custom Configuration for Kaniko Build Task",
+			cfg: PredefinedTaskConfig{
+				PipelineName:      "test-pipeline",
+				PipelineNamespace: "kurator-pipeline",
+				TemplateName:      BuildPushImage,
+				Params: map[string]string{
+					"IMAGE": "ghcr.io/test-orz/test-image:0.3.1",
+				},
+				OwnerReference: &metav1.OwnerReference{
+					APIVersion: "v1",
+					Kind:       "Deployment",
+					Name:       "example-deployment",
+					UID:        "22345678-1234-1234-1234-123456789abc",
+				},
+			},
+			expectError:  false,
+			expectedFile: "build-and-upload-image-default.yaml",
 		},
 
 		// TODO: Add more test cases here for different task templates or configurations...

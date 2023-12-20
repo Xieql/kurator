@@ -23,6 +23,11 @@ cosign generate-key-pair k8s://tekton-chains/signing-secrets
 
 ### 配置 镜像仓库认证
 
+首先docker login 登录得到密码文件 config.json. 
+然后通过 这个密码文件创建两个 不同格式的 分别用于 task任务自身 以及 chain controller 的两个secret
+
+#### docker login
+
 ```
 docker login ghcr.io -u xieql -p xxx
 ```
@@ -35,28 +40,35 @@ WARNING! Your password will be stored unencrypted in /root/.docker/config.json.
 
 /root/.docker/config.json 这个路径就是 docker 的认证信息，我们通过这个信息来创建secret
 
+#### 创建 task 所需的secret
+
 创建用于 task 上传image 到 oci仓库所需的 secret
 
 ```
 kubectl create secret generic registry-credentials --from-file=/root/.docker/config.json -n chain-test
 ```
 
+该 secret 作为 task 的 workspace 的参数，从而 task 获取认证的权限
+
+
+#### 创建 chain controller 所需的secret
+
 创建用于 chain controller 上传 sig 和 att 到 oci仓库所需的secret
 
 ```
-kubectl create secret docker-registry chain-credentials \
-  --docker-server=ghcr.io \
-  --docker-username=xieql \
-  --docker-email=xieqianglong@huawei.com \
-  --docker-password=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 \
-  -n chain-test
+kubectl create secret generic chain-credentials \
+    --from-file=.dockerconfigjson=/root/.docker/config.json \
+    --type=kubernetes.io/dockerconfigjson \
+    -n chain-test
 ```
 
-通过serviceaccount 把这个认证传给 chain controller
+关联 该 secret 到 service account
+
 ```
 k apply -f examples/pipeline/test-rbac.yaml
 ```
 
+chain-credentials 的认证信息 将 通过service account 传给 chain controller
 
 
 ### 配置 tekton chain 相关参数
@@ -70,14 +82,12 @@ kubectl patch configmap chains-config -n tekton-chains -p='{"data":{"transparenc
 
 ### 创建 kaniko 测试例子
 
-
 #### apply task 例子
 ```
 kubectl apply -f https://github.com/tektoncd/chains/raw/main/examples/kaniko/kaniko.yaml -n chain-test
 ```
 
 #### 创建 task run
-
 
 ```
 echo "
@@ -92,13 +102,13 @@ spec:
     name: kaniko-chains
   params:
   - name: IMAGE
-    value: ghcr.io/xieql/kaniko-chains
+    value: ghcr.io/xieql/kurator-test-muilti-verion:0.3.1
   workspaces:
   - name: source
     emptyDir: {}
   - name: dockerconfig
     secret:
-      secretName: registry-credentials
+      secretName: registry-credentials  # 该 task 的推送镜像权限
 " | kubectl apply -f - -n chain-test
 
 ```
@@ -126,8 +136,8 @@ items:
 通过如下方式验证签名：（在之前cosign 过程中创建的 cosign.pub，用来作为签名校验的公钥）
 
 ```
-cosign verify --key cosign.pub ghcr.io/xieql/kaniko-chains
-cosign verify-attestation --key cosign.pub --type slsaprovenance ghcr.io/xieql/kaniko-chains
+cosign verify --key cosign.pub ghcr.io/xieql/kaniko-chains2
+cosign verify-attestation --key cosign.pub --type slsaprovenance ghcr.io/xieql/kaniko-chains2
 ```
 
 如果验证失败，会有明确的错误信息（签名不匹配、前面无效等）。
@@ -317,3 +327,7 @@ kubectl delete secret signing-secrets -n tekton-chains
 ```
 docker logout ghcr.io 
 ```
+
+注意：
+多个版本的推向同一个仓库，新的会把旧的覆盖掉。这个应该是可以配置的。理论上需要同时保持多个 镜像版本。
+此外，如果多个精选版本，是否还可以进行验证。因为有多个验证文件可选，cosign 能否匹配对应的信息。如果不行，可能需要考虑额外的方案
