@@ -52,6 +52,10 @@ kubectl create secret docker-registry chain-credentials \
   -n chain-test
 ```
 
+可能的写法？
+```
+k apply -f examples/pipeline/test-rbac.yaml
+```
 
 
 
@@ -283,8 +287,23 @@ echo 'eyJfdHlwZSI6Imh0dHBzOi8vaW4tdG90by5pby9TdGF0ZW1lbnQvdjAuMSIsInByZWRpY2F0ZV
 
 删除ns
 ```
-k delete ns tekton-chains
+k delete ns chain-test
 ```
+删除不掉？？？
+似乎没有看到如何删除相关资源
+
+无法删除的时候重装：
+
+```
+kubectl delete --f https://storage.googleapis.com/tekton-releases/chains/latest/release.yaml
+```
+
+```
+kubectl apply --f https://storage.googleapis.com/tekton-releases/chains/latest/release.yaml
+```
+
+
+
 
 删除cosign密钥
 ```
