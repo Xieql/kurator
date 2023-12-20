@@ -5,6 +5,7 @@ metadata:
   namespace: "chain-test"
 secrets:
   - name: "registry-credentials"
+    namespace: "chain-test"
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding

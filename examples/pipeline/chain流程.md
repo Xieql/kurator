@@ -87,7 +87,7 @@ metadata:
   name: kaniko-run
   namespace: chain-test
 spec:
-  serviceaccount: 
+  serviceAccountName: example
   taskRef:
     name: kaniko-chains
   params:
@@ -102,6 +102,8 @@ spec:
 " | kubectl apply -f - -n chain-test
 
 ```
+
+
 查看 taskrun 状态：
 
 ```
