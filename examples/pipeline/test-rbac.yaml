@@ -4,7 +4,7 @@ metadata:
   name: "example"
   namespace: "chain-test"
 secrets:
-  - name: "registry-credentials"
+  - name: "chain-credentials"
     namespace: "chain-test"
 ---
 apiVersion: rbac.authorization.k8s.io/v1

@@ -52,7 +52,7 @@ kubectl create secret docker-registry chain-credentials \
   -n chain-test
 ```
 
-可能的写法？
+通过serviceaccount 把这个认证传给 chain controller
 ```
 k apply -f examples/pipeline/test-rbac.yaml
 ```
