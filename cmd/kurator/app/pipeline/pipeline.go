@@ -21,8 +21,6 @@ import (
 	"fmt"
 
 	"github.com/spf13/cobra"
-
-	"kurator.dev/kurator/pkg/version"
 )
 
 func NewCmd() *cobra.Command {
@@ -39,7 +37,6 @@ func NewCmd() *cobra.Command {
 // RunVersion provides the version information of keadm in format depending on arguments
 // specified in cobra.Command.
 func RunVersion(cmd *cobra.Command) error {
-	v := version.Get()
 
 	y, err := json.MarshalIndent(&v, "", "  ")
 	if err != nil {
