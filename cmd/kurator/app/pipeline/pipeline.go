@@ -19,6 +19,7 @@ package pipeline
 import (
 	"encoding/json"
 	"fmt"
+	"runtime"
 
 	"github.com/spf13/cobra"
 )
@@ -37,6 +38,7 @@ func NewCmd() *cobra.Command {
 // RunVersion provides the version information of keadm in format depending on arguments
 // specified in cobra.Command.
 func RunVersion(cmd *cobra.Command) error {
+	v := GetInfo()
 
 	y, err := json.MarshalIndent(&v, "", "  ")
 	if err != nil {
@@ -45,4 +47,27 @@ func RunVersion(cmd *cobra.Command) error {
 	fmt.Println(string(y))
 
 	return nil
+}
+
+// Info contains Pipeline information.
+type Info struct {
+	Say       string `json:"say"`
+	GoVersion string `json:"goVersion"`
+	Compiler  string `json:"compiler"`
+	Platform  string `json:"platform"`
+}
+
+// String returns a Go-syntax representation of the Info.
+func (info Info) String() string {
+	return fmt.Sprintf("%#v", info)
+}
+
+// GetInfo returns the overall Pipeline information. It's for test
+func GetInfo() Info {
+	return Info{
+		Say:       "hello world!",
+		GoVersion: runtime.Version(),
+		Compiler:  runtime.Compiler,
+		Platform:  fmt.Sprintf("%s/%s", runtime.GOOS, runtime.GOARCH),
+	}
 }
