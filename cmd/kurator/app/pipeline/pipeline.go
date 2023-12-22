@@ -19,20 +19,64 @@ package pipeline
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/sirupsen/logrus"
+	"kurator.dev/kurator/pkg/generic"
+	pipelinelist "kurator.dev/kurator/pkg/pipeline"
 	"runtime"
 
 	"github.com/spf13/cobra"
 )
 
-func NewCmd() *cobra.Command {
-	cmd := &cobra.Command{
-		Use:   "pipeline",
-		Short: "Print the info of kurator pipeline",
-		Run: func(cmd *cobra.Command, args []string) {
+var ListArgs = pipelinelist.ListArgs{}
+
+func NewCmd(opts *generic.Options) *cobra.Command {
+	PipelineListCmd := &cobra.Command{
+		Use:     "pipeline",
+		Short:   "Print the info of kurator pipeline",
+		Example: getExample(),
+		RunE: func(cmd *cobra.Command, args []string) error {
+
 			_ = RunVersion(cmd)
+
+			PipelineList, err := pipelinelist.NewPipelineList(opts, &ListArgs)
+			if err != nil {
+				logrus.Errorf("pipeline init error: %v", err)
+				return fmt.Errorf("volcano init error: %v", err)
+			}
+
+			logrus.Debugf("start list pipeline obj, Global: %+v ", opts)
+			if err := PipelineList.Execute(); err != nil {
+				logrus.Errorf("volcano execute error: %v", err)
+				return fmt.Errorf("volcano execute error: %v", err)
+			}
+
+			return nil
 		},
 	}
-	return cmd
+
+	PipelineListCmd.PersistentFlags().StringVarP(&ListArgs.Namespace, "namespace", "ns", "default", "Comma separated list of namespace")
+
+	return PipelineListCmd
+}
+
+func getExample() string {
+	return `  # List kurator pipeline obj in default ns
+  kurator pipeline list
+
+  # List the pipeline in xxx ns
+  kurator pipeline list -n xxx
+
+  # List specified components Cli tool.
+  kurator pipeline list istio karmada
+
+  # List component Cli tools in JSON output format.
+  kurator pipeline list -o json
+
+  # List component Cli tools in YAML output format.
+  kurator pipeline list -o yaml
+
+  # List a single components Cli tool in JSON output format.
+  kurator pipeline list istio -o json`
 }
 
 // RunVersion provides the version information of keadm in format depending on arguments
