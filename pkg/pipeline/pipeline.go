@@ -19,7 +19,7 @@ package tool
 import (
 	"context"
 	"fmt"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	corev1 "k8s.io/api/core/v1"
 	"kurator.dev/kurator/pkg/client"
 	"kurator.dev/kurator/pkg/generic"
 	"os"
@@ -74,14 +74,14 @@ func NewPipelineList(opts *generic.Options, args *ListArgs) (*pipelineList, erro
 
 func (p *pipelineList) Execute() error {
 	// 获取集群中的所有节点
-	nodes, err := p.Client.KubeClient().CoreV1().Nodes().List(context.TODO(), metav1.ListOptions{})
-	if err != nil {
+	nodeList := &corev1.NodeList{}
+	if err := p.Client.CtrlRuntimeClient().List(context.Background(), nodeList); err != nil {
 		fmt.Fprintf(os.Stderr, "获取节点信息失败: %v\n", err)
 		os.Exit(1)
 	}
-	// 打印每个节点的名称
+	// 打印节点信息
 	fmt.Println("集群节点列表:")
-	for _, node := range nodes.Items {
+	for _, node := range nodeList.Items {
 		fmt.Println(node.Name)
 	}
 	return nil
