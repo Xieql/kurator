@@ -14,17 +14,18 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package pipeline_excution
+package pipeline_execution
 
 import (
 	"encoding/json"
 	"fmt"
+	"kurator.dev/kurator/pkg/generic"
 	"runtime"
 
 	"github.com/spf13/cobra"
 )
 
-func NewCmd() *cobra.Command {
+func NewCmd(opts *generic.Options) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "pipeline-execution",
 		Short: "Print the info of kurator pipeline-execution",

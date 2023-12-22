@@ -25,6 +25,7 @@ import (
 	"kurator.dev/kurator/cmd/kurator/app/install"
 	"kurator.dev/kurator/cmd/kurator/app/join"
 	"kurator.dev/kurator/cmd/kurator/app/pipeline"
+	"kurator.dev/kurator/cmd/kurator/app/pipeline-execution"
 	"kurator.dev/kurator/cmd/kurator/app/tool"
 	"kurator.dev/kurator/cmd/kurator/app/version"
 	"kurator.dev/kurator/pkg/generic"
@@ -54,6 +55,7 @@ func NewKuratorCommand() *cobra.Command {
 	cmd.AddCommand(install.NewCmd(o))
 	cmd.AddCommand(join.NewCmd(o))
 	cmd.AddCommand(tool.NewCmd(o))
-	cmd.AddCommand(pipeline.NewCmd())
+	cmd.AddCommand(pipeline.NewCmd(o))
+	cmd.AddCommand(pipeline_execution.NewCmd(o))
 	return cmd
 }
