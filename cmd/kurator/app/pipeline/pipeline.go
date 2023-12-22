@@ -54,7 +54,7 @@ func NewCmd(opts *generic.Options) *cobra.Command {
 		},
 	}
 
-	PipelineListCmd.PersistentFlags().StringVarP(&ListArgs.Namespace, "namespace", "ns", "default", "Comma separated list of namespace")
+	PipelineListCmd.PersistentFlags().StringVarP(&ListArgs.Namespace, "namespace", "n", "default", "Comma separated list of namespace")
 
 	return PipelineListCmd
 }
