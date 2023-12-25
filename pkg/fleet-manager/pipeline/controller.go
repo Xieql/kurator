@@ -311,22 +311,29 @@ func (p *PipelineManager) reconcileDeletePipeline(ctx context.Context, pipeline 
 
 // isRBACResourceReady checks if the necessary RBAC resources are ready in the specified namespace.
 func (p *PipelineManager) isRBACResourceReady(ctx context.Context, rbacConfig render.RBACConfig) bool {
+	log := ctrl.LoggerFrom(ctx)
+
 	// Check for the existence of the ServiceAccount
 	sa := &v1.ServiceAccount{}
 	err := p.Client.Get(ctx, types.NamespacedName{Name: rbacConfig.PipelineName, Namespace: rbacConfig.PipelineNamespace}, sa)
 	if err != nil {
+		log.Error(err, " Check for the existence of the ServiceAccount error")
+
 		return false
 	}
 	// Check for the existence of the RoleBinding for broad resources
 	broadResourceRoleBinding := &rbacv1.RoleBinding{}
 	err = p.Client.Get(ctx, types.NamespacedName{Name: rbacConfig.BroadResourceRoleBindingName(), Namespace: rbacConfig.PipelineNamespace}, broadResourceRoleBinding)
 	if err != nil {
+		log.Error(err, " Check for the existence of the RoleBinding for broad resources error")
 		return false
 	}
 	// Check for the existence of the RoleBinding for secret resources
 	secretResourceRoleBinding := &rbacv1.RoleBinding{}
 	err = p.Client.Get(ctx, types.NamespacedName{Name: rbacConfig.SecretRoleBindingName(), Namespace: rbacConfig.PipelineNamespace}, secretResourceRoleBinding)
 	if err != nil {
+		log.Error(err, " Check for the existence of the RoleBinding for secret resources error")
+
 		return false
 	}
 	// If all resources are found, return true
