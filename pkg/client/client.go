@@ -38,7 +38,6 @@ import (
 	kubeclient "k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
-	pipelineapi "kurator.dev/kurator/pkg/apis/pipeline/v1alpha1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/yaml"
 )
@@ -77,9 +76,7 @@ func NewClient(rest genericclioptions.RESTClientGetter) (*Client, error) {
 	if err := tektonapi.AddToScheme(scheme); err != nil {
 		return nil, fmt.Errorf("failed to add tektonapi to scheme: %v", err)
 	}
-	if err := pipelineapi.AddToScheme(scheme); err != nil {
-		return nil, fmt.Errorf("failed to add pipelineapi to scheme: %v", err)
-	}
+
 	// create controller-runtime client with scheme
 	ctrlRuntimeClient, err := client.New(c, client.Options{Scheme: scheme})
 	if err != nil {
