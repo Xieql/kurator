@@ -101,7 +101,7 @@ kubectl logs -l app.kubernetes.io/name=kurator-fleet-manager -n kurator-system -
 ## 暴露服务
 
 ```
-kubectl port-forward --address 0.0.0.0 service/el-kurator-pipeline-listener 30000:8080 -n kurator-pipeline
+kubectl port-forward --address 0.0.0.0 service/el-quick-start-listener 30000:8080 -n kurator-pipeline
 ```
 
 
