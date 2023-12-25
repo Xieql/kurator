@@ -64,6 +64,8 @@ func (p *PipelineManager) Reconcile(ctx context.Context, req ctrl.Request) (_ ct
 	log.Info("~!!!!!!!!!!! all  fs ready * !!!!!!!!!!!!!!!! ", "pipeline", ctx)
 
 	if err := p.Client.Get(ctx, req.NamespacedName, pipeline); err != nil {
+		log.Error(err, "Get pipeline error")
+
 		if apierrors.IsNotFound(err) {
 			log.Info("pipeline object not found", "pipeline", req)
 			return ctrl.Result{}, nil
@@ -82,6 +84,7 @@ func (p *PipelineManager) Reconcile(ctx context.Context, req ctrl.Request) (_ ct
 	defer func() {
 		patchOpts := []patch.Option{}
 		if err := patchHelper.Patch(ctx, pipeline, patchOpts...); err != nil {
+			log.Error(err, "patchHelper.Patch error")
 			reterr = utilerrors.NewAggregate([]error{reterr, errors.Wrapf(err, "failed to patch %s  %s", pipeline.Name, req.NamespacedName)})
 		}
 	}()
@@ -123,6 +126,8 @@ func (p *PipelineManager) reconcilePipeline(ctx context.Context, pipeline *pipel
 	// Apply Tekton tasks,
 	res, err := p.reconcileCreateTasks(ctx, pipeline)
 	if err != nil || res.Requeue || res.RequeueAfter > 0 {
+		log.Error(err, "reconcileCreateTasks error???")
+
 		return res, err
 	}
 
@@ -188,11 +193,15 @@ func (p *PipelineManager) reconcileCreateTasks(ctx context.Context, pipeline *pi
 		if task.PredefinedTask != nil {
 			err := p.createPredefinedTask(ctx, task, pipeline)
 			if err != nil {
+				log.Error(err, "createPredefinedTask error")
+
 				return ctrl.Result{}, err
 			}
 		} else {
 			err := p.createCustomTask(ctx, task, pipeline)
 			if err != nil {
+				log.Error(err, "createCustomTask error")
+
 				return ctrl.Result{}, err
 			}
 		}
@@ -217,6 +226,8 @@ func (p *PipelineManager) createPredefinedTask(ctx context.Context, task pipelin
 	manifestFileSystem := manifests.BuiltinOrDir("")
 	taskResource, err := render.RenderPredefinedTask(manifestFileSystem, cfg)
 	if err != nil {
+		log.Error(err, "RenderPredefinedTask error")
+
 		return err
 	}
 	// apply rbac resources
@@ -235,10 +246,14 @@ func (p *PipelineManager) createCustomTask(ctx context.Context, task pipelineapi
 	manifestFileSystem := manifests.BuiltinOrDir("")
 	taskResource, err := render.RenderCustomTaskWithPipeline(manifestFileSystem, task.Name, pipeline.Name, pipeline.Namespace, *task.CustomTask, generatePipelineOwnerRef(pipeline))
 	if err != nil {
+		log.Error(err, "RenderCustomTaskWithPipeline error")
+
 		return err
 	}
 	// apply custom task resources
 	if _, err := util.PatchResources(taskResource); err != nil {
+		log.Error(err, "PatchResources error")
+
 		return errors.Wrapf(err, "failed to apply rbac resources")
 	}
 
@@ -252,11 +267,15 @@ func (p *PipelineManager) reconcileCreatePipeline(ctx context.Context, pipeline 
 	manifestFileSystem := manifests.BuiltinOrDir("")
 	pipelineResource, err := render.RenderPipelineWithTasks(manifestFileSystem, pipeline.Name, pipeline.Namespace, pipeline.Spec.Tasks, generatePipelineOwnerRef(pipeline))
 	if err != nil {
+		log.Error(err, "RenderPipelineWithTasks error")
+
 		return ctrl.Result{}, err
 	}
 
 	// apply pipeline resources
 	if _, err := util.PatchResources(pipelineResource); err != nil {
+		log.Error(err, "PatchResources error")
+
 		return ctrl.Result{}, errors.Wrapf(err, "failed to apply rbac resources")
 	}
 
@@ -276,11 +295,15 @@ func (p *PipelineManager) reconcileCreateTrigger(ctx context.Context, pipeline *
 	}
 	triggerResource, err := render.RenderTrigger(manifestFileSystem, cfg)
 	if err != nil {
+		log.Error(err, "RenderTrigger error")
+
 		return ctrl.Result{}, err
 	}
 
 	// apply pipeline resources
 	if _, err := util.PatchResources(triggerResource); err != nil {
+		log.Error(err, "PatchResources error")
+
 		return ctrl.Result{}, errors.Wrapf(err, "failed to apply rbac resources")
 	}
 
