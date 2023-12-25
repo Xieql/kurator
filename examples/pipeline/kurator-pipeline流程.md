@@ -90,7 +90,7 @@ kubectl patch configmap chains-config -n tekton-chains -p='{"data":{"transparenc
 #### apply kurator pipeline 例子
 
 ```
-kubectl apply -f examples/pipeline/kurator-pipeline.yaml
+kubectl apply -f examples/pipeline/quick-start.yaml
 ```
 
 

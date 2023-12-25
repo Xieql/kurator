@@ -23,18 +23,18 @@ spec:
       predefinedTask:
         name: go-test
         params:
-          packages: " ./..."
+          packages: ./...
     - name: golangci-lint
       predefinedTask:
         name: golangci-lint
         params:
           packages: ./...
           flags:
-            - --verbose
+            - "--verbose"
     - name: build-image
       predefinedTask:
         name: kaniko
         params:
           image-name: ghcr.io/xieql/podinfo:test-version
           extra-args:
-            - --skip-tls-verify
+            - "--skip-tls-verify"
