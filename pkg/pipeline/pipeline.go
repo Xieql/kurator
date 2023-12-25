@@ -21,6 +21,7 @@ import (
 	"fmt"
 	"github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
 	corev1 "k8s.io/api/core/v1"
+	pipelineapi "kurator.dev/kurator/pkg/apis/pipeline/v1alpha1"
 	"kurator.dev/kurator/pkg/client"
 	"kurator.dev/kurator/pkg/generic"
 	"os"
@@ -95,6 +96,18 @@ func (p *pipelineList) Execute() error {
 	// 打印 TaskRun 的名称
 	fmt.Println("TaskRun 列表:")
 	for _, tr := range taskRunList.Items {
+		fmt.Println(tr.Name)
+	}
+
+	plList := &pipelineapi.PipelineList{}
+	if err := p.CtrlRuntimeClient().List(context.Background(), plList); err != nil {
+		fmt.Fprintf(os.Stderr, "获取 TaskRun 列表失败: %v\n", err)
+		os.Exit(1)
+	}
+
+	// 打印 TaskRun 的名称
+	fmt.Println("kurator pipeline 列表:")
+	for _, tr := range plList.Items {
 		fmt.Println(tr.Name)
 	}
 

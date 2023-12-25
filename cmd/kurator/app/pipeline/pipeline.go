@@ -41,13 +41,13 @@ func NewCmd(opts *generic.Options) *cobra.Command {
 			PipelineList, err := pipelinelist.NewPipelineList(opts, &ListArgs)
 			if err != nil {
 				logrus.Errorf("pipeline init error: %v", err)
-				return fmt.Errorf("volcano init error: %v", err)
+				return fmt.Errorf("pipeline init error: %v", err)
 			}
 
 			logrus.Debugf("start list pipeline obj, Global: %+v ", opts)
 			if err := PipelineList.Execute(); err != nil {
-				logrus.Errorf("volcano execute error: %v", err)
-				return fmt.Errorf("volcano execute error: %v", err)
+				logrus.Errorf("pipeline execute error: %v", err)
+				return fmt.Errorf("pipeline execute error: %v", err)
 			}
 
 			return nil
