@@ -40,8 +40,6 @@ import (
 	"k8s.io/client-go/tools/clientcmd"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/yaml"
-
-	pipelineapi "kurator.dev/kurator/pkg/apis/pipeline/v1alpha1"
 )
 
 type Client struct {
@@ -51,7 +49,7 @@ type Client struct {
 
 	karmada karmadaclientset.Interface
 	prom    promclient.Interface
-	// it currently only support k8s core API and velero API, because only these schemes are registered
+	// it currently only support k8s core API, tekton API and velero API, because only these schemes are registered
 	ctrlRuntimeClient client.Client
 }
 
@@ -75,11 +73,8 @@ func NewClient(rest genericclioptions.RESTClientGetter) (*Client, error) {
 	if err := veleroapi.AddToScheme(scheme); err != nil {
 		return nil, fmt.Errorf("failed to add veleroapi to scheme: %v", err)
 	}
-	if err := pipelineapi.AddToScheme(scheme); err != nil {
-		return nil, fmt.Errorf("failed to add pipelineapi to scheme: %v", err)
-	}
 	if err := tektonapi.AddToScheme(scheme); err != nil {
-		return nil, fmt.Errorf("failed to add pipelineapi to scheme: %v", err)
+		return nil, fmt.Errorf("failed to add tektonapi to scheme: %v", err)
 	}
 	// create controller-runtime client with scheme
 	ctrlRuntimeClient, err := client.New(c, client.Options{Scheme: scheme})
