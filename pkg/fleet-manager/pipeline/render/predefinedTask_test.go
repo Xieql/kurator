@@ -141,6 +141,28 @@ func TestRenderPredefinedTask(t *testing.T) {
 			expectedFile: "build-and-upload-image-default.yaml",
 		},
 
+		{
+			name: "Custom Dockerfile and Context for Kaniko Build Task",
+			cfg: PredefinedTaskConfig{
+				PipelineName:      "test-pipeline",
+				PipelineNamespace: "kurator-pipeline",
+				TemplateName:      BuildPushImage,
+				Params: map[string]string{
+					"IMAGE":      "ghcr.io/test-orz/test-image:0.3.2",
+					"DOCKERFILE": "./app/Dockerfile",
+					"CONTEXT":    "./app/",
+				},
+				OwnerReference: &metav1.OwnerReference{
+					APIVersion: "v1",
+					Kind:       "Deployment",
+					Name:       "example-deployment",
+					UID:        "22345678-1234-1234-1234-123456789abc",
+				},
+			},
+			expectError:  false,
+			expectedFile: "build-and-upload-image-custom.yaml",
+		},
+
 		// TODO: Add more test cases here for different task templates or configurations...
 	}
 

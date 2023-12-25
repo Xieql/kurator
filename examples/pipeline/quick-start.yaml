@@ -35,15 +35,5 @@ spec:
       predefinedTask:
         name: kaniko
         params:
-          image-name: "ghcr.io/kurator-dev/podinfo:test-version"
           extra-args:
             - --skip-tls-verify
-    - name: echo-image-digest
-      customTask:
-        image: ubuntu
-        script: |
-          echo $(params.digest)
-          case .$(params.digest) in
-            ".sha"*) exit 0 ;;
-            *)       echo "Digest value is not correct" && exit 1 ;;
-          esac
