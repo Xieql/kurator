@@ -38,6 +38,9 @@ spec:
       - name: git-credentials
         secret:
           secretName: git-credentials
+      - name: docker-credentials
+        secret:
+          secretName: docker-credentials  # auth for task
 ---
 apiVersion: triggers.tekton.dev/v1alpha1
 kind: TriggerBinding

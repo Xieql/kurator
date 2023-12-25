@@ -24,9 +24,9 @@ spec:
         name: go-test
         params:
           packages: ./...
-    - name: golangci-lint
+    - name: go-lint
       predefinedTask:
-        name: golangci-lint
+        name: go-lint
         params:
           packages: "./..."
           flags: "--verbose"

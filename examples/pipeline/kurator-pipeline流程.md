@@ -93,6 +93,17 @@ kubectl patch configmap chains-config -n tekton-chains -p='{"data":{"transparenc
 kubectl apply -f examples/pipeline/quick-start.yaml
 ```
 
+## 暴露服务
+
+```
+kubectl port-forward --address 0.0.0.0 service/el-kurator-pipeline-listener 30000:8080 -n kurator-pipeline
+```
+
+查看日志
+```
+kubectl logs -l app.kubernetes.io/name=kurator-fleet-manager -n kurator-system --tail=-1
+```
+
 
 查看 taskrun 状态：
 

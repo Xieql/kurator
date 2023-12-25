@@ -24,7 +24,7 @@ spec:
     default: "."
   - name: flags
     description: flags to use for the lint command
-    default: "--enable-all --fix"
+    default: "--verbose"
   - name: version
     description: golangci-lint version to use
     default: "latest"

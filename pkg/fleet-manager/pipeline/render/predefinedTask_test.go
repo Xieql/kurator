@@ -77,6 +77,7 @@ func TestRenderPredefinedTask(t *testing.T) {
 					"version":  "1.20",
 					"GOOS":     "linux",
 					"GOARCH":   "arm",
+					"flags":    "-race -cover -v",
 				},
 			},
 			expectError:  false,
@@ -138,7 +139,7 @@ func TestRenderPredefinedTask(t *testing.T) {
 				},
 			},
 			expectError:  false,
-			expectedFile: "build-and-upload-image-default.yaml",
+			expectedFile: "build-and-push-image-default.yaml",
 		},
 
 		{
@@ -160,7 +161,7 @@ func TestRenderPredefinedTask(t *testing.T) {
 				},
 			},
 			expectError:  false,
-			expectedFile: "build-and-upload-image-custom.yaml",
+			expectedFile: "build-and-push-image-custom.yaml",
 		},
 
 		// TODO: Add more test cases here for different task templates or configurations...

@@ -1,7 +1,7 @@
 apiVersion: tekton.dev/v1beta1
 kind: Task
 metadata:
-  name: build-and-upload-image-test-pipeline
+  name: build-and-push-image-test-pipeline
   namespace: kurator-pipeline
   labels:
     app.kubernetes.io/version: "0.6"
@@ -24,13 +24,13 @@ spec:
   params:
   - name: IMAGE # This is a parameter that must be set.
     description: Name (reference) of the image to build.
-    default: ghcr.io/test-orz/test-image:0.3.1
+    default: ghcr.io/test-orz/test-image:0.3.2
   - name: DOCKERFILE
     description: Path to the Dockerfile to build.
-    default: ./Dockerfile
+    default: ./app/Dockerfile
   - name: CONTEXT
     description: The build context used by Kaniko.
-    default: ./
+    default: ./app/
   - name: EXTRA_ARGS # more details see https://github.com/GoogleContainerTools/kaniko?tab=readme-ov-file#additional-flags
     type: array
     default: []
