@@ -53,6 +53,33 @@ func TestRenderPipelineWithTasks(t *testing.T) {
 			expectError:  false,
 			expectedFile: "readme-test.yaml",
 		},
+		{
+			name: "valid comprehensive pipeline configuration, contains tasks: git-clone, cat-readme, go-test, go-lint, push-and-build-image",
+			tasks: []pipelineapi.PipelineTask{
+				{
+					Name:           "git-clone",
+					PredefinedTask: &pipelineapi.PredefinedTask{Name: GitCloneTask},
+				},
+				{
+					Name:       "cat-readme",
+					CustomTask: &pipelineapi.CustomTask{},
+				},
+				{
+					Name:           "go-test",
+					PredefinedTask: &pipelineapi.PredefinedTask{Name: GoTestTask},
+				},
+				{
+					Name:           "go-lint",
+					PredefinedTask: &pipelineapi.PredefinedTask{Name: GoLintTask},
+				},
+				{
+					Name:           "build-and-push-image",
+					PredefinedTask: &pipelineapi.PredefinedTask{Name: BuildPushImage},
+				},
+			},
+			expectError:  false,
+			expectedFile: "comprehensive.yaml",
+		},
 	}
 
 	for _, tc := range cases {

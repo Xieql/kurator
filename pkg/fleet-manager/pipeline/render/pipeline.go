@@ -26,8 +26,9 @@ import (
 )
 
 const (
-	PipelineTemplateFile = "pipeline/pipeline.tpl"
-	PipelineTemplateName = "pipeline template"
+	PipelineTemplateFile  = "pipeline/pipeline.tpl"
+	PipelineTemplateName  = "pipeline template"
+	DockerCredentialsName = "docker-credentials"
 )
 
 type PipelineConfig struct {
@@ -40,11 +41,14 @@ type PipelineConfig struct {
 	// TasksInfo contains the necessary information to integrate tasks into the pipeline.
 	TasksInfo      string
 	OwnerReference *metav1.OwnerReference
+
+	// DockerCredentials is the name of docker credential secret in current namespace. It will be used only for "build and push image" task.
+	DockerCredentials string
 }
 
 // RenderPipelineWithTasks renders the full pipeline configuration as a YAML byte array using a specified template and **Pipeline.Tasks**.
 func RenderPipelineWithTasks(fsys fs.FS, pipelineName, pipelineNameSpace string, tasks []pipelineapi.PipelineTask, ownerReference *metav1.OwnerReference) ([]byte, error) {
-	tasksInfo, err := GenerateTasksInfo(pipelineName, tasks)
+	DockerCredentials, tasksInfo, err := GenerateTasksInfo(pipelineName, tasks)
 	if err != nil {
 		return nil, err
 	}
@@ -54,6 +58,7 @@ func RenderPipelineWithTasks(fsys fs.FS, pipelineName, pipelineNameSpace string,
 		PipelineNamespace: pipelineNameSpace,
 		TasksInfo:         tasksInfo,
 		OwnerReference:    ownerReference,
+		DockerCredentials: DockerCredentials,
 	}
 
 	return renderPipeline(fsys, cfg)
@@ -67,7 +72,8 @@ func renderPipeline(fsys fs.FS, cfg PipelineConfig) ([]byte, error) {
 // GenerateTasksInfo constructs TasksInfo, detailing the integration of tasks into a given pipeline.
 // 这个方法这样实现的原因在于 我们 要求第一个任务必须固定为 git clone。
 // TODO: 重构方法，现在的可读性太差了。可以尝试在模板中分别填写，两种任务这里的格式没区别，可以用数组完成
-func GenerateTasksInfo(pipelineName string, tasks []pipelineapi.PipelineTask) (string, error) {
+func GenerateTasksInfo(pipelineName string, tasks []pipelineapi.PipelineTask) (string, string, error) {
+	var DockerCredentials string
 	var tasksBuilder strings.Builder
 	// lastTask record the current taskAfter task. git-clone always the first task, so it will be the lastTask for second task.
 	lastTask := GitCloneTask
@@ -78,15 +84,20 @@ func GenerateTasksInfo(pipelineName string, tasks []pipelineapi.PipelineTask) (s
 		}
 		var taskYaml string
 		if (task.CustomTask == nil && task.PredefinedTask == nil) || (task.CustomTask != nil && task.PredefinedTask != nil) {
-			return "", fmt.Errorf("only exactly one of 'PredefinedTask' or 'CustomTask' must be set in 'PipelineTask'")
+			return "", "", fmt.Errorf("only exactly one of 'PredefinedTask' or 'CustomTask' must be set in 'PipelineTask'")
 		}
-		taskYaml = generateTaskInfo(task.Name, generatePipelineTaskName(task.Name, pipelineName), lastTask, task.Retries)
+		if task.Name == BuildPushImage {
+			taskYaml = generateKanikoTaskInfo(task.Name, generatePipelineTaskName(task.Name, pipelineName), lastTask, task.Retries)
+			DockerCredentials = DockerCredentialsName
+		} else {
+			taskYaml = generateTaskInfo(task.Name, generatePipelineTaskName(task.Name, pipelineName), lastTask, task.Retries)
+		}
 		// add taskYaml to tasksBuilder
 		fmt.Fprintf(&tasksBuilder, "  %s", taskYaml)
 		// ensure task execution order as defined by the user
 		lastTask = task.Name
 	}
-	return tasksBuilder.String(), nil
+	return DockerCredentials, tasksBuilder.String(), nil
 }
 
 // generateTaskInfo formats a single task's information, including its dependencies and retries, for inclusion in a pipeline.
@@ -105,6 +116,28 @@ func generateTaskInfo(taskName, taskRefer, lastTask string, retries int) string 
 
 	// add fixed workspace configuration
 	taskBuilder.WriteString("    workspaces:\n    - name: source\n      workspace: kurator-pipeline-shared-data\n")
+
+	// Include retry configuration if applicable
+	if retries > 0 {
+		fmt.Fprintf(&taskBuilder, "  retries: %d\n", retries)
+	}
+
+	return taskBuilder.String()
+}
+
+// dockerconfig 特殊处理 docker 任务，因为该任务需要额外的 认证 workspace
+func generateKanikoTaskInfo(taskName, taskRefer, lastTask string, retries int) string {
+	var taskBuilder strings.Builder
+
+	// define task name and reference
+	fmt.Fprintf(&taskBuilder, "- name: %s\n    taskRef:\n      name: %s\n", taskName, taskRefer)
+
+	// dpecify dependency on the preceding task
+	fmt.Fprintf(&taskBuilder, "    runAfter: [\"%s\"]\n", lastTask)
+
+	// add fixed workspace configuration
+	taskBuilder.WriteString("    workspaces:\n    - name: source\n      workspace: kurator-pipeline-shared-data\n")
+	taskBuilder.WriteString("    - name: dockerconfig\n      workspace: docker-credentials\n")
 
 	// Include retry configuration if applicable
 	if retries > 0 {

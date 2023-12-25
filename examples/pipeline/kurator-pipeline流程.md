@@ -5,7 +5,7 @@
 
 ### 创建测试ns
 ```
-k create ns chain-test
+k create ns kurator-pipeline
 ```
 
 ### 创建加密所需密钥。
@@ -23,7 +23,7 @@ cosign generate-key-pair k8s://tekton-chains/signing-secrets
 
 ### 配置 镜像仓库认证
 
-首先docker login 登录得到密码文件 config.json. 
+首先docker login 登录得到密码文件 config.json.
 然后通过 这个密码文件创建两个 不同格式的 分别用于 task任务自身 以及 chain controller 的两个secret
 
 #### docker login
@@ -45,7 +45,7 @@ WARNING! Your password will be stored unencrypted in /root/.docker/config.json.
 创建用于 task 上传image 到 oci仓库所需的 secret
 
 ```
-kubectl create secret generic docker-credentials --from-file=/root/.docker/config.json -n chain-test
+kubectl create secret generic docker-credentials --from-file=/root/.docker/config.json -n kurator-pipeline
 ```
 
 该 secret 作为 task 的 workspace 的参数，从而 task 获取认证的权限
@@ -59,14 +59,10 @@ kubectl create secret generic docker-credentials --from-file=/root/.docker/confi
 kubectl create secret generic chain-credentials \
     --from-file=.dockerconfigjson=/root/.docker/config.json \
     --type=kubernetes.io/dockerconfigjson \
-    -n chain-test
+    -n kurator-pipeline
 ```
 
-关联 该 secret 到 service account
-
-```
-k apply -f examples/pipeline/test-rbac.yaml
-```
+关联 该 secret 到 service account, 已经写在 rbac.yaml
 
 chain-credentials 的认证信息 将 通过service account 传给 chain controller
 
@@ -83,34 +79,9 @@ kubectl patch configmap chains-config -n tekton-chains -p='{"data":{"transparenc
 ### 创建 kaniko 测试例子
 
 #### apply task 例子
-```
-kubectl apply -f https://github.com/tektoncd/chains/raw/main/examples/kaniko/kaniko.yaml -n chain-test
-```
-
-#### 创建 task run
 
 ```
-echo "
-apiVersion: tekton.dev/v1beta1
-kind: TaskRun
-metadata:
-  name: kaniko-run
-  namespace: chain-test
-spec:
-  serviceAccountName: example
-  taskRef:
-    name: kaniko-chains
-  params:
-  - name: IMAGE
-    value: ghcr.io/xieql/kurator-test-muilti-verion:0.4.1
-  workspaces:
-  - name: source
-    emptyDir: {}
-  - name: dockerconfig
-    secret:
-      secretName: docker-credentials  # 该 task 的推送镜像权限
-" | kubectl apply -f - -n chain-test
-
+kubectl apply -f examples/pipeline/kurator-pipeline.yaml
 ```
 
 
@@ -126,10 +97,9 @@ items:
   metadata:
     annotations:
       chains.tekton.dev/signed: "true"
-
 ```
 
-### 验证签名 
+### 验证签名
 
 登录 ghcr 查看，可以看到对应pkg下的镜像以及对应的 .sig 签名 和 .att 出处证明
 

@@ -35,5 +35,6 @@ spec:
       predefinedTask:
         name: kaniko
         params:
+          image-name: "ghcr.io/xieql/podinfo:test-version"
           extra-args:
             - --skip-tls-verify

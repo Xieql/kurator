@@ -1,15 +1,8 @@
 apiVersion: tekton.dev/v1beta1
 kind: Pipeline
 metadata:
-  name: {{ .PipelineName}}
-  namespace: {{ .PipelineNamespace }}
-{{- if .OwnerReference }}
-  ownerReferences:
-  - apiVersion: "{{ .OwnerReference.APIVersion }}"
-    kind: "{{ .OwnerReference.Kind }}"
-    name: "{{ .OwnerReference.Name }}"
-    uid: "{{ .OwnerReference.UID }}"
-{{- end }}
+  name: test-pipeline
+  namespace: kurator-pipeline
 spec:
   description: |
     This is a universal pipeline with the following settings: 
@@ -32,11 +25,9 @@ spec:
       A Workspace containing a .gitconfig and .git-credentials file. These
       will be copied to the user's home before any git commands are run. Any
       other files in this Workspace are ignored.
-{{- if .DockerCredentials }}
   - name: docker-credentials
     description: |
       This is the credentials for build and push image task.
-{{- end }}
   tasks:
   - name: git-clone
     # Key points about 'git-clone':
@@ -45,7 +36,7 @@ spec:
     # - Always the first task in the pipeline.
     # - Cannot be modified via templates.
     taskRef:
-      name: git-clone-{{ .PipelineName }}
+      name: git-clone-test-pipeline
     workspaces:
     - name: source
       workspace: kurator-pipeline-shared-data
@@ -56,4 +47,33 @@ spec:
       value: $(params.repo-url)
     - name: revision
       value: $(params.revision)
-{{ .TasksInfo }}
+  - name: cat-readme
+    taskRef:
+      name: cat-readme-test-pipeline
+    runAfter: ["git-clone"]
+    workspaces:
+    - name: source
+      workspace: kurator-pipeline-shared-data
+  - name: go-test
+    taskRef:
+      name: go-test-test-pipeline
+    runAfter: ["cat-readme"]
+    workspaces:
+    - name: source
+      workspace: kurator-pipeline-shared-data
+  - name: go-lint
+    taskRef:
+      name: go-lint-test-pipeline
+    runAfter: ["go-test"]
+    workspaces:
+    - name: source
+      workspace: kurator-pipeline-shared-data
+  - name: build-and-push-image
+    taskRef:
+      name: build-and-push-image-test-pipeline
+    runAfter: ["go-lint"]
+    workspaces:
+    - name: source
+      workspace: kurator-pipeline-shared-data
+    - name: dockerconfig
+      workspace: docker-credentials

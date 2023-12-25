@@ -45,6 +45,11 @@ spec:
       - name: git-credentials
         secret:
           secretName: git-credentials
+          namespace: { { .PipelineNamespace } }
+      - name: docker-credentials
+        secret:
+          secretName: docker-credentials  # auth for task
+          namespace: { { .PipelineNamespace } }
 ---
 apiVersion: triggers.tekton.dev/v1alpha1
 kind: TriggerBinding
