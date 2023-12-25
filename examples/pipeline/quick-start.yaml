@@ -28,13 +28,13 @@ spec:
       predefinedTask:
         name: golangci-lint
         params:
-          packages: " ./..."
+          packages: ./...
           flags:
             - --verbose
     - name: build-image
       predefinedTask:
         name: kaniko
         params:
-          image-name: "ghcr.io/xieql/podinfo:test-version"
+          image-name: ghcr.io/xieql/podinfo:test-version
           extra-args:
             - --skip-tls-verify

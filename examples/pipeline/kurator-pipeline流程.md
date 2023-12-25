@@ -21,6 +21,15 @@ cosign generate-key-pair k8s://tekton-chains/signing-secrets
 
 并且会在当前本地路径创建一个 cosign.pub的公钥文件
 
+### 配置 git仓库认证
+
+```
+kubectl create secret generic git-credentials \
+  --namespace=kurator-pipeline \
+  --from-literal=.gitconfig=$'[credential "https://github.com"]\n\thelper = store' \
+  --from-literal=.git-credentials='https://Xieql:xxxxxxxxxxxxx@github.com'
+```
+
 ### 配置 镜像仓库认证
 
 首先docker login 登录得到密码文件 config.json.
@@ -40,7 +49,7 @@ WARNING! Your password will be stored unencrypted in /root/.docker/config.json.
 
 /root/.docker/config.json 这个路径就是 docker 的认证信息，我们通过这个信息来创建secret
 
-#### 创建 task 所需的secret
+#### 创建 task 所需镜像仓库认证的secret
 
 创建用于 task 上传image 到 oci仓库所需的 secret
 
@@ -51,7 +60,7 @@ kubectl create secret generic docker-credentials --from-file=/root/.docker/confi
 该 secret 作为 task 的 workspace 的参数，从而 task 获取认证的权限
 
 
-#### 创建 chain controller 所需的secret
+#### 创建 chain controller 所需镜像仓库的secret
 
 创建用于 chain controller 上传 sig 和 att 到 oci仓库所需的secret
 
@@ -76,9 +85,9 @@ kubectl patch configmap chains-config -n tekton-chains -p='{"data":{"artifacts.o
 kubectl patch configmap chains-config -n tekton-chains -p='{"data":{"transparency.enabled": "true"}}'
 ```
 
-### 创建 kaniko 测试例子
+### 创建 kurator pipeline 测试例子
 
-#### apply task 例子
+#### apply kurator pipeline 例子
 
 ```
 kubectl apply -f examples/pipeline/kurator-pipeline.yaml
