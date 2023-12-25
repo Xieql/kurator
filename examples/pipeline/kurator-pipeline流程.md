@@ -27,7 +27,7 @@ cosign generate-key-pair k8s://tekton-chains/signing-secrets
 kubectl create secret generic git-credentials \
   --namespace=kurator-pipeline \
   --from-literal=.gitconfig=$'[credential "https://github.com"]\n\thelper = store' \
-  --from-literal=.git-credentials='https://Xieql:xxxxxxxxxxxxx@github.com'
+  --from-literal=.git-credentials='https://Xieql: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@github.com'
 ```
 
 ### 配置 镜像仓库认证
@@ -93,16 +93,18 @@ kubectl patch configmap chains-config -n tekton-chains -p='{"data":{"transparenc
 kubectl apply -f examples/pipeline/quick-start.yaml
 ```
 
+查看日志
+```
+kubectl logs -l app.kubernetes.io/name=kurator-fleet-manager -n kurator-system --tail=-1
+```
+
 ## 暴露服务
 
 ```
 kubectl port-forward --address 0.0.0.0 service/el-kurator-pipeline-listener 30000:8080 -n kurator-pipeline
 ```
 
-查看日志
-```
-kubectl logs -l app.kubernetes.io/name=kurator-fleet-manager -n kurator-system --tail=-1
-```
+
 
 
 查看 taskrun 状态：
