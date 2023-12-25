@@ -77,7 +77,7 @@ func NewClient(rest genericclioptions.RESTClientGetter) (*Client, error) {
 	if err := tektonapi.AddToScheme(scheme); err != nil {
 		return nil, fmt.Errorf("failed to add tektonapi to scheme: %v", err)
 	}
-	if err := pipelineapi.AddToScheme(scheme); err != nil {
+	if err := pipelineapi.Install(scheme); err != nil {
 		return nil, fmt.Errorf("failed to add pipelineapi to scheme: %v", err)
 	}
 	// create controller-runtime client with scheme
