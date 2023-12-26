@@ -34,4 +34,4 @@ spec:
       predefinedTask:
         name: build-and-push-image
         params:
-          image: "ghcr.io/xieql/kurator-test:0.4.1"
+          image: "ghcr.io/xieql/kurator-final:0.4.1"
