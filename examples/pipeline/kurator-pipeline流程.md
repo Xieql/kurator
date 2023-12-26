@@ -96,6 +96,7 @@ git://github.com/acme/myproject.git#refs/heads/mybranch#
 
 ```
 kubectl apply -f examples/pipeline/quick-start.yaml
+
 ```
 
 查看日志

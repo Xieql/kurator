@@ -11,11 +11,6 @@ spec:
         name: git-clone
         params:
           git-secret-name: git-credentials
-    - name: build-and-push-image
-      predefinedTask:
-        name: build-and-push-image
-        params:
-          image: "ghcr.io/xieql/kurator-final:0.4.1"
     - name: cat-readme
       customTask:
         image: zshusers/zsh:4.3.15
@@ -35,3 +30,8 @@ spec:
         params:
           packages: "./..."
           flags: "--disable=errcheck,unused,gosimple,staticcheck --verbose --timeout 10m"
+    - name: build-and-push-image
+      predefinedTask:
+        name: build-and-push-image
+        params:
+          image: "ghcr.io/xieql/kurator-final:0.4.1"

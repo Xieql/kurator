@@ -37,7 +37,7 @@ spec:
     type: array
     default: {{ default `[]` .Params.extra_args }}
   - name: BUILDER_IMAGE
-    description: The image on which builds will run (default is v1.19.2)
+    description: The image on which builds will run (default is v1.19.2 debug)
     default: {{ default `gcr.io/kaniko-project/executor@sha256:899886a2db1c127ff1565d5c7b1e574af1810bbdad048e9850e4f40b5848d79c` .Params.builder_image }}
   workspaces:
   - name: source
