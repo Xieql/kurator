@@ -129,7 +129,7 @@ func TestRenderPredefinedTask(t *testing.T) {
 				PipelineNamespace: "kurator-pipeline",
 				TemplateName:      BuildPushImage,
 				Params: map[string]string{
-					"IMAGE": "ghcr.io/test-orz/test-image:0.3.1",
+					"image": "ghcr.io/test-orz/test-image:0.3.1",
 				},
 				OwnerReference: &metav1.OwnerReference{
 					APIVersion: "v1",
@@ -149,9 +149,9 @@ func TestRenderPredefinedTask(t *testing.T) {
 				PipelineNamespace: "kurator-pipeline",
 				TemplateName:      BuildPushImage,
 				Params: map[string]string{
-					"IMAGE":      "ghcr.io/test-orz/test-image:0.3.2",
-					"DOCKERFILE": "./app/Dockerfile",
-					"CONTEXT":    "./app/",
+					"image":      "ghcr.io/test-orz/test-image:0.3.2",
+					"dockerfile": "./app/Dockerfile",
+					"context":    "./app/",
 				},
 				OwnerReference: &metav1.OwnerReference{
 					APIVersion: "v1",

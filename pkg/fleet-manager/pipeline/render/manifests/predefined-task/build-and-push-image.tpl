@@ -26,19 +26,19 @@ spec:
   params:
   - name: IMAGE # This is a parameter that must be set.
     description: Name (reference) of the image to build.
-    default: {{ default `Unknown` .Params.IMAGE }}
+    default: {{ default `Unknown` .Params.image }}
   - name: DOCKERFILE
     description: Path to the Dockerfile to build.
-    default: {{ default `./Dockerfile` .Params.DOCKERFILE }}
+    default: {{ default `./Dockerfile` .Params.dockerfile }}
   - name: CONTEXT
     description: The build context used by Kaniko.
-    default: {{ default `./` .Params.CONTEXT }}
+    default: {{ default `./` .Params.context }}
   - name: EXTRA_ARGS # more details see https://github.com/GoogleContainerTools/kaniko?tab=readme-ov-file#additional-flags
     type: array
-    default: {{ default `[]` .Params.EXTRA_ARGS }}
+    default: {{ default `[]` .Params.extra_args }}
   - name: BUILDER_IMAGE
     description: The image on which builds will run (default is v1.5.1)
-    default: {{ default `gcr.io/kaniko-project/executor:v1.5.1@sha256:c6166717f7fe0b7da44908c986137ecfeab21f31ec3992f6e128fff8a94be8a5` .Params.BUILDER_IMAGE }}
+    default: {{ default `gcr.io/kaniko-project/executor:v1.5.1@sha256:c6166717f7fe0b7da44908c986137ecfeab21f31ec3992f6e128fff8a94be8a5` .Params.builder_image }}
   workspaces:
   - name: source
     description: Holds the context and Dockerfile
