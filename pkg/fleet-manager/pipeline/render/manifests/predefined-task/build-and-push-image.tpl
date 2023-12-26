@@ -61,7 +61,7 @@ spec:
     - --context=$(workspaces.source.path)/$(params.CONTEXT) # The user does not need to care the workspace and the source.
     - --destination=$(params.IMAGE)
     - --digest-file=$(results.IMAGE_DIGEST.path)
-    - --whitelist-var-run=false
+    - --ignore-var-run=false
     # kaniko assumes it is running as root, which means this example fails on platforms
     # that default to run containers as random uid (like OpenShift). Adding this securityContext
     # makes it explicit that it needs to run as root.
