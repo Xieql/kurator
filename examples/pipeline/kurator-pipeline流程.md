@@ -56,6 +56,7 @@ WARNING! Your password will be stored unencrypted in /root/.docker/config.json.
 
 ```
 kubectl create secret generic docker-credentials --from-file=/root/.docker/config.json -n kurator-pipeline
+
 ```
 
 该 secret 作为 task 的 workspace 的参数，从而 task 获取认证的权限
@@ -70,6 +71,7 @@ kubectl create secret generic chain-credentials \
     --from-file=.dockerconfigjson=/root/.docker/config.json \
     --type=kubernetes.io/dockerconfigjson \
     -n kurator-pipeline
+
 ```
 
 关联 该 secret 到 service account, 已经写在 rbac.yaml
