@@ -34,5 +34,5 @@ spec:
       predefinedTask:
         name: build-and-push-image
         params:
-          image-name: "ghcr.io/xieql/podinfo:test-version"
+          image-name: "ghcr.io/xieql/kurator-final:0.4.1"
           extra-args: "--skip-tls-verify"
