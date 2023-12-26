@@ -86,6 +86,8 @@ kubectl patch configmap chains-config -n tekton-chains -p='{"data":{"artifacts.o
 kubectl patch configmap chains-config -n tekton-chains -p='{"data":{"transparency.enabled": "true"}}'
 ```
 
+git://github.com/acme/myproject.git#refs/heads/mybranch#
+
 ### 创建 kurator pipeline 测试例子
 
 #### apply kurator pipeline 例子
