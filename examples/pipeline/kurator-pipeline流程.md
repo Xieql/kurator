@@ -27,7 +27,7 @@ cosign generate-key-pair k8s://tekton-chains/signing-secrets
 kubectl create secret generic git-credentials \
   --namespace=kurator-pipeline \
   --from-literal=.gitconfig=$'[credential "https://github.com"]\n\thelper = store' \
-  --from-literal=.git-credentials='https://Xieql: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@github.com'
+  --from-literal=.git-credentials='https://Xieql:xxx@github.com'
 ```
 
 ### 配置 镜像仓库认证
@@ -52,6 +52,7 @@ WARNING! Your password will be stored unencrypted in /root/.docker/config.json.
 #### 创建 task 所需镜像仓库认证的secret
 
 创建用于 task 上传image 到 oci仓库所需的 secret
+
 
 ```
 kubectl create secret generic docker-credentials --from-file=/root/.docker/config.json -n kurator-pipeline
