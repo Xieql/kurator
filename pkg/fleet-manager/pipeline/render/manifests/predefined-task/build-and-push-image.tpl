@@ -37,8 +37,8 @@ spec:
     type: array
     default: {{ default `[]` .Params.extra_args }}
   - name: BUILDER_IMAGE
-    description: The image on which builds will run (default is v1.5.1)
-    default: {{ default `gcr.io/kaniko-project/executor:v1.5.1@sha256:c6166717f7fe0b7da44908c986137ecfeab21f31ec3992f6e128fff8a94be8a5` .Params.builder_image }}
+    description: The image on which builds will run (default is v1.19.2)
+    default: {{ default `gcr.io/kaniko-project/executor@sha256:f913ab076f92f1bdca336ab8514fea6e76f0311e52459cce5ec090c120885c8b` .Params.builder_image }}
   workspaces:
   - name: source
     description: Holds the context and Dockerfile
