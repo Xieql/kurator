@@ -219,7 +219,7 @@ func (p *PipelineManager) createPredefinedTask(ctx context.Context, task pipelin
 		PipelineName:      pipeline.Name,
 		PipelineNamespace: pipeline.Namespace,
 		TemplateName:      string(task.PredefinedTask.Name),
-		Params:            nil,
+		Params:            task.PredefinedTask.Params,
 		OwnerReference:    generatePipelineOwnerRef(pipeline),
 	}
 
@@ -340,6 +340,7 @@ func (p *PipelineManager) isRBACResourceReady(ctx context.Context, rbacConfig re
 	sa := &v1.ServiceAccount{}
 	err := p.Client.Get(ctx, types.NamespacedName{Name: rbacConfig.PipelineName, Namespace: rbacConfig.PipelineNamespace}, sa)
 	if err != nil {
+		// not found 的处理，其他也是
 		log.Error(err, " Check for the existence of the ServiceAccount error")
 
 		return false
