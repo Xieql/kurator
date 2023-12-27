@@ -81,7 +81,7 @@ func (p *pipelineList) Execute() error {
 		os.Exit(1)
 	}
 	// 打印节点信息
-	fmt.Println("集群节点列表:")
+	fmt.Println("集群节点列表 :")
 	for _, node := range nodeList.Items {
 		fmt.Println(node.Name)
 	}
