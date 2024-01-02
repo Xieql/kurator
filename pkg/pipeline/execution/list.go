@@ -89,7 +89,7 @@ func (p *pipelineList) ListExecute() error {
 	fmt.Println("---------------------------------------------------------------------")
 
 	for _, tr := range pipelineRunList.Items {
-		fmt.Printf("%-30s | %-16s | %-12s | %s\n",
+		fmt.Printf("%-25s | %-16s | %-12s | %s\n",
 			tr.Name,
 			tr.CreationTimestamp.Format("2006-01-02 15:04:05"),
 			tr.Namespace,
