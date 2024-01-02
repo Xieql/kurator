@@ -85,20 +85,15 @@ func (p *pipelineList) ListExecute() error {
 
 	// 打印 Pipeline 的名称
 	fmt.Println("------------------ Pipeline execution ----------")
-	fmt.Println("Execution Name   | Creation Time   |  Namespace  | creator Pipeline  ")
-	fmt.Println("------------------ ---------- ----------")
+	fmt.Println("Execution Name   | Creation Time   |  Namespace  | Creator Pipeline")
+	fmt.Println("------------------ -----------------------------")
 
-	type listValue struct {
-		executionName   string
-		createTime      string
-		namespace       string
-		creatorPipeline string
-	}
 	for _, tr := range pipelineRunList.Items {
-		fmt.Println(tr.Name)
-		fmt.Println(tr.Namespace)
-		fmt.Println(tr.CreationTimestamp)
-		fmt.Println(tr.Spec.PipelineRef.Name)
+		fmt.Printf("%-20s | %-16s | %-12s | %s\n",
+			tr.Name,
+			tr.CreationTimestamp.Format("2006-01-02 15:04:05"),
+			tr.Namespace,
+			tr.Spec.PipelineRef.Name)
 	}
 
 	return nil
