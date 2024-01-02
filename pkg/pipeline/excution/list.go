@@ -96,7 +96,9 @@ func (p *pipelineList) ListExecute() error {
 	}
 
 	// 打印 Pipeline 的名称
-	fmt.Println("Pipeline:")
+	fmt.Println("------------------ Pipeline execution ----------")
+	fmt.Println("------------------ Pipeline execution ----------")
+
 	for _, tr := range pipelineRunList.Items {
 		fmt.Println(tr.Name)
 	}
