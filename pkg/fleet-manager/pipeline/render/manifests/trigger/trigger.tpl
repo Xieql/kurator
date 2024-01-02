@@ -34,6 +34,7 @@ spec:
       - name: repo-url
         value: $(tt.params.gitrepositoryurl)
       workspaces:
+      // TODO: 这里做成定制化
       - name: kurator-pipeline-shared-data # there only one pvc workspace in each pipeline, and the name is `kurator-pipeline-shared-data`
         volumeClaimTemplate:
           spec:

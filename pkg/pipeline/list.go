@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package tool
+package pipeline
 
 import (
 	"context"
@@ -73,7 +73,7 @@ func NewPipelineList(opts *generic.Options, args *ListArgs) (*pipelineList, erro
 	return pList, nil
 }
 
-func (p *pipelineList) Execute() error {
+func (p *pipelineList) ListExecute() error {
 	// 获取集群中的所有节点
 	nodeList := &corev1.NodeList{}
 	if err := p.Client.CtrlRuntimeClient().List(context.Background(), nodeList); err != nil {
@@ -88,12 +88,12 @@ func (p *pipelineList) Execute() error {
 
 	taskRunList := &tektonapi.TaskRunList{}
 	if err := p.CtrlRuntimeClient().List(context.Background(), taskRunList); err != nil {
-		fmt.Fprintf(os.Stderr, "获取 TaskRun 列表失败: %v\n", err)
+		fmt.Fprintf(os.Stderr, "获取 Pipeline 列表失败: %v\n", err)
 		os.Exit(1)
 	}
 
-	// 打印 TaskRun 的名称
-	fmt.Println("TaskRun 列表:")
+	// 打印 Pipeline 的名称
+	fmt.Println("Pipeline:")
 	for _, tr := range taskRunList.Items {
 		fmt.Println(tr.Name)
 	}

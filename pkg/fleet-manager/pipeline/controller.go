@@ -39,6 +39,8 @@ import (
 	"kurator.dev/kurator/pkg/infra/util"
 )
 
+// TODO: 给 pipeline 添加 condition ？
+
 const (
 	PipelineFinalizer = "pipeline.kurator.dev"
 )
