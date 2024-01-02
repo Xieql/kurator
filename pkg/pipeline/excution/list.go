@@ -20,7 +20,6 @@ import (
 	"context"
 	"fmt"
 	tektonapi "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1"
-	corev1 "k8s.io/api/core/v1"
 	"kurator.dev/kurator/pkg/client"
 	"kurator.dev/kurator/pkg/generic"
 	"os"
@@ -77,17 +76,6 @@ func NewPipelineList(opts *generic.Options, args *ListArgs) (*pipelineList, erro
 }
 
 func (p *pipelineList) ListExecute() error {
-	// 获取集群中的所有节点
-	nodeList := &corev1.NodeList{}
-	if err := p.Client.CtrlRuntimeClient().List(context.Background(), nodeList); err != nil {
-		fmt.Fprintf(os.Stderr, "获取节点信息失败: %v\n", err)
-		os.Exit(1)
-	}
-	// 打印节点信息
-	fmt.Println("集群节点列表 :")
-	for _, node := range nodeList.Items {
-		fmt.Println(node.Name)
-	}
 
 	pipelineRunList := &tektonapi.PipelineRunList{}
 	if err := p.CtrlRuntimeClient().List(context.Background(), pipelineRunList); err != nil {
@@ -108,6 +96,9 @@ func (p *pipelineList) ListExecute() error {
 	}
 	for _, tr := range pipelineRunList.Items {
 		fmt.Println(tr.Name)
+		fmt.Println(tr.Namespace)
+		fmt.Println(tr.CreationTimestamp)
+		fmt.Println(tr.Spec.PipelineRef.Name)
 	}
 
 	return nil
