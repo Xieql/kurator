@@ -18,13 +18,9 @@ package pipeline
 
 import (
 	"github.com/spf13/cobra"
-	pipelinelist "kurator.dev/kurator/pkg/pipeline/execution"
-
 	"kurator.dev/kurator/cmd/kurator/app/pipeline/execution"
 	"kurator.dev/kurator/pkg/generic"
 )
-
-var ListArgs = pipelinelist.ListArgs{}
 
 func NewCmd(opts *generic.Options) *cobra.Command {
 	joinCmd := &cobra.Command{

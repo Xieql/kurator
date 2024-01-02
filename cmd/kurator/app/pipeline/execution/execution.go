@@ -18,14 +18,10 @@ package execution
 
 import (
 	"github.com/spf13/cobra"
-	pipelinelist "kurator.dev/kurator/pkg/pipeline/execution"
-
 	"kurator.dev/kurator/cmd/kurator/app/pipeline/execution/list"
 	"kurator.dev/kurator/cmd/kurator/app/pipeline/execution/logs"
 	"kurator.dev/kurator/pkg/generic"
 )
-
-var ListArgs = pipelinelist.ListArgs{}
 
 func NewCmd(opts *generic.Options) *cobra.Command {
 	joinCmd := &cobra.Command{

@@ -24,6 +24,7 @@ import (
 	"kurator.dev/kurator/pkg/client"
 	"kurator.dev/kurator/pkg/generic"
 	"os"
+	ctrlclient "sigs.k8s.io/controller-runtime/pkg/client"
 	"sort"
 )
 
@@ -49,10 +50,7 @@ type pipelineList struct {
 }
 
 type ListArgs struct {
-	ExecutionName   string
-	Namespace       string
-	CreateTime      string
-	CreatorPipeline string
+	Namespace string
 }
 
 func NewPipelineList(opts *generic.Options, args *ListArgs) (*pipelineList, error) {
@@ -79,9 +77,13 @@ type PipelineRunValue struct {
 
 // ListExecute retrieves and prints a formatted list of PipelineRuns.
 func (p *pipelineList) ListExecute() error {
+	// 创建 ListOptions，设置 Namespace 筛选条件
+	listOpts := &ctrlclient.ListOptions{
+		Namespace: p.args.Namespace,
+	}
 	// Get all pipelineRuns
 	pipelineRunList := &tektonapi.PipelineRunList{}
-	if err := p.CtrlRuntimeClient().List(context.Background(), pipelineRunList); err != nil {
+	if err := p.CtrlRuntimeClient().List(context.Background(), pipelineRunList, listOpts); err != nil {
 		fmt.Fprintf(os.Stderr, "failed to get PipelineRunList: %v\n", err)
 		return err
 	}
