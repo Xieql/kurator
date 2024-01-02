@@ -28,19 +28,6 @@ import (
 	"sort"
 )
 
-// Info is the status of pipeline
-type Info struct {
-	Name   string `yaml:"name"`
-	Status string `yaml:"status"`
-}
-
-// listOptions is the option about command "kurator pipeline list"
-type listOptions struct {
-	options *generic.Options
-	info    map[string]Info
-	output  string
-}
-
 // pipelineList is the struct for command for list pipeline obj
 type pipelineList struct {
 	*client.Client
@@ -50,7 +37,8 @@ type pipelineList struct {
 }
 
 type ListArgs struct {
-	Namespace string
+	Namespace     string
+	AllNamespaces bool
 }
 
 func NewPipelineList(opts *generic.Options, args *ListArgs) (*pipelineList, error) {
@@ -77,9 +65,12 @@ type PipelineRunValue struct {
 
 // ListExecute retrieves and prints a formatted list of PipelineRuns.
 func (p *pipelineList) ListExecute() error {
-	// 创建 ListOptions，设置 Namespace 筛选条件
-	listOpts := &ctrlclient.ListOptions{
-		Namespace: p.args.Namespace,
+	// 创建 ListOptions
+	listOpts := &ctrlclient.ListOptions{}
+
+	// 如果未设置查看所有命名空间的标志，则使用指定的命名空间
+	if !p.args.AllNamespaces {
+		listOpts.Namespace = p.args.Namespace
 	}
 	// Get all pipelineRuns
 	pipelineRunList := &tektonapi.PipelineRunList{}
@@ -88,7 +79,7 @@ func (p *pipelineList) ListExecute() error {
 		return err
 	}
 
-	valueList := []PipelineRunValue{}
+	var valueList []PipelineRunValue
 	for _, tr := range pipelineRunList.Items {
 		valueList = append(valueList, PipelineRunValue{
 			Name:              tr.Name,

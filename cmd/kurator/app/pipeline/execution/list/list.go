@@ -50,6 +50,7 @@ func NewCmd(opts *generic.Options) *cobra.Command {
 	}
 
 	PipelineListCmd.PersistentFlags().StringVarP(&ListArgs.Namespace, "namespace", "n", "default", "Comma separated list of namespace")
+	PipelineListCmd.PersistentFlags().BoolVarP(&ListArgs.AllNamespaces, "all-namespaces", "A", false, "If true, list the pipelineRuns across all namespaces")
 
 	return PipelineListCmd
 }
