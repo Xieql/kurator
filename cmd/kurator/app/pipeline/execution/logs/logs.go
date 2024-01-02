@@ -21,7 +21,7 @@ import (
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"kurator.dev/kurator/pkg/generic"
-	pipelinelist "kurator.dev/kurator/pkg/pipeline/excution"
+	pipelinelist "kurator.dev/kurator/pkg/pipeline/execution"
 )
 
 var ListArgs = pipelinelist.ListArgs{}
