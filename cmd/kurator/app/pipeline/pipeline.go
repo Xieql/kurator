@@ -28,7 +28,7 @@ var ListArgs = pipelinelist.ListArgs{}
 
 func NewCmd(opts *generic.Options) *cobra.Command {
 	joinCmd := &cobra.Command{
-		Use:                   "join",
+		Use:                   "pipeline",
 		Short:                 "Register a cluster or node",
 		DisableFlagsInUseLine: true,
 		FParseErrWhitelist: cobra.FParseErrWhitelist{

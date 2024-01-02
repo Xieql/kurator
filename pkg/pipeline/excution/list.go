@@ -100,6 +100,12 @@ func (p *pipelineList) ListExecute() error {
 	fmt.Println("Execution Name   | Creation Time   |  Namespace  | creator Pipeline  ")
 	fmt.Println("------------------ ---------- ----------")
 
+	type listValue struct {
+		executionName   string
+		createTime      string
+		namespace       string
+		creatorPipeline string
+	}
 	for _, tr := range pipelineRunList.Items {
 		fmt.Println(tr.Name)
 	}
