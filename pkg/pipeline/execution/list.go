@@ -20,16 +20,11 @@ import (
 	"context"
 	"fmt"
 	tektonapi "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"kurator.dev/kurator/pkg/client"
 	"kurator.dev/kurator/pkg/generic"
 	"os"
-)
-
-type PipelineStatus string
-
-const (
-	Ready   PipelineStatus = "ready"
-	Unready PipelineStatus = "unready"
+	"sort"
 )
 
 // Info is the status of pipeline
@@ -75,26 +70,64 @@ func NewPipelineList(opts *generic.Options, args *ListArgs) (*pipelineList, erro
 	return pList, nil
 }
 
-func (p *pipelineList) ListExecute() error {
+type PipelineRunValue struct {
+	Name              string
+	CreationTimestamp metav1.Time
+	Namespace         string
+	CreatorPipeline   string
+}
 
+// ListExecute retrieves and prints a formatted list of PipelineRuns.
+func (p *pipelineList) ListExecute() error {
+	// Get all pipelineRuns
 	pipelineRunList := &tektonapi.PipelineRunList{}
 	if err := p.CtrlRuntimeClient().List(context.Background(), pipelineRunList); err != nil {
-		fmt.Fprintf(os.Stderr, "获取 Pipeline 列表失败: %v\n", err)
-		os.Exit(1)
+		fmt.Fprintf(os.Stderr, "failed to get PipelineRunList: %v\n", err)
+		return err
 	}
 
-	// 打印 Pipeline 的名称
-	fmt.Println("----------------------------------- Pipeline execution ---------------------------")
-	fmt.Println("  Execution Name          |   Creation Time     |   Namespace      | Creator Pipeline")
-	fmt.Println("---------------------------------------------------------------------------------")
-
+	valueList := []PipelineRunValue{}
 	for _, tr := range pipelineRunList.Items {
-		fmt.Printf("%-25s | %-16s | %-12s | %s\n",
-			tr.Name,
-			tr.CreationTimestamp.Format("2006-01-02 15:04:05"),
-			tr.Namespace,
-			tr.Spec.PipelineRef.Name)
+		valueList = append(valueList, PipelineRunValue{
+			Name:              tr.Name,
+			CreationTimestamp: tr.CreationTimestamp,
+			Namespace:         tr.Namespace,
+			CreatorPipeline:   tr.Spec.PipelineRef.Name,
+		})
+	}
+
+	groupedRuns := GroupAndSortPipelineRuns(valueList)
+
+	// Print the formatted list
+	fmt.Println("------------------------------------- Pipeline Execution -----------------------------")
+	fmt.Println("  Execution Name          |   Creation Time     |   Namespace      | Creator Pipeline")
+	fmt.Println("--------------------------------------------------------------------------------------")
+
+	for _, runs := range groupedRuns {
+		for _, tr := range runs {
+			fmt.Printf("%-25s | %-20s | %-16s | %s\n",
+				tr.Name,
+				tr.CreationTimestamp.Time.Format("2006-01-02 15:04:05"),
+				tr.Namespace,
+				tr.CreatorPipeline)
+		}
 	}
 
 	return nil
+}
+
+// GroupAndSortPipelineRuns groups PipelineRunValues by CreatorPipeline and sorts each group by CreationTimestamp.
+func GroupAndSortPipelineRuns(runs []PipelineRunValue) map[string][]PipelineRunValue {
+	groups := make(map[string][]PipelineRunValue)
+	for _, run := range runs {
+		groups[run.CreatorPipeline] = append(groups[run.CreatorPipeline], run)
+	}
+
+	for _, group := range groups {
+		sort.Slice(group, func(i, j int) bool {
+			return group[i].CreationTimestamp.Time.Before(group[j].CreationTimestamp.Time)
+		})
+	}
+
+	return groups
 }
