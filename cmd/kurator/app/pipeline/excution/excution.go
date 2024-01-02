@@ -14,13 +14,14 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package pipeline
+package excution
 
 import (
 	"github.com/spf13/cobra"
 	pipelinelist "kurator.dev/kurator/pkg/pipeline/excution"
 
-	"kurator.dev/kurator/cmd/kurator/app/pipeline/excution"
+	"kurator.dev/kurator/cmd/kurator/app/pipeline/excution/list"
+	"kurator.dev/kurator/cmd/kurator/app/pipeline/excution/logs"
 	"kurator.dev/kurator/pkg/generic"
 )
 
@@ -36,7 +37,8 @@ func NewCmd(opts *generic.Options) *cobra.Command {
 		},
 	}
 
-	joinCmd.AddCommand(excution.NewCmd(opts))
+	joinCmd.AddCommand(list.NewCmd(opts))
+	joinCmd.AddCommand(logs.NewCmd(opts))
 
 	return joinCmd
 }

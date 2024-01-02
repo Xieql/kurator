@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package pipeline
+package excution
 
 import (
 	"context"
@@ -55,7 +55,10 @@ type pipelineList struct {
 }
 
 type ListArgs struct {
-	Namespace string
+	ExecutionName   string
+	Namespace       string
+	CreateTime      string
+	CreatorPipeline string
 }
 
 func NewPipelineList(opts *generic.Options, args *ListArgs) (*pipelineList, error) {
@@ -86,15 +89,15 @@ func (p *pipelineList) ListExecute() error {
 		fmt.Println(node.Name)
 	}
 
-	taskRunList := &tektonapi.TaskRunList{}
-	if err := p.CtrlRuntimeClient().List(context.Background(), taskRunList); err != nil {
+	pipelineRunList := &tektonapi.PipelineRunList{}
+	if err := p.CtrlRuntimeClient().List(context.Background(), pipelineRunList); err != nil {
 		fmt.Fprintf(os.Stderr, "获取 Pipeline 列表失败: %v\n", err)
 		os.Exit(1)
 	}
 
 	// 打印 Pipeline 的名称
 	fmt.Println("Pipeline:")
-	for _, tr := range taskRunList.Items {
+	for _, tr := range pipelineRunList.Items {
 		fmt.Println(tr.Name)
 	}
 
