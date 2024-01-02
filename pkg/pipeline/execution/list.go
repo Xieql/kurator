@@ -28,31 +28,20 @@ import (
 	"sort"
 )
 
-// Info is the status of pipeline
-type Info struct {
-	Name   string `yaml:"name"`
-	Status string `yaml:"status"`
-}
-
-// listOptions is the option about command "kurator pipeline list"
-type listOptions struct {
-	options *generic.Options
-	info    map[string]Info
-	output  string
-}
-
-// pipelineList is the struct for command for list pipeline obj
+// pipelineList is the structure used for listing pipeline objects.
 type pipelineList struct {
 	*client.Client
-
 	args    *ListArgs
 	options *generic.Options
 }
 
+// ListArgs holds the arguments for listing pipeline runs.
 type ListArgs struct {
-	Namespace string
+	Namespace     string // Specific namespace to list pipeline runs.
+	AllNamespaces bool   // Flag to list pipeline runs across all namespaces.
 }
 
+// NewPipelineList creates a new pipelineList instance.
 func NewPipelineList(opts *generic.Options, args *ListArgs) (*pipelineList, error) {
 	pList := &pipelineList{
 		options: opts,
@@ -64,10 +53,10 @@ func NewPipelineList(opts *generic.Options, args *ListArgs) (*pipelineList, erro
 		return nil, err
 	}
 	pList.Client = c
-
 	return pList, nil
 }
 
+// PipelineRunValue represents a single pipeline run.
 type PipelineRunValue struct {
 	Name              string
 	CreationTimestamp metav1.Time
@@ -75,20 +64,23 @@ type PipelineRunValue struct {
 	CreatorPipeline   string
 }
 
-// ListExecute retrieves and prints a formatted list of PipelineRuns.
+// ListExecute fetches and displays a formatted list of PipelineRuns.
 func (p *pipelineList) ListExecute() error {
-	// 创建 ListOptions，设置 Namespace 筛选条件
-	listOpts := &ctrlclient.ListOptions{
-		Namespace: p.args.Namespace,
+	listOpts := &ctrlclient.ListOptions{}
+
+	// Apply namespace filter if AllNamespaces flag is not set.
+	if !p.args.AllNamespaces {
+		listOpts.Namespace = p.args.Namespace
 	}
-	// Get all pipelineRuns
+
 	pipelineRunList := &tektonapi.PipelineRunList{}
 	if err := p.CtrlRuntimeClient().List(context.Background(), pipelineRunList, listOpts); err != nil {
 		fmt.Fprintf(os.Stderr, "failed to get PipelineRunList: %v\n", err)
 		return err
 	}
 
-	valueList := []PipelineRunValue{}
+	// Transform pipelineRunList items to PipelineRunValue instances.
+	var valueList []PipelineRunValue
 	for _, tr := range pipelineRunList.Items {
 		valueList = append(valueList, PipelineRunValue{
 			Name:              tr.Name,
@@ -98,9 +90,9 @@ func (p *pipelineList) ListExecute() error {
 		})
 	}
 
+	// Group and sort pipeline runs for display.
 	groupedRuns := GroupAndSortPipelineRuns(valueList)
 
-	// Print the formatted list
 	fmt.Println("------------------------------------- Pipeline Execution -----------------------------")
 	fmt.Println("  Execution Name          |   Creation Time     |   Namespace      | Creator Pipeline")
 	fmt.Println("--------------------------------------------------------------------------------------")
@@ -118,13 +110,14 @@ func (p *pipelineList) ListExecute() error {
 	return nil
 }
 
-// GroupAndSortPipelineRuns groups PipelineRunValues by CreatorPipeline and sorts each group by CreationTimestamp.
+// GroupAndSortPipelineRuns organizes PipelineRunValues by CreatorPipeline and orders them by CreationTimestamp within each group.
 func GroupAndSortPipelineRuns(runs []PipelineRunValue) map[string][]PipelineRunValue {
 	groups := make(map[string][]PipelineRunValue)
 	for _, run := range runs {
 		groups[run.CreatorPipeline] = append(groups[run.CreatorPipeline], run)
 	}
 
+	// Sort each group by creation timestamp.
 	for _, group := range groups {
 		sort.Slice(group, func(i, j int) bool {
 			return group[i].CreationTimestamp.Time.Before(group[j].CreationTimestamp.Time)

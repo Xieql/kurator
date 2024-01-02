@@ -32,7 +32,6 @@ func NewCmd(opts *generic.Options) *cobra.Command {
 		Short:   "list the kurator pipeline",
 		Example: getExample(),
 		RunE: func(cmd *cobra.Command, args []string) error {
-
 			PipelineList, err := pipelinelist.NewPipelineList(opts, &ListArgs)
 			if err != nil {
 				logrus.Errorf("pipeline init error: %v", err)
@@ -50,19 +49,19 @@ func NewCmd(opts *generic.Options) *cobra.Command {
 	}
 
 	PipelineListCmd.PersistentFlags().StringVarP(&ListArgs.Namespace, "namespace", "n", "default", "Comma separated list of namespace")
+	PipelineListCmd.PersistentFlags().BoolVarP(&ListArgs.AllNamespaces, "all-namespaces", "A", false, "If true, list the pipelineRuns across all namespaces")
 
 	return PipelineListCmd
 }
 
-// TODO ：了解 这种 写法，是不是{}   kurator pipeline list -n {namespace}
 func getExample() string {
-	return `  # List kurator pipeline obj in default ns
+	return `  # List kurator pipeline objects in the default namespace
   kurator pipeline list
 
-  # List the pipeline in xxx ns
-  kurator pipeline list -n {namespace}
+  # List the pipelines in a specific namespace (replace 'example-namespace' with your namespace)
+  kurator pipeline list -n example-namespace
 
-  # List the pipeline in all ns
+  # List the pipelines across all namespaces
   kurator pipeline list -A
 `
 }
