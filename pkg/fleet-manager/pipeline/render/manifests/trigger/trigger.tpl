@@ -34,15 +34,20 @@ spec:
       - name: repo-url
         value: $(tt.params.gitrepositoryurl)
       workspaces:
-      // TODO: 这里做成定制化
       - name: kurator-pipeline-shared-data # there only one pvc workspace in each pipeline, and the name is `kurator-pipeline-shared-data`
         volumeClaimTemplate:
           spec:
             accessModes:
-              - ReadWriteOnce
+              -  {{ default `ReadWriteOnce` .AccessMode }}
             resources:
               requests:
-                storage: 1Gi
+                storage: {{ default `1Gi` .StorageRequest }}
+{{- if .VolumeMode }}
+            volumeMode: {{ .VolumeMode }}
+{{- end }}
+{{- if .StorageClassName }}
+            storageClassName: {{ .StorageClassName }}
+{{- end }}
       - name: git-credentials
         secret:
           secretName: git-credentials
