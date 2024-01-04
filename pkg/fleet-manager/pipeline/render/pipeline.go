@@ -18,9 +18,9 @@ package render
 
 import (
 	"fmt"
-	"io/fs"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"strings"
+
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	pipelineapi "kurator.dev/kurator/pkg/apis/pipeline/v1alpha1"
 )
@@ -47,26 +47,26 @@ type PipelineConfig struct {
 }
 
 // RenderPipelineWithTasks renders the full pipeline configuration as a YAML byte array using a specified template and **Pipeline.Tasks**.
-func RenderPipelineWithTasks(fsys fs.FS, pipelineName, pipelineNameSpace string, tasks []pipelineapi.PipelineTask, ownerReference *metav1.OwnerReference) ([]byte, error) {
-	DockerCredentials, tasksInfo, err := GenerateTasksInfo(pipelineName, tasks)
+func RenderPipelineWithPipeline(pipeline *pipelineapi.Pipeline) ([]byte, error) {
+	DockerCredentials, tasksInfo, err := GenerateTasksInfo(pipeline.Name, pipeline.Spec.Tasks)
 	if err != nil {
 		return nil, err
 	}
 
 	cfg := PipelineConfig{
-		PipelineName:      pipelineName,
-		PipelineNamespace: pipelineNameSpace,
+		PipelineName:      pipeline.Name,
+		PipelineNamespace: pipeline.Namespace,
 		TasksInfo:         tasksInfo,
-		OwnerReference:    ownerReference,
+		OwnerReference:    GeneratePipelineOwnerRef(pipeline),
 		DockerCredentials: DockerCredentials,
 	}
 
-	return renderPipeline(fsys, cfg)
+	return renderPipeline(cfg)
 }
 
 // renderPipeline renders the full pipeline configuration as a YAML byte array using a specified template and **PipelineConfig**.
-func renderPipeline(fsys fs.FS, cfg PipelineConfig) ([]byte, error) {
-	return renderTemplate(fsys, PipelineTemplateFile, PipelineTemplateName, cfg)
+func renderPipeline(cfg PipelineConfig) ([]byte, error) {
+	return renderTemplate(PipelineTemplateFile, PipelineTemplateName, cfg)
 }
 
 // GenerateTasksInfo constructs TasksInfo, detailing the integration of tasks into a given pipeline.
@@ -145,4 +145,8 @@ func generateKanikoTaskInfo(taskName, taskRefer, lastTask string, retries int) s
 	}
 
 	return taskBuilder.String()
+}
+
+func generatePipelineTaskName(taskName, pipelineName string) string {
+	return taskName + "-" + pipelineName
 }

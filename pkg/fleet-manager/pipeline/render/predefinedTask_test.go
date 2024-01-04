@@ -169,9 +169,7 @@ func TestRenderPredefinedTask(t *testing.T) {
 
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			fs := manifestFS
-
-			result, err := RenderPredefinedTask(fs, tc.cfg)
+			result, err := RenderPredefinedTask(tc.cfg)
 
 			// Test assertions
 			if tc.expectError {

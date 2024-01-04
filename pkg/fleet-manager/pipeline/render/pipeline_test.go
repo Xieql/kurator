@@ -17,6 +17,7 @@ limitations under the License.
 package render
 
 import (
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	pipelineapi "kurator.dev/kurator/pkg/apis/pipeline/v1alpha1"
 	"os"
 	"testing"
@@ -26,8 +27,13 @@ import (
 
 func TestRenderPipelineWithTasks(t *testing.T) {
 	expectedPipelineFilePath := "testdata/pipeline/"
-	pipelineName := "test-pipeline"
-	pipelineNameSpace := "kurator-pipeline"
+	testPipeline := pipelineapi.Pipeline{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "test-pipeline",
+			Namespace: "kurator-pipeline",
+		},
+	}
+
 	cases := []struct {
 		name         string
 		tasks        []pipelineapi.PipelineTask
@@ -84,9 +90,9 @@ func TestRenderPipelineWithTasks(t *testing.T) {
 
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			fs := manifestFS
+			testPipeline.Spec.Tasks = tc.tasks
 
-			result, err := RenderPipelineWithTasks(fs, pipelineName, pipelineNameSpace, tc.tasks, nil)
+			result, err := RenderPipelineWithPipeline(&testPipeline)
 
 			if tc.expectError {
 				assert.Error(t, err)

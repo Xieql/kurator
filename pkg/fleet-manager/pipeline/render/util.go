@@ -18,37 +18,17 @@ package render
 
 import (
 	"bytes"
-	"io/fs"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	pipelineapi "kurator.dev/kurator/pkg/apis/pipeline/v1alpha1"
 	"text/template"
 
 	"github.com/Masterminds/sprig/v3"
 	"sigs.k8s.io/yaml"
-
-	"kurator.dev/kurator/pkg/fleet-manager/pipeline/render/manifests"
 )
-
-const (
-	// GoTestTask is the predefined task template name of go test task
-	GoTestTask = "go-test"
-	// GitCloneTask is the predefined task template name of git clone task
-	GitCloneTask = "git-clone"
-	// GoLintTask is the predefined task template name of golangci lint task
-	GoLintTask     = "go-lint"
-	BuildPushImage = "build-and-push-image"
-)
-
-var manifestFS = manifests.BuiltinOrDir("manifests")
 
 // renderTemplate reads, parses, and renders a template file using the provided configuration data.
-func renderTemplate(fsys fs.FS, tplFileName, tplName string, cfg interface{}) ([]byte, error) {
-	out, err := fs.ReadFile(fsys, tplFileName)
-	if err != nil {
-		return nil, err
-	}
-
-	t := template.New(tplName)
-
-	tpl, err := t.Funcs(funMap()).Parse(string(out))
+func renderTemplate(tplFileString, tplName string, cfg interface{}) ([]byte, error) {
+	tpl, err := template.New(tplName).Funcs(funMap()).Parse(tplFileString)
 	if err != nil {
 		return nil, err
 	}
@@ -79,7 +59,11 @@ func toYaml(value interface{}) string {
 	return string(y)
 }
 
-// generatePipelineTaskName generate a unique name in case different pipeline have the same name task.
-func generatePipelineTaskName(taskName, pipelineName string) string {
-	return taskName + "-" + pipelineName
+func GeneratePipelineOwnerRef(pipeline *pipelineapi.Pipeline) *metav1.OwnerReference {
+	return &metav1.OwnerReference{
+		APIVersion: pipeline.APIVersion,
+		Kind:       pipeline.Kind,
+		Name:       pipeline.Name,
+		UID:        pipeline.UID,
+	}
 }

@@ -44,9 +44,8 @@ func TestRenderTrigger(t *testing.T) {
 
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			fs := manifestFS
 
-			result, err := RenderTrigger(fs, tc.cfg)
+			result, err := RenderTrigger(tc.cfg)
 
 			if tc.expectError {
 				assert.Error(t, err)

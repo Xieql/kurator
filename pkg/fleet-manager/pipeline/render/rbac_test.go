@@ -22,8 +22,6 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-
-	"kurator.dev/kurator/pkg/fleet-manager/manifests"
 )
 
 func TestRenderRBAC(t *testing.T) {
@@ -61,14 +59,6 @@ func TestRenderRBAC(t *testing.T) {
 			expectError: true,
 		},
 		{
-			name: "invalid file system path",
-			cfg: RBACConfig{
-				PipelineName:      "example",
-				PipelineNamespace: "default",
-			},
-			expectError: true,
-		},
-		{
 			name: "configuration with OwnerReference",
 			cfg: RBACConfig{
 				PipelineName:      "example-with-owner",
@@ -87,19 +77,12 @@ func TestRenderRBAC(t *testing.T) {
 
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			fs := manifestFS
-			// Use an invalid file system for the relevant test case.
-			if tc.name == "invalid file system path" {
-				fs = manifests.BuiltinOrDir("invalid-path")
-			}
-
-			result, err := RenderRBAC(fs, tc.cfg)
+			result, err := RenderRBAC(tc.cfg)
 
 			if tc.expectError {
 				assert.Error(t, err)
 			} else {
 				assert.NoError(t, err)
-
 				expected, err := os.ReadFile(expectedRBACFilePath + tc.expectedFile)
 				assert.NoError(t, err)
 				assert.Equal(t, string(expected), string(result))

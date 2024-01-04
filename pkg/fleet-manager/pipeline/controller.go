@@ -23,7 +23,6 @@ import (
 	v1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	utilerrors "k8s.io/apimachinery/pkg/util/errors"
@@ -113,7 +112,7 @@ func (p *PipelineManager) reconcilePipeline(ctx context.Context, pipeline *pipel
 	rbacConfig := render.RBACConfig{
 		PipelineName:      pipeline.Name,
 		PipelineNamespace: pipeline.Namespace,
-		OwnerReference:    generatePipelineOwnerRef(pipeline),
+		OwnerReference:    render.GeneratePipelineOwnerRef(pipeline),
 	}
 
 	// rbac 必须先于其他资源创建。之后，pipeline、task、triggers 等资源在创建阶段，不严格要求创建顺序。在使用阶段，需要确保所有资源创建完成
@@ -169,10 +168,9 @@ func (p *PipelineManager) reconcileCreateRBAC(ctx context.Context, rbacConfig re
 		return ctrl.Result{}, err2
 	}
 
-	manifestFileSystem := manifests.BuiltinOrDir("")
-	rbac, err := render.RenderRBAC(manifestFileSystem, rbacConfig)
+	rbac, err := render.RenderRBAC(rbacConfig)
 	if err != nil {
-		log.Error(err, "unable to RenderRBAC controller", "manifestFileSystem", manifestFileSystem)
+		log.Error(err, "unable to RenderRBAC controller")
 		return ctrl.Result{}, err
 	}
 
@@ -193,14 +191,14 @@ func (p *PipelineManager) reconcileCreateTasks(ctx context.Context, pipeline *pi
 
 	for _, task := range pipeline.Spec.Tasks {
 		if task.PredefinedTask != nil {
-			err := p.createPredefinedTask(ctx, task, pipeline)
+			err := p.createPredefinedTask(ctx, &task, pipeline)
 			if err != nil {
 				log.Error(err, "createPredefinedTask error")
 
 				return ctrl.Result{}, err
 			}
 		} else {
-			err := p.createCustomTask(ctx, task, pipeline)
+			err := p.createCustomTask(ctx, &task, pipeline)
 			if err != nil {
 				log.Error(err, "createCustomTask error")
 
@@ -213,20 +211,11 @@ func (p *PipelineManager) reconcileCreateTasks(ctx context.Context, pipeline *pi
 }
 
 // createPredefinedTask converts the pipeline resources into Tekton resource and apply them.
-func (p *PipelineManager) createPredefinedTask(ctx context.Context, task pipelineapi.PipelineTask, pipeline *pipelineapi.Pipeline) error {
+func (p *PipelineManager) createPredefinedTask(ctx context.Context, task *pipelineapi.PipelineTask, pipeline *pipelineapi.Pipeline) error {
 	log := ctrl.LoggerFrom(ctx)
 	log.Info("~~~~~~~~~~~~~~~~~~~createPredefinedTask ", "pipeline", ctx)
 
-	cfg := render.PredefinedTaskConfig{
-		PipelineName:      pipeline.Name,
-		PipelineNamespace: pipeline.Namespace,
-		TemplateName:      string(task.PredefinedTask.Name),
-		Params:            task.PredefinedTask.Params,
-		OwnerReference:    generatePipelineOwnerRef(pipeline),
-	}
-
-	manifestFileSystem := manifests.BuiltinOrDir("")
-	taskResource, err := render.RenderPredefinedTask(manifestFileSystem, cfg)
+	taskResource, err := render.RenderPredefinedTaskWithPipeline(pipeline, task.PredefinedTask)
 	if err != nil {
 		log.Error(err, "RenderPredefinedTask error")
 
@@ -241,12 +230,11 @@ func (p *PipelineManager) createPredefinedTask(ctx context.Context, task pipelin
 }
 
 // createCustomTask converts the pipeline resources into Tekton resource and apply them.
-func (p *PipelineManager) createCustomTask(ctx context.Context, task pipelineapi.PipelineTask, pipeline *pipelineapi.Pipeline) error {
+func (p *PipelineManager) createCustomTask(ctx context.Context, task *pipelineapi.PipelineTask, pipeline *pipelineapi.Pipeline) error {
 	log := ctrl.LoggerFrom(ctx)
 	log.Info("~~~~~~~~~~~~~~~~~~~createCustomTask ", "pipeline", ctx)
 
-	manifestFileSystem := manifests.BuiltinOrDir("")
-	taskResource, err := render.RenderCustomTaskWithPipeline(manifestFileSystem, task.Name, pipeline.Name, pipeline.Namespace, *task.CustomTask, generatePipelineOwnerRef(pipeline))
+	taskResource, err := render.RenderCustomTaskWithPipeline(pipeline, task.Name, task.CustomTask)
 	if err != nil {
 		log.Error(err, "RenderCustomTaskWithPipeline error")
 
@@ -266,8 +254,7 @@ func (p *PipelineManager) createCustomTask(ctx context.Context, task pipelineapi
 func (p *PipelineManager) reconcileCreatePipeline(ctx context.Context, pipeline *pipelineapi.Pipeline) (ctrl.Result, error) {
 	log := ctrl.LoggerFrom(ctx)
 	log.Info("~~~~~~~~~~~~~~~~~~~reconcileCreatePipeline ", "pipeline", ctx)
-	manifestFileSystem := manifests.BuiltinOrDir("")
-	pipelineResource, err := render.RenderPipelineWithTasks(manifestFileSystem, pipeline.Name, pipeline.Namespace, pipeline.Spec.Tasks, generatePipelineOwnerRef(pipeline))
+	pipelineResource, err := render.RenderPipelineWithPipeline(pipeline)
 	if err != nil {
 		log.Error(err, "RenderPipelineWithTasks error")
 
@@ -288,14 +275,8 @@ func (p *PipelineManager) reconcileCreatePipeline(ctx context.Context, pipeline 
 func (p *PipelineManager) reconcileCreateTrigger(ctx context.Context, pipeline *pipelineapi.Pipeline) (ctrl.Result, error) {
 	log := ctrl.LoggerFrom(ctx)
 	log.Info("~~~~~~~~~~~~~~~~~~~reconcileCreateTrigger ", "pipeline", ctx)
-	manifestFileSystem := manifests.BuiltinOrDir("")
 
-	cfg := render.TriggerConfig{
-		PipelineName:      pipeline.Name,
-		PipelineNamespace: pipeline.Namespace,
-		OwnerReference:    generatePipelineOwnerRef(pipeline),
-	}
-	triggerResource, err := render.RenderTrigger(manifestFileSystem, cfg)
+	triggerResource, err := render.RenderTriggerWithPipeline(pipeline)
 	if err != nil {
 		log.Error(err, "RenderTrigger error")
 
@@ -364,13 +345,4 @@ func (p *PipelineManager) isRBACResourceReady(ctx context.Context, rbacConfig re
 	}
 	// If all resources are found, return true
 	return true
-}
-
-func generatePipelineOwnerRef(pipeline *pipelineapi.Pipeline) *metav1.OwnerReference {
-	return &metav1.OwnerReference{
-		APIVersion: pipeline.APIVersion,
-		Kind:       pipeline.Kind,
-		Name:       pipeline.Name,
-		UID:        pipeline.UID,
-	}
 }

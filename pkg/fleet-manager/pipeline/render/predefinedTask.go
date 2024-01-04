@@ -17,10 +17,19 @@ limitations under the License.
 package render
 
 import (
-	"io/fs"
 	pipelineapi "kurator.dev/kurator/pkg/apis/pipeline/v1alpha1"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+)
+
+const (
+	// GoTestTask is the predefined task template name of go test task
+	GoTestTask = "go-test"
+	// GitCloneTask is the predefined task template name of git clone task
+	GitCloneTask = "git-clone"
+	// GoLintTask is the predefined task template name of golangci lint task
+	GoLintTask     = "go-lint"
+	BuildPushImage = "build-and-push-image"
 )
 
 type PredefinedTaskConfig struct {
@@ -35,25 +44,25 @@ type PredefinedTaskConfig struct {
 
 // PredefinedTaskName is the name of Predefined task object, in case different pipeline have the same name task.
 func (cfg PredefinedTaskConfig) PredefinedTaskName() string {
-	return generatePipelineTaskName(cfg.TemplateName, cfg.PipelineName)
+	return cfg.TemplateName + "-" + cfg.PipelineName
 }
 
-// RenderPredefinedTaskWithPipeline renders the full PredefinedTask configuration as a YAML byte array using **pipelineapi.CustomTask**.
-func RenderPredefinedTaskWithPipeline(fsys fs.FS, taskName, pipelineName, pipelineNamespace string, task pipelineapi.PredefinedTask, ownerReference *metav1.OwnerReference) ([]byte, error) {
+// RenderPredefinedTaskWithPipeline renders the full PredefinedTask configuration as a YAML byte array using pipeline and pipelineapi.CustomTask.
+func RenderPredefinedTaskWithPipeline(pipeline *pipelineapi.Pipeline, task *pipelineapi.PredefinedTask) ([]byte, error) {
 	cfg := PredefinedTaskConfig{
-		PipelineName:      pipelineName,
-		PipelineNamespace: pipelineNamespace,
+		PipelineName:      pipeline.Name,
+		PipelineNamespace: pipeline.Namespace,
 		TemplateName:      string(task.Name),
 		Params:            task.Params,
-		OwnerReference:    ownerReference,
+		OwnerReference:    GeneratePipelineOwnerRef(pipeline),
 	}
 
-	return renderTemplate(fsys, CustomTaskTemplateFile, CustomTaskTemplateName, cfg)
+	return renderTemplate(CustomTaskTemplateFile, CustomTaskTemplateName, cfg)
 }
 
-// RenderPredefinedTask renders the full PredefinedTask configuration as a YAML byte array using **PredefinedTaskConfig**.
-func RenderPredefinedTask(fsys fs.FS, cfg PredefinedTaskConfig) ([]byte, error) {
-	return renderTemplate(fsys, generateTaskTemplateFileName(cfg.TemplateName), generateTaskTemplateName(cfg.TemplateName), cfg)
+// RenderPredefinedTask renders the full PredefinedTask configuration as a YAML byte array using PredefinedTaskConfig.
+func RenderPredefinedTask(cfg PredefinedTaskConfig) ([]byte, error) {
+	return renderTemplate(generateTaskTemplateFileName(cfg.TemplateName), generateTaskTemplateName(cfg.TemplateName), cfg)
 }
 
 func generateTaskTemplateFileName(Name string) string {
