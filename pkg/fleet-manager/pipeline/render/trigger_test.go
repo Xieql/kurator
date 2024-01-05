@@ -32,13 +32,26 @@ func TestRenderTrigger(t *testing.T) {
 		expectedFile string
 	}{
 		{
-			name: "valid pipeline configuration, contains tasks: git-clone, cat-readme, go-test",
+			name: "default trigger configuration",
 			cfg: TriggerConfig{
 				PipelineName:      "test-pipeline",
 				PipelineNamespace: "kurator-pipeline",
 			},
 			expectError:  false,
-			expectedFile: "trigger.yaml",
+			expectedFile: "default.yaml",
+		},
+		{
+			name: "trigger configuration with custom volume claim",
+			cfg: TriggerConfig{
+				PipelineName:      "test-pipeline",
+				PipelineNamespace: "kurator-pipeline",
+				AccessMode:        "ReadWriteOnce",
+				StorageRequest:    "500Mi",
+				StorageClassName:  "manual",
+				VolumeMode:        "Filesystem",
+			},
+			expectError:  false,
+			expectedFile: "with-volume-claim.yaml",
 		},
 	}
 

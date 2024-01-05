@@ -84,14 +84,14 @@ func RenderTriggerWithPipeline(pipeline *pipelineapi.Pipeline) ([]byte, error) {
 }
 
 func RenderTrigger(cfg TriggerConfig) ([]byte, error) {
-	return renderTemplate(TriggerTemplateFile, TriggerTemplateName, cfg)
+	return renderTemplate(TriggerTemplateContent, TriggerTemplateName, cfg)
 }
 
-const TriggerTemplateContent = `apiVersion: v1
-kind: ServiceAccount
+const TriggerTemplateContent = `apiVersion: triggers.tekton.dev/v1alpha1
+kind: TriggerTemplate
 metadata:
-  name: "{{ .ServiceAccountName }}"
-  namespace: "{{ .PipelineNamespace }}"
+  name: {{ .PipelineName }}-triggertemplate
+  namespace: {{ .PipelineNamespace }}
 {{- if .OwnerReference }}
   ownerReferences:
   - apiVersion: "{{ .OwnerReference.APIVersion }}"
@@ -99,15 +99,56 @@ metadata:
     name: "{{ .OwnerReference.Name }}"
     uid: "{{ .OwnerReference.UID }}"
 {{- end }}
-secrets:
-  - name: "chain-credentials"
-    namespace: "{{ .PipelineNamespace }}"
+spec:
+  params:
+  - name: gitrevision
+    description: The git revision
+  - name: gitrepositoryurl
+    description: The git repository url
+  - name: namespace
+    description: The namespace to create the resources
+  resourceTemplates:
+  - apiVersion: tekton.dev/v1beta1
+    kind: PipelineRun
+    metadata:
+      generateName: {{ .PipelineName }}-run-
+      namespace: $(tt.params.namespace)
+    spec:
+      serviceAccountName: {{ .ServiceAccountName }}
+      pipelineRef:
+        name: {{ .PipelineName }}
+      params:
+      - name: revision
+        value: $(tt.params.gitrevision)
+      - name: repo-url
+        value: $(tt.params.gitrepositoryurl)
+      workspaces:
+      - name: kurator-pipeline-shared-data # there only one pvc workspace in each pipeline, and the name is kurator-pipeline-shared-data
+        volumeClaimTemplate:
+          spec:
+            accessModes:
+              - {{ default "ReadWriteOnce" .AccessMode }}
+            resources:
+              requests:
+                storage: {{ default "1Gi" .StorageRequest }}
+{{- if .VolumeMode }}
+            volumeMode: {{ .VolumeMode }}
+{{- end }}
+{{- if .StorageClassName }}
+            storageClassName: {{ .StorageClassName }}
+{{- end }}
+      - name: git-credentials
+        secret:
+          secretName: git-credentials
+      - name: docker-credentials
+        secret:
+          secretName: docker-credentials  # auth for task
 ---
-apiVersion: rbac.authorization.k8s.io/v1
-kind: RoleBinding
+apiVersion: triggers.tekton.dev/v1alpha1
+kind: TriggerBinding
 metadata:
-  name: "{{ .BroadResourceRoleBindingName }}"
-  namespace: "{{ .PipelineNamespace }}"
+  name: {{ .PipelineName }}-triggerbinding
+  namespace: {{ .PipelineNamespace}}
 {{- if .OwnerReference }}
   ownerReferences:
   - apiVersion: "{{ .OwnerReference.APIVersion }}"
@@ -115,20 +156,20 @@ metadata:
     name: "{{ .OwnerReference.Name }}"
     uid: "{{ .OwnerReference.UID }}"
 {{- end }}
-subjects:
-- kind: ServiceAccount
-  name: "{{ .ServiceAccountName }}"
-  namespace: "{{ .PipelineNamespace }}"
-roleRef:
-  apiGroup: rbac.authorization.k8s.io
-  kind: ClusterRole
-  name: tekton-triggers-eventlistener-roles # add role for handle broad-resource, such as eventListener, triggers, configmaps and so on. tekton-triggers-eventlistener-roles is provided by Tekton
+spec:
+  params:
+  - name: gitrevision
+    value: $(body.head_commit.id)
+  - name: namespace
+    value: {{ .PipelineNamespace}}
+  - name: gitrepositoryurl
+    value: "https://github.com/$(body.repository.full_name)"
 ---
-apiVersion: rbac.authorization.k8s.io/v1
-kind: ClusterRoleBinding
+apiVersion: triggers.tekton.dev/v1alpha1
+kind: EventListener
 metadata:
-  name: "{{ .SecretRoleBindingName }}"
-  namespace: "{{ .PipelineNamespace }}"
+  name: {{ .PipelineName }}-listener
+  namespace: {{ .PipelineNamespace}}
 {{- if .OwnerReference }}
   ownerReferences:
   - apiVersion: "{{ .OwnerReference.APIVersion }}"
@@ -136,12 +177,11 @@ metadata:
     name: "{{ .OwnerReference.Name }}"
     uid: "{{ .OwnerReference.UID }}"
 {{- end }}
-subjects:
-- kind: ServiceAccount
-  name: "{{ .ServiceAccountName }}"
-  namespace: "{{ .PipelineNamespace }}"
-roleRef:
-  apiGroup: rbac.authorization.k8s.io
-  kind: ClusterRole
-  name: tekton-triggers-eventlistener-clusterroles # add role for handle secret, clustertriggerbinding and clusterinterceptors. tekton-triggers-eventlistener-clusterroles is provided by Tekton
+spec:
+  serviceAccountName: {{ .ServiceAccountName }}
+  triggers:
+  - bindings:
+    - ref: {{ .PipelineName }}-triggerbinding
+    template:
+      ref: {{ .PipelineName }}-triggertemplate
 `

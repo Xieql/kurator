@@ -72,3 +72,5 @@ func generateTaskTemplateFileName(Name string) string {
 func generateTaskTemplateName(taskType string) string {
 	return "pipeline " + taskType + " task template"
 }
+
+GoTestTaskContent
