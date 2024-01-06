@@ -64,7 +64,7 @@ spec:
     type: string
     default: "1"
   - name: sslVerify
-    description: Set the `http.sslVerify` global git config. Setting this to `false` is not advised unless you are sure that you trust your git remote.
+    description: Set the "http.sslVerify" global git config. Setting this to "false" is not advised unless you are sure that you trust your git remote.
     type: string
     default: "true"
   - name: crtFileName
@@ -72,7 +72,7 @@ spec:
     type: string
     default: "ca-bundle.crt"
   - name: subdirectory
-    description: Subdirectory inside the `source` Workspace to clone the repo into.
+    description: Subdirectory inside the "source" Workspace to clone the repo into.
     type: string
     default: ""
   - name: sparseCheckoutDirectories
@@ -96,7 +96,7 @@ spec:
     type: string
     default: ""
   - name: verbose
-    description: Log the commands that are executed during `git-clone`'s operation.
+    description: Log the commands that are executed during "git-clone"'s operation.
     type: string
     default: "true"
   - name: gitInitImage

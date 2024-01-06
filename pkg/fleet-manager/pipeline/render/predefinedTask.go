@@ -17,18 +17,20 @@ limitations under the License.
 package render
 
 import (
+	"fmt"
 	pipelineapi "kurator.dev/kurator/pkg/apis/pipeline/v1alpha1"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 const (
-	// GoTestTask is the predefined task template name of go test task
-	GoTestTask = "go-test"
 	// GitCloneTask is the predefined task template name of git clone task
 	GitCloneTask = "git-clone"
+	// GoTestTask is the predefined task template name of go test task
+	GoTestTask = "go-test"
 	// GoLintTask is the predefined task template name of golangci lint task
-	GoLintTask     = "go-lint"
+	GoLintTask = "go-lint"
+	// BuildPushImage is the predefined task template name of task about building image and pushing it to image repo
 	BuildPushImage = "build-and-push-image"
 )
 
@@ -57,20 +59,38 @@ func RenderPredefinedTaskWithPipeline(pipeline *pipelineapi.Pipeline, task *pipe
 		OwnerReference:    GeneratePipelineOwnerRef(pipeline),
 	}
 
-	return renderTemplate(CustomTaskTemplateFile, CustomTaskTemplateName, cfg)
+	return RenderPredefinedTask(cfg)
 }
 
 // RenderPredefinedTask renders the full PredefinedTask configuration as a YAML byte array using PredefinedTaskConfig.
 func RenderPredefinedTask(cfg PredefinedTaskConfig) ([]byte, error) {
-	return renderTemplate(generateTaskTemplateFileName(cfg.TemplateName), generateTaskTemplateName(cfg.TemplateName), cfg)
-}
-
-func generateTaskTemplateFileName(Name string) string {
-	return "predefined-task/" + Name + ".tpl"
+	templateContent, err := getPredefinedTaskTemplate(cfg.TemplateName)
+	if err != nil {
+		fmt.Errorf("faild to getPredefinedTaskTemplate '%v' ", err)
+		return nil, err
+	}
+	return renderTemplate(templateContent, generateTaskTemplateName(cfg.TemplateName), cfg)
 }
 
 func generateTaskTemplateName(taskType string) string {
 	return "pipeline " + taskType + " task template"
 }
 
-GoTestTaskContent
+// getPredefinedTaskTemplate is a function that returns the template string based on the given template name.
+// It takes a template name as a parameter and returns two values: the template string and an error object.
+// If the corresponding template is found in the templates map, it returns the template string and nil (indicating no error).
+// If the template is not found, it returns an empty string and a custom error message.
+func getPredefinedTaskTemplate(name string) (string, error) {
+	if template, ok := predefinedTaskTemplates[name]; ok {
+		return template, nil
+	}
+	// Returns an error if the template is not found
+	return "", fmt.Errorf("Template named '%s' not found", name)
+}
+
+var predefinedTaskTemplates = map[string]string{
+	GitCloneTask:   GitCloneTaskContent,
+	GoTestTask:     GoTestTaskContent,
+	GoLintTask:     GoLintTaskContent,
+	BuildPushImage: BuildPushImageContent,
+}

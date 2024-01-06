@@ -35,13 +35,13 @@ spec:
     type: array
     default: []
   - name: BUILDER_IMAGE
-    description: The image on which builds will run (default is v1.5.1)
-    default: gcr.io/kaniko-project/executor:v1.5.1@sha256:c6166717f7fe0b7da44908c986137ecfeab21f31ec3992f6e128fff8a94be8a5
+    description: The image on which builds will run (default is v1.19.2 debug)
+    default: gcr.io/kaniko-project/executor@sha256:899886a2db1c127ff1565d5c7b1e574af1810bbdad048e9850e4f40b5848d79c
   workspaces:
   - name: source
     description: Holds the context and Dockerfile
   - name: dockerconfig
-    description: Includes a docker `config.json`
+    description: Includes a docker "config.json"
     optional: true
     mountPath: /kaniko/.docker
   results:
@@ -59,6 +59,7 @@ spec:
     - --context=$(workspaces.source.path)/$(params.CONTEXT) # The user does not need to care the workspace and the source.
     - --destination=$(params.IMAGE)
     - --digest-file=$(results.IMAGE_DIGEST.path)
+    - --ignore-path=/product_uuid # in case kind cluster run failed, see https://github.com/GoogleContainerTools/kaniko/issues/2164
     # kaniko assumes it is running as root, which means this example fails on platforms
     # that default to run containers as random uid (like OpenShift). Adding this securityContext
     # makes it explicit that it needs to run as root.

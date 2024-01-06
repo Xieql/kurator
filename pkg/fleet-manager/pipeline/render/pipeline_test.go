@@ -31,9 +31,16 @@ func TestRenderPipelineWithTasks(t *testing.T) {
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "test-pipeline",
 			Namespace: "kurator-pipeline",
+			OwnerReferences: []metav1.OwnerReference{
+				{
+					APIVersion: "v1",
+					Kind:       "Deployment",
+					Name:       "example-deployment",
+					UID:        "22345678-1234-1234-1234-123456789abc",
+				},
+			},
 		},
 	}
-
 	cases := []struct {
 		name         string
 		tasks        []pipelineapi.PipelineTask

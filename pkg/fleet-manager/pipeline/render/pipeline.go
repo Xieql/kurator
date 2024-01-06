@@ -26,7 +26,6 @@ import (
 )
 
 const (
-	PipelineTemplateFile  = "pipeline/pipeline.tpl"
 	PipelineTemplateName  = "pipeline template"
 	DockerCredentialsName = "docker-credentials"
 )
@@ -46,9 +45,9 @@ type PipelineConfig struct {
 	DockerCredentials string
 }
 
-// RenderPipelineWithTasks renders the full pipeline configuration as a YAML byte array using a specified template and **Pipeline.Tasks**.
+// RenderPipelineWithPipeline renders the full pipeline configuration as a YAML byte array using a specified template and **Pipeline.Tasks**.
 func RenderPipelineWithPipeline(pipeline *pipelineapi.Pipeline) ([]byte, error) {
-	DockerCredentials, tasksInfo, err := GenerateTasksInfo(pipeline.Name, pipeline.Spec.Tasks)
+	DockerCredentials, tasksInfo, err := generateTasksInfo(pipeline.Name, pipeline.Spec.Tasks)
 	if err != nil {
 		return nil, err
 	}
@@ -66,13 +65,13 @@ func RenderPipelineWithPipeline(pipeline *pipelineapi.Pipeline) ([]byte, error) 
 
 // renderPipeline renders the full pipeline configuration as a YAML byte array using a specified template and **PipelineConfig**.
 func renderPipeline(cfg PipelineConfig) ([]byte, error) {
-	return renderTemplate(PipelineTemplateFile, PipelineTemplateName, cfg)
+	return renderTemplate(PipelineTemplateContent, PipelineTemplateName, cfg)
 }
 
-// GenerateTasksInfo constructs TasksInfo, detailing the integration of tasks into a given pipeline.
+// generateTasksInfo constructs TasksInfo, detailing the integration of tasks into a given pipeline.
 // 这个方法这样实现的原因在于 我们 要求第一个任务必须固定为 git clone。
 // TODO: 重构方法，现在的可读性太差了。可以尝试在模板中分别填写，两种任务这里的格式没区别，可以用数组完成
-func GenerateTasksInfo(pipelineName string, tasks []pipelineapi.PipelineTask) (string, string, error) {
+func generateTasksInfo(pipelineName string, tasks []pipelineapi.PipelineTask) (string, string, error) {
 	var DockerCredentials string
 	var tasksBuilder strings.Builder
 	// lastTask record the current taskAfter task. git-clone always the first task, so it will be the lastTask for second task.
@@ -150,3 +149,63 @@ func generateKanikoTaskInfo(taskName, taskRefer, lastTask string, retries int) s
 func generatePipelineTaskName(taskName, pipelineName string) string {
 	return taskName + "-" + pipelineName
 }
+
+const PipelineTemplateContent = `apiVersion: tekton.dev/v1beta1
+kind: Pipeline
+metadata:
+  name: {{ .PipelineName}}
+  namespace: {{ .PipelineNamespace }}
+{{- if .OwnerReference }}
+  ownerReferences:
+  - apiVersion: "{{ .OwnerReference.APIVersion }}"
+    kind: "{{ .OwnerReference.Kind }}"
+    name: "{{ .OwnerReference.Name }}"
+    uid: "{{ .OwnerReference.UID }}"
+{{- end }}
+spec:
+  description: |
+    This is a universal pipeline with the following settings: 
+      1. No parameters are passed because all user parameters have already been rendered into the corresponding tasks. 
+      2. All tasks are strictly executed in the order defined by the user, with each task starting only after the previous one is completed. 
+      3. There is only one workspace, which is used by all tasks. The PVC for this workspace will be configured in the trigger.
+  params:
+  - name: repo-url
+    type: string
+    description: The git repository URL to clone from.
+  - name: revision
+    type: string
+    description: The git branch to clone.
+  workspaces:
+  - name: kurator-pipeline-shared-data
+    description: |
+      This workspace is used by all tasks
+  - name: git-credentials
+    description: |
+      A Workspace containing a .gitconfig and .git-credentials file. These
+      will be copied to the user's home before any git commands are run. Any
+      other files in this Workspace are ignored.
+{{- if .DockerCredentials }}
+  - name: docker-credentials
+    description: |
+      This is the credentials for build and push image task.
+{{- end }}
+  tasks:
+  - name: git-clone
+    # Key points about 'git-clone':
+    # - Fundamental for all tasks.
+    # - Closely integrated with the trigger.
+    # - Always the first task in the pipeline.
+    # - Cannot be modified via templates.
+    taskRef:
+      name: git-clone-{{ .PipelineName }}
+    workspaces:
+    - name: source
+      workspace: kurator-pipeline-shared-data
+    - name: basic-auth
+      workspace: git-credentials
+    params:
+    - name: url
+      value: $(params.repo-url)
+    - name: revision
+      value: $(params.revision)
+{{ .TasksInfo }}`

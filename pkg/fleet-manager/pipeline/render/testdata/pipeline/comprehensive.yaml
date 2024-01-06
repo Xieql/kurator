@@ -3,6 +3,11 @@ kind: Pipeline
 metadata:
   name: test-pipeline
   namespace: kurator-pipeline
+  ownerReferences:
+  - apiVersion: ""
+    kind: ""
+    name: "test-pipeline"
+    uid: ""
 spec:
   description: |
     This is a universal pipeline with the following settings: 
