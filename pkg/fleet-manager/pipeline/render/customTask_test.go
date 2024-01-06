@@ -148,7 +148,7 @@ func TestRenderCustomTask(t *testing.T) {
 
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			result, err := RenderCustomTaskWithConfig(tc.cfg)
+			result, err := RenderCustomTask(tc.cfg)
 
 			// Test assertions
 			if tc.expectError {

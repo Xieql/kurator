@@ -25,7 +25,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestRenderPipelineWithTasks(t *testing.T) {
+func TestRenderPipelineWithPipeline(t *testing.T) {
 	expectedPipelineFilePath := "testdata/pipeline/"
 	testPipeline := pipelineapi.Pipeline{
 		ObjectMeta: metav1.ObjectMeta{

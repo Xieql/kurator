@@ -44,12 +44,7 @@ type PredefinedTaskConfig struct {
 	OwnerReference *metav1.OwnerReference
 }
 
-// PredefinedTaskName is the name of Predefined task object, in case different pipeline have the same name task.
-func (cfg PredefinedTaskConfig) PredefinedTaskName() string {
-	return cfg.TemplateName + "-" + cfg.PipelineName
-}
-
-// RenderPredefinedTaskWithPipeline renders the full PredefinedTask configuration as a YAML byte array using pipeline and pipelineapi.CustomTask.
+// RenderPredefinedTaskWithPipeline takes a Pipeline object and generates YAML byte array configuration representing the PredefinedTask configuration.
 func RenderPredefinedTaskWithPipeline(pipeline *pipelineapi.Pipeline, task *pipelineapi.PredefinedTask) ([]byte, error) {
 	cfg := PredefinedTaskConfig{
 		PipelineName:      pipeline.Name,
@@ -62,30 +57,18 @@ func RenderPredefinedTaskWithPipeline(pipeline *pipelineapi.Pipeline, task *pipe
 	return RenderPredefinedTask(cfg)
 }
 
-// RenderPredefinedTask renders the full PredefinedTask configuration as a YAML byte array using PredefinedTaskConfig.
+// RenderPredefinedTask takes a PredefinedTaskConfig object and generates YAML byte array configuration representing the PredefinedTask configuration.
 func RenderPredefinedTask(cfg PredefinedTaskConfig) ([]byte, error) {
-	templateContent, err := getPredefinedTaskTemplate(cfg.TemplateName)
-	if err != nil {
-		fmt.Errorf("faild to getPredefinedTaskTemplate '%v' ", err)
-		return nil, err
+	templateContent, ok := predefinedTaskTemplates[cfg.TemplateName]
+	if !ok {
+		return nil, fmt.Errorf("predefinedTask template content named '%s' not found", cfg.TemplateName)
 	}
+
 	return renderTemplate(templateContent, generateTaskTemplateName(cfg.TemplateName), cfg)
 }
 
 func generateTaskTemplateName(taskType string) string {
 	return "pipeline " + taskType + " task template"
-}
-
-// getPredefinedTaskTemplate is a function that returns the template string based on the given template name.
-// It takes a template name as a parameter and returns two values: the template string and an error object.
-// If the corresponding template is found in the templates map, it returns the template string and nil (indicating no error).
-// If the template is not found, it returns an empty string and a custom error message.
-func getPredefinedTaskTemplate(name string) (string, error) {
-	if template, ok := predefinedTaskTemplates[name]; ok {
-		return template, nil
-	}
-	// Returns an error if the template is not found
-	return "", fmt.Errorf("Template named '%s' not found", name)
 }
 
 var predefinedTaskTemplates = map[string]string{

@@ -45,7 +45,7 @@ func (cfg CustomTaskConfig) CustomTaskName() string {
 	return cfg.TaskName + "-" + cfg.PipelineName
 }
 
-// RenderCustomTaskWithPipeline renders the full CustomTask configuration as a YAML byte array using pipeline and pipelineapi.CustomTask.
+// RenderCustomTaskWithPipeline takes a Pipeline object and generates YAML byte array configuration representing the CustomTask configuration.
 func RenderCustomTaskWithPipeline(pipeline *pipelineapi.Pipeline, taskName string, task *pipelineapi.CustomTask) ([]byte, error) {
 	cfg := CustomTaskConfig{
 		TaskName:             taskName,
@@ -60,11 +60,11 @@ func RenderCustomTaskWithPipeline(pipeline *pipelineapi.Pipeline, taskName strin
 		OwnerReference:       GeneratePipelineOwnerRef(pipeline),
 	}
 
-	return RenderCustomTaskWithConfig(cfg)
+	return RenderCustomTask(cfg)
 }
 
-// RenderCustomTaskWithConfig renders the full CustomTask configuration as a YAML byte array using CustomTaskConfig.
-func RenderCustomTaskWithConfig(cfg CustomTaskConfig) ([]byte, error) {
+// RenderCustomTask takes a CustomTaskConfig object and generates YAML byte array configuration representing the CustomTask configuration.
+func RenderCustomTask(cfg CustomTaskConfig) ([]byte, error) {
 	if cfg.Image == "" || cfg.CustomTaskName() == "" {
 		return nil, fmt.Errorf("invalid RBACConfig: PipelineName and PipelineNamespace must not be empty")
 	}

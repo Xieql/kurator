@@ -15,9 +15,7 @@ package pipeline
 
 import (
 	"context"
-	"fmt"
 	"github.com/pkg/errors"
-	"io/fs"
 	"time"
 
 	v1 "k8s.io/api/core/v1"
@@ -34,7 +32,6 @@ import (
 
 	pipelineapi "kurator.dev/kurator/pkg/apis/pipeline/v1alpha1"
 	"kurator.dev/kurator/pkg/fleet-manager/pipeline/render"
-	"kurator.dev/kurator/pkg/fleet-manager/pipeline/render/manifests"
 	"kurator.dev/kurator/pkg/infra/util"
 )
 
@@ -152,21 +149,6 @@ func (p *PipelineManager) reconcilePipeline(ctx context.Context, pipeline *pipel
 func (p *PipelineManager) reconcileCreateRBAC(ctx context.Context, rbacConfig render.RBACConfig) (ctrl.Result, error) {
 	log := ctrl.LoggerFrom(ctx)
 	log.Info("~~~~~~~~~~~~~~~~~~~reconcileCreateRBAC ", "pipeline", ctx)
-
-	basicFS := manifests.BuiltinOrDir("")
-
-	err2 := fs.WalkDir(basicFS, ".", func(path string, d fs.DirEntry, err error) error {
-		if err != nil {
-			log.Error(err, " func(path string, d fs.DirEntry, err error) error")
-			return err
-		}
-		fmt.Println(path)
-		return nil
-	})
-	if err2 != nil {
-		log.Error(err2, " unable to WalkDir")
-		return ctrl.Result{}, err2
-	}
 
 	rbac, err := render.RenderRBAC(rbacConfig)
 	if err != nil {
