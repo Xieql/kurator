@@ -23,9 +23,7 @@ import (
 )
 
 const (
-	RBACTemplateName    = "pipeline rbac template"
-	SecretSuffix        = "-secret"
-	BroadResourceSuffix = "-broad-resource"
+	RBACTemplateName = "pipeline rbac template"
 )
 
 // RBACConfig contains the configuration data required for the RBAC template.
@@ -36,19 +34,9 @@ type RBACConfig struct {
 	OwnerReference    *metav1.OwnerReference
 }
 
-// ServiceAccountName generates the service account name using the pipeline name \
+// ServiceAccountName generates the service account name using the pipeline name.
 func (rbac RBACConfig) ServiceAccountName() string {
 	return rbac.PipelineName
-}
-
-// BroadResourceRoleBindingName generates the role binding name using the service account name.
-func (rbac RBACConfig) BroadResourceRoleBindingName() string {
-	return rbac.ServiceAccountName() + BroadResourceSuffix
-}
-
-// SecretRoleBindingName generates the cluster role binding name using the service account name.
-func (rbac RBACConfig) SecretRoleBindingName() string {
-	return rbac.ServiceAccountName() + SecretSuffix
 }
 
 // RenderRBAC renders the RBAC configuration using a specified template.
@@ -78,7 +66,7 @@ secrets:
 apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
 metadata:
-  name: "{{ .BroadResourceRoleBindingName }}"
+  name: "{{ .PipelineName }}"
   namespace: "{{ .PipelineNamespace }}"
 {{- if .OwnerReference }}
   ownerReferences:
@@ -99,7 +87,7 @@ roleRef:
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
-  name: "{{ .SecretRoleBindingName }}"
+  name: "{{ .PipelineName }}"
   namespace: "{{ .PipelineNamespace }}"
 {{- if .OwnerReference }}
   ownerReferences:

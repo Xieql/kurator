@@ -35,8 +35,6 @@ import (
 	"kurator.dev/kurator/pkg/infra/util"
 )
 
-// TODO: 给 pipeline 添加 condition ？
-
 const (
 	PipelineFinalizer = "pipeline.kurator.dev"
 )
@@ -59,7 +57,6 @@ func (p *PipelineManager) Reconcile(ctx context.Context, req ctrl.Request) (_ ct
 	log := ctrl.LoggerFrom(ctx)
 	pipeline := &pipelineapi.Pipeline{}
 	log.Info("~~~~~~~~~~~~~~~~~~~Reconcile ", "pipeline", ctx)
-	log.Info("~!!!!!!!!!!! all  fs ready * !!!!!!!!!!!!!!!! ", "pipeline", ctx)
 
 	if err := p.Client.Get(ctx, req.NamespacedName, pipeline); err != nil {
 		log.Error(err, "Get pipeline error")
@@ -105,6 +102,13 @@ func (p *PipelineManager) Reconcile(ctx context.Context, req ctrl.Request) (_ ct
 // reconcilePipeline handles the main reconcile logic for a Pipeline object.
 func (p *PipelineManager) reconcilePipeline(ctx context.Context, pipeline *pipelineapi.Pipeline) (ctrl.Result, error) {
 	log := ctrl.LoggerFrom(ctx)
+
+	if pipeline.Status.Phase == pipelineapi.ReadyPhase {
+		log.Info("Pipeline already ready, return directly")
+		return ctrl.Result{}, nil
+	}
+	pipeline.Status.Phase = pipelineapi.RunningPhase
+
 	log.Info("~~~~~~~~~~~~~~~~~~~reconcilePipeline ", "pipeline", ctx)
 	rbacConfig := render.RBACConfig{
 		PipelineName:      pipeline.Name,
@@ -280,8 +284,9 @@ func (p *PipelineManager) reconcilePipelineStatus(ctx context.Context, pipeline 
 	log := ctrl.LoggerFrom(ctx)
 	log.Info("~~~~~~~~~~~~~~~~~~~reconcilePipelineStatus ", "pipeline", ctx)
 
-	// Remove finalizer
 	pipeline.Status.Phase = pipelineapi.ReadyPhase
+
+	pipeline.Status.EventListenerServiceName = getListenerServiceName(pipeline)
 
 	return ctrl.Result{}, nil
 }
@@ -312,14 +317,14 @@ func (p *PipelineManager) isRBACResourceReady(ctx context.Context, rbacConfig re
 	}
 	// Check for the existence of the RoleBinding for broad resources
 	broadResourceRoleBinding := &rbacv1.RoleBinding{}
-	err = p.Client.Get(ctx, types.NamespacedName{Name: rbacConfig.BroadResourceRoleBindingName(), Namespace: rbacConfig.PipelineNamespace}, broadResourceRoleBinding)
+	err = p.Client.Get(ctx, types.NamespacedName{Name: rbacConfig.PipelineName, Namespace: rbacConfig.PipelineNamespace}, broadResourceRoleBinding)
 	if err != nil {
 		log.Error(err, " Check for the existence of the RoleBinding for broad resources error")
 		return false
 	}
 	// Check for the existence of the RoleBinding for secret resources
 	secretResourceRoleBinding := &rbacv1.RoleBinding{}
-	err = p.Client.Get(ctx, types.NamespacedName{Name: rbacConfig.SecretRoleBindingName(), Namespace: rbacConfig.PipelineNamespace}, secretResourceRoleBinding)
+	err = p.Client.Get(ctx, types.NamespacedName{Name: rbacConfig.PipelineName, Namespace: rbacConfig.PipelineNamespace}, secretResourceRoleBinding)
 	if err != nil {
 		log.Error(err, " Check for the existence of the RoleBinding for secret resources error")
 
@@ -327,4 +332,10 @@ func (p *PipelineManager) isRBACResourceReady(ctx context.Context, rbacConfig re
 	}
 	// If all resources are found, return true
 	return true
+}
+
+// getListenerServiceName get the name of event listener service name. this naming way is origin from tekton controller.
+func getListenerServiceName(pipeline *pipelineapi.Pipeline) *string {
+	serviceName := "el-" + pipeline.Name + "-listener"
+	return &serviceName
 }
