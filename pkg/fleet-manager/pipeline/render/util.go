@@ -18,12 +18,13 @@ package render
 
 import (
 	"bytes"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	pipelineapi "kurator.dev/kurator/pkg/apis/pipeline/v1alpha1"
 	"text/template"
 
 	"github.com/Masterminds/sprig/v3"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/yaml"
+
+	pipelineapi "kurator.dev/kurator/pkg/apis/pipeline/v1alpha1"
 )
 
 // renderTemplate reads, parses, and renders a template file using the provided configuration data.
