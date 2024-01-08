@@ -103,12 +103,6 @@ func (p *PipelineManager) Reconcile(ctx context.Context, req ctrl.Request) (_ ct
 func (p *PipelineManager) reconcilePipeline(ctx context.Context, pipeline *pipelineapi.Pipeline) (ctrl.Result, error) {
 	log := ctrl.LoggerFrom(ctx)
 
-	if pipeline.Status.Phase == pipelineapi.ReadyPhase {
-		log.Info("Pipeline already ready, return directly")
-		return ctrl.Result{}, nil
-	}
-	pipeline.Status.Phase = pipelineapi.RunningPhase
-
 	log.Info("~~~~~~~~~~~~~~~~~~~reconcilePipeline ", "pipeline", ctx)
 	rbacConfig := render.RBACConfig{
 		PipelineName:      pipeline.Name,
@@ -283,8 +277,6 @@ func (p *PipelineManager) reconcileCreateTrigger(ctx context.Context, pipeline *
 func (p *PipelineManager) reconcilePipelineStatus(ctx context.Context, pipeline *pipelineapi.Pipeline) (ctrl.Result, error) {
 	log := ctrl.LoggerFrom(ctx)
 	log.Info("~~~~~~~~~~~~~~~~~~~reconcilePipelineStatus ", "pipeline", ctx)
-
-	pipeline.Status.Phase = pipelineapi.ReadyPhase
 
 	pipeline.Status.EventListenerServiceName = getListenerServiceName(pipeline)
 
