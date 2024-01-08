@@ -40,7 +40,7 @@ type CustomTaskConfig struct {
 	OwnerReference       *metav1.OwnerReference
 }
 
-// CustomTaskName is the name of Predefined task object, in case different pipeline have the same name task.
+// CustomTaskName is the name of custom task object, in case different pipeline have the same name task.
 func (cfg CustomTaskConfig) CustomTaskName() string {
 	return cfg.TaskName + "-" + cfg.PipelineName
 }

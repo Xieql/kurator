@@ -44,6 +44,11 @@ type PredefinedTaskConfig struct {
 	OwnerReference *metav1.OwnerReference
 }
 
+// PredefinedTaskName is the name of Predefined task object, in case different pipeline have the same name task.
+func (cfg PredefinedTaskConfig) PredefinedTaskName() string {
+	return cfg.TemplateName + "-" + cfg.PipelineName
+}
+
 // RenderPredefinedTaskWithPipeline takes a Pipeline object and generates YAML byte array configuration representing the PredefinedTask configuration.
 func RenderPredefinedTaskWithPipeline(pipeline *pipelineapi.Pipeline, task *pipelineapi.PredefinedTask) ([]byte, error) {
 	cfg := PredefinedTaskConfig{
