@@ -46,10 +46,12 @@ func RenderTriggerWithPipeline(pipeline *pipelineapi.Pipeline) ([]byte, error) {
 		PipelineName:      pipeline.Name,
 		PipelineNamespace: pipeline.Namespace,
 		OwnerReference:    GeneratePipelineOwnerRef(pipeline),
-		AccessMode:        string(pipeline.Spec.SharedWorkspace.AccessMode),
-		StorageRequest:    pipeline.Spec.SharedWorkspace.StorageRequest,
-		StorageClassName:  pipeline.Spec.SharedWorkspace.StorageClassName,
-		VolumeMode:        string(pipeline.Spec.SharedWorkspace.VolumeMode),
+	}
+	if pipeline.Spec.SharedWorkspace != nil {
+		config.AccessMode = string(pipeline.Spec.SharedWorkspace.AccessMode)
+		config.StorageRequest = pipeline.Spec.SharedWorkspace.StorageRequest
+		config.StorageClassName = pipeline.Spec.SharedWorkspace.StorageClassName
+		config.VolumeMode = string(pipeline.Spec.SharedWorkspace.VolumeMode)
 	}
 
 	return RenderTrigger(config)
