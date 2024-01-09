@@ -39,7 +39,7 @@ const (
 	PipelineFinalizer = "pipeline.kurator.dev"
 )
 
-// PipelineManager reconciles a Pipeline object
+// PipelineManager reconciles a Pipeline object.
 type PipelineManager struct {
 	client.Client
 	Scheme *runtime.Scheme
@@ -53,248 +53,231 @@ func (p *PipelineManager) SetupWithManager(ctx context.Context, mgr ctrl.Manager
 		Complete(p)
 }
 
+// Reconcile performs the reconciliation process for the Pipeline object.
 func (p *PipelineManager) Reconcile(ctx context.Context, req ctrl.Request) (_ ctrl.Result, reterr error) {
 	log := ctrl.LoggerFrom(ctx)
 	pipeline := &pipelineapi.Pipeline{}
-	log.Info("~~~~~~~~~~~~~~~~~~~Reconcile ", "pipeline", ctx)
 
+	// Retrieve the pipeline object based on the request.
 	if err := p.Client.Get(ctx, req.NamespacedName, pipeline); err != nil {
-		log.Error(err, "Get pipeline error")
+		log.Error(err, "failed to fetching pipeline")
 
+		// Handle not found errors and requeue others.
 		if apierrors.IsNotFound(err) {
-			log.Info("pipeline object not found", "pipeline", req)
+			log.Info("Pipeline object not found", "pipeline", req)
 			return ctrl.Result{}, nil
 		}
-
-		// Error reading the object - requeue the request.
 		return ctrl.Result{}, err
 	}
 
-	// Initialize patch helper
+	// Initialize a helper for patching the pipeline object at the end.
 	patchHelper, err := patch.NewHelper(pipeline, p.Client)
 	if err != nil {
 		return ctrl.Result{}, errors.Wrapf(err, "failed to init patch helper for pipeline %s", req.NamespacedName)
 	}
-	// Setup deferred function to handle patching the object at the end of the reconciler
 	defer func() {
 		patchOpts := []patch.Option{}
 		if err := patchHelper.Patch(ctx, pipeline, patchOpts...); err != nil {
-			log.Error(err, "patchHelper.Patch error")
-			reterr = utilerrors.NewAggregate([]error{reterr, errors.Wrapf(err, "failed to patch %s  %s", pipeline.Name, req.NamespacedName)})
+			log.Error(err, "error patching pipeline")
+			reterr = utilerrors.NewAggregate([]error{reterr, errors.Wrapf(err, "failed to patch pipeline %s", req.NamespacedName)})
 		}
 	}()
 
-	// Check and add finalizer if not present
+	// Add finalizer if it's not present.
 	if !controllerutil.ContainsFinalizer(pipeline, PipelineFinalizer) {
 		controllerutil.AddFinalizer(pipeline, PipelineFinalizer)
 		return ctrl.Result{}, nil
 	}
 
-	// Handle deletion
+	// Handle pipeline deletion.
 	if pipeline.GetDeletionTimestamp() != nil {
 		return p.reconcileDeletePipeline(ctx, pipeline)
 	}
 
-	// Handle the main reconcile logic
+	// Proceed with the main reconciliation logic.
 	return p.reconcilePipeline(ctx, pipeline)
 }
 
-// reconcilePipeline handles the main reconcile logic for a Pipeline object.
+// reconcilePipeline contains the core logic for reconciling the Pipeline object.
 func (p *PipelineManager) reconcilePipeline(ctx context.Context, pipeline *pipelineapi.Pipeline) (ctrl.Result, error) {
 	log := ctrl.LoggerFrom(ctx)
 
-	log.Info("~~~~~~~~~~~~~~~~~~~reconcilePipeline ", "pipeline", ctx)
+	// Prepare RBAC configuration for the pipeline.
 	rbacConfig := render.RBACConfig{
 		PipelineName:      pipeline.Name,
 		PipelineNamespace: pipeline.Namespace,
 		OwnerReference:    render.GeneratePipelineOwnerRef(pipeline),
 	}
 
-	// rbac 必须先于其他资源创建。之后，pipeline、task、triggers 等资源在创建阶段，不严格要求创建顺序。在使用阶段，需要确保所有资源创建完成
+	// Ensure RBAC resources are created before other resources.
 	if !p.isRBACResourceReady(ctx, rbacConfig) {
-		result, err1 := p.reconcileCreateRBAC(ctx, rbacConfig)
-		time.Sleep(1 * time.Second)
-		if err1 != nil || result.Requeue || result.RequeueAfter > 0 {
-			return result, err1
+		result, err := p.reconcileCreateRBAC(ctx, rbacConfig)
+		if err != nil || result.Requeue || result.RequeueAfter > 0 {
+			return result, err
 		}
+		// Add interval for creating rbac resource
+		return ctrl.Result{RequeueAfter: 1 * time.Second}, nil
 	}
 
-	// Apply Tekton tasks,
+	// Create and apply Tekton tasks.
 	res, err := p.reconcileCreateTasks(ctx, pipeline)
 	if err != nil || res.Requeue || res.RequeueAfter > 0 {
-		log.Error(err, "reconcileCreateTasks error???")
-
+		log.Error(err, "Error creating Tekton tasks")
 		return res, err
 	}
 
-	// Apply Tekton pipeline
+	// Create and apply Tekton pipeline.
 	res, err = p.reconcileCreatePipeline(ctx, pipeline)
 	if err != nil || res.Requeue || res.RequeueAfter > 0 {
 		return res, err
 	}
 
-	// Apply Tekton trigger
+	// Create and apply Tekton trigger.
 	res, err = p.reconcileCreateTrigger(ctx, pipeline)
 	if err != nil || res.Requeue || res.RequeueAfter > 0 {
 		return res, err
 	}
 
-	// update status
+	// Update pipeline status.
 	return p.reconcilePipelineStatus(ctx, pipeline)
 }
 
-// reconcileCreateRBAC converts the pipeline resources into Tekton resource and apply them.
+// reconcileCreateRBAC creates and applies RBAC resources for the pipeline.
 func (p *PipelineManager) reconcileCreateRBAC(ctx context.Context, rbacConfig render.RBACConfig) (ctrl.Result, error) {
 	log := ctrl.LoggerFrom(ctx)
-	log.Info("~~~~~~~~~~~~~~~~~~~reconcileCreateRBAC ", "pipeline", ctx)
 
+	// Render RBAC configuration.
 	rbac, err := render.RenderRBAC(rbacConfig)
 	if err != nil {
-		log.Error(err, "unable to RenderRBAC controller")
+		log.Error(err, "Error rendering RBAC resources")
 		return ctrl.Result{}, err
 	}
 
-	// apply rbac resources
+	// Apply RBAC resources.
 	if _, err := util.PatchResources(rbac); err != nil {
-		log.Error(err, "unable to PatchResources ", "rbac", rbac)
-
-		return ctrl.Result{}, errors.Wrapf(err, "failed to apply rbac resources")
+		log.Error(err, "Error applying RBAC resources")
+		return ctrl.Result{}, errors.Wrapf(err, "failed to apply RBAC resources")
 	}
 
 	return ctrl.Result{}, nil
 }
 
-// reconcileCreateTasks converts the pipeline resources into Tekton resource and apply them.
+// reconcileCreateTasks creates and applies Tekton tasks for the pipeline.
 func (p *PipelineManager) reconcileCreateTasks(ctx context.Context, pipeline *pipelineapi.Pipeline) (ctrl.Result, error) {
 	log := ctrl.LoggerFrom(ctx)
-	log.Info("~~~~~~~~~~~~~~~~~~~reconcileCreateRBAC ", "pipeline", ctx)
 
+	// Process each task in the pipeline.
 	for _, task := range pipeline.Spec.Tasks {
+		var err error
 		if task.PredefinedTask != nil {
-			err := p.createPredefinedTask(ctx, &task, pipeline)
-			if err != nil {
-				log.Error(err, "createPredefinedTask error")
-
-				return ctrl.Result{}, err
-			}
+			err = p.createPredefinedTask(ctx, &task, pipeline)
 		} else {
-			err := p.createCustomTask(ctx, &task, pipeline)
-			if err != nil {
-				log.Error(err, "createCustomTask error")
-
-				return ctrl.Result{}, err
-			}
+			err = p.createCustomTask(ctx, &task, pipeline)
+		}
+		if err != nil {
+			log.Error(err, "Error creating task")
+			return ctrl.Result{}, err
 		}
 	}
 
 	return ctrl.Result{}, nil
 }
 
-// createPredefinedTask converts the pipeline resources into Tekton resource and apply them.
+// createPredefinedTask creates a predefined Tekton task and applies it.
 func (p *PipelineManager) createPredefinedTask(ctx context.Context, task *pipelineapi.PipelineTask, pipeline *pipelineapi.Pipeline) error {
 	log := ctrl.LoggerFrom(ctx)
-	log.Info("~~~~~~~~~~~~~~~~~~~createPredefinedTask ", "pipeline", ctx)
 
+	// Render the predefined task.
 	taskResource, err := render.RenderPredefinedTaskWithPipeline(pipeline, task.PredefinedTask)
 	if err != nil {
-		log.Error(err, "RenderPredefinedTask error")
-
+		log.Error(err, "Error rendering predefined task")
 		return err
 	}
-	// apply rbac resources
+
+	// Apply the task resources.
 	if _, err := util.PatchResources(taskResource); err != nil {
-		return errors.Wrapf(err, "failed to apply rbac resources")
+		log.Error(err, "Error applying task resources")
+		return errors.Wrapf(err, "failed to apply task resources")
 	}
 
 	return nil
 }
 
-// createCustomTask converts the pipeline resources into Tekton resource and apply them.
+// createCustomTask creates a custom Tekton task and applies it.
 func (p *PipelineManager) createCustomTask(ctx context.Context, task *pipelineapi.PipelineTask, pipeline *pipelineapi.Pipeline) error {
 	log := ctrl.LoggerFrom(ctx)
-	log.Info("~~~~~~~~~~~~~~~~~~~createCustomTask ", "pipeline", ctx)
 
+	// Render the custom task.
 	taskResource, err := render.RenderCustomTaskWithPipeline(pipeline, task.Name, task.CustomTask)
 	if err != nil {
-		log.Error(err, "RenderCustomTaskWithPipeline error")
-
+		log.Error(err, "Error rendering custom task")
 		return err
 	}
-	// apply custom task resources
-	if _, err := util.PatchResources(taskResource); err != nil {
-		log.Error(err, "PatchResources error")
 
-		return errors.Wrapf(err, "failed to apply rbac resources")
+	// Apply the task resources.
+	if _, err := util.PatchResources(taskResource); err != nil {
+		log.Error(err, "Error applying custom task resources")
+		return errors.Wrapf(err, "failed to apply custom task resources")
 	}
 
 	return nil
 }
 
-// reconcileCreatePipeline converts the pipeline resources into Tekton resource and apply them.
+// reconcileCreatePipeline creates and applies the Tekton pipeline.
 func (p *PipelineManager) reconcileCreatePipeline(ctx context.Context, pipeline *pipelineapi.Pipeline) (ctrl.Result, error) {
 	log := ctrl.LoggerFrom(ctx)
-	log.Info("~~~~~~~~~~~~~~~~~~~reconcileCreatePipeline ", "pipeline", ctx)
+
+	// Render the pipeline.
 	pipelineResource, err := render.RenderPipelineWithPipeline(pipeline)
 	if err != nil {
-		log.Error(err, "RenderPipelineWithTasks error")
-
+		log.Error(err, "Error rendering the pipeline")
 		return ctrl.Result{}, err
 	}
 
-	// apply pipeline resources
+	// Apply the pipeline resources.
 	if _, err := util.PatchResources(pipelineResource); err != nil {
-		log.Error(err, "PatchResources error")
-
-		return ctrl.Result{}, errors.Wrapf(err, "failed to apply rbac resources")
+		log.Error(err, "Error applying pipeline resources")
+		return ctrl.Result{}, errors.Wrapf(err, "failed to apply pipeline resources")
 	}
 
 	return ctrl.Result{}, nil
 }
 
-// reconcileCreateTrigger converts the pipeline resources into Tekton resource and apply them.
+// reconcileCreateTrigger creates and applies the Tekton trigger.
 func (p *PipelineManager) reconcileCreateTrigger(ctx context.Context, pipeline *pipelineapi.Pipeline) (ctrl.Result, error) {
 	log := ctrl.LoggerFrom(ctx)
-	log.Info("~~~~~~~~~~~~~~~~~~~reconcileCreateTrigger ", "pipeline", ctx)
 
+	// Render the trigger.
 	triggerResource, err := render.RenderTriggerWithPipeline(pipeline)
 	if err != nil {
-		log.Error(err, "RenderTrigger error")
-
+		log.Error(err, "Error rendering the trigger")
 		return ctrl.Result{}, err
 	}
 
-	// apply pipeline resources
+	// Apply the trigger resources.
 	if _, err := util.PatchResources(triggerResource); err != nil {
-		log.Error(err, "PatchResources error")
-
-		return ctrl.Result{}, errors.Wrapf(err, "failed to apply rbac resources")
+		log.Error(err, "Error applying trigger resources")
+		return ctrl.Result{}, errors.Wrapf(err, "failed to apply trigger resources")
 	}
 
 	return ctrl.Result{}, nil
 }
 
-// reconcilePipelineStatus updates status of each pipeline resource.
+// reconcilePipelineStatus updates the status of the pipeline.
 func (p *PipelineManager) reconcilePipelineStatus(ctx context.Context, pipeline *pipelineapi.Pipeline) (ctrl.Result, error) {
-	log := ctrl.LoggerFrom(ctx)
-	log.Info("~~~~~~~~~~~~~~~~~~~reconcilePipelineStatus ", "pipeline", ctx)
-
+	// Update event listener service name in the status.
 	pipeline.Status.EventListenerServiceName = getListenerServiceName(pipeline)
-
 	return ctrl.Result{}, nil
 }
 
-// reconcileDeletePipeline handles the deletion process of a Pipeline object.
+// reconcileDeletePipeline handles the deletion of a Pipeline object.
 func (p *PipelineManager) reconcileDeletePipeline(ctx context.Context, pipeline *pipelineapi.Pipeline) (ctrl.Result, error) {
-	log := ctrl.LoggerFrom(ctx)
-	log.Info("~~~~~~~~~~~~~~~~~~~reconcileDeletePipeline ", "pipeline", ctx)
-
-	// Remove finalizer
+	// Remove the finalizer from the pipeline.
 	controllerutil.RemoveFinalizer(pipeline, PipelineFinalizer)
-
 	return ctrl.Result{}, nil
 }
 
-// isRBACResourceReady checks if the necessary RBAC resources are ready in the specified namespace.
+// isRBACResourceReady checks if necessary RBAC resources are ready.
 func (p *PipelineManager) isRBACResourceReady(ctx context.Context, rbacConfig render.RBACConfig) bool {
 	log := ctrl.LoggerFrom(ctx)
 
@@ -302,31 +285,31 @@ func (p *PipelineManager) isRBACResourceReady(ctx context.Context, rbacConfig re
 	sa := &v1.ServiceAccount{}
 	err := p.Client.Get(ctx, types.NamespacedName{Name: rbacConfig.PipelineName, Namespace: rbacConfig.PipelineNamespace}, sa)
 	if err != nil {
-		// not found 的处理，其他也是
-		log.Error(err, " Check for the existence of the ServiceAccount error")
-
+		log.Error(err, "failed to get ServiceAccount for pipeline")
 		return false
 	}
+
 	// Check for the existence of the RoleBinding for broad resources
-	broadResourceRoleBinding := &rbacv1.RoleBinding{}
-	err = p.Client.Get(ctx, types.NamespacedName{Name: rbacConfig.PipelineName, Namespace: rbacConfig.PipelineNamespace}, broadResourceRoleBinding)
+	rb := &rbacv1.RoleBinding{}
+	err = p.Client.Get(ctx, types.NamespacedName{Name: rbacConfig.PipelineName, Namespace: rbacConfig.PipelineNamespace}, rb)
 	if err != nil {
-		log.Error(err, " Check for the existence of the RoleBinding for broad resources error")
+		log.Error(err, "failed to get RoleBinding for pipeline")
 		return false
 	}
-	// Check for the existence of the RoleBinding for secret resources
-	secretResourceRoleBinding := &rbacv1.RoleBinding{}
-	err = p.Client.Get(ctx, types.NamespacedName{Name: rbacConfig.PipelineName, Namespace: rbacConfig.PipelineNamespace}, secretResourceRoleBinding)
-	if err != nil {
-		log.Error(err, " Check for the existence of the RoleBinding for secret resources error")
 
+	// Check for the existence of the ClusterRoleBinding for secret resources
+	crb := &rbacv1.ClusterRoleBinding{}
+	err = p.Client.Get(ctx, types.NamespacedName{Name: rbacConfig.PipelineName, Namespace: rbacConfig.PipelineNamespace}, crb)
+	if err != nil {
+		log.Error(err, "failed to get ClusterRoleBinding for pipeline")
 		return false
 	}
+
 	// If all resources are found, return true
 	return true
 }
 
-// getListenerServiceName get the name of event listener service name. this naming way is origin from tekton controller.
+// getListenerServiceName get the name of event listener service name. This naming way is origin from tekton controller.
 func getListenerServiceName(pipeline *pipelineapi.Pipeline) *string {
 	serviceName := "el-" + pipeline.Name + "-listener"
 	return &serviceName

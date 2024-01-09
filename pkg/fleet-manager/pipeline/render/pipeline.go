@@ -69,28 +69,28 @@ func renderPipeline(cfg PipelineConfig) ([]byte, error) {
 
 // generateTasksInfo creates a string representation of tasks for inclusion in a pipeline.
 // It returns the name of Docker credentials if required by the tasks.
-func generateTasksInfo(pipelineName string, tasks []pipelineapi.PipelineTask) (dockerCredentials string, tasksinfo string, err error) {
+func generateTasksInfo(pipelineName string, tasks []pipelineapi.PipelineTask) (dockerCredentials string, tasksInfo string, err error) {
 	var tasksBuilder strings.Builder
 
 	lastTask := "git-clone" // GitCloneTask is always the first task.
 	for _, task := range tasks {
-		if task.Name == "git-clone" { // GitCloneTask
-			continue // Skip the first git-clone task.
+		if task.Name == "git-clone" {
+			continue // Skip the first git-clone task.because it is already fixed in template.
 		}
 
-		var taskYaml string
+		var taskInfo string
 		if (task.CustomTask == nil && task.PredefinedTask == nil) || (task.CustomTask != nil && task.PredefinedTask != nil) {
 			return "", "", fmt.Errorf("only one of 'PredefinedTask' or 'CustomTask' must be set in 'PipelineTask'")
 		}
 
-		if task.Name == "build-and-push-image" { // BuildPushImage
-			taskYaml = generateKanikoTaskInfo(task.Name, generatePipelineTaskName(task.Name, pipelineName), lastTask, task.Retries)
+		if task.Name == "build-and-push-image" { // build-and-push-image need special handle.
+			taskInfo = generateKanikoTaskInfo(task.Name, generatePipelineTaskName(task.Name, pipelineName), lastTask, task.Retries)
 			dockerCredentials = DockerCredentialsName
 		} else {
-			taskYaml = generateTaskInfo(task.Name, generatePipelineTaskName(task.Name, pipelineName), lastTask, task.Retries)
+			taskInfo = generateTaskInfo(task.Name, generatePipelineTaskName(task.Name, pipelineName), lastTask, task.Retries)
 		}
 
-		fmt.Fprintf(&tasksBuilder, "  %s", taskYaml)
+		fmt.Fprintf(&tasksBuilder, "  %s", taskInfo)
 		lastTask = task.Name // Update the last task.
 	}
 
@@ -99,27 +99,17 @@ func generateTasksInfo(pipelineName string, tasks []pipelineapi.PipelineTask) (d
 
 // generateTaskInfo formats a single task's information.
 func generateTaskInfo(taskName, taskRefer, lastTask string, retries int) string {
-	var taskBuilder strings.Builder
-
-	// Define task name and reference
-	fmt.Fprintf(&taskBuilder, "- name: %s\n    taskRef:\n      name: %s\n", taskName, taskRefer)
-
-	// Specify dependency on the preceding task
-	fmt.Fprintf(&taskBuilder, "    runAfter: [\"%s\"]\n", lastTask)
-
-	// Add fixed workspace configuration
-	taskBuilder.WriteString("    workspaces:\n    - name: source\n      workspace: kurator-pipeline-shared-data\n")
-
-	// Include retry configuration if applicable
-	if retries > 0 {
-		fmt.Fprintf(&taskBuilder, "    retries: %d\n", retries)
-	}
-
-	return taskBuilder.String()
+	return generateTaskInfoBase(taskName, taskRefer, lastTask, retries)
 }
 
 // generateKanikoTaskInfo formats Kaniko task information, including additional Docker credentials workspace.
 func generateKanikoTaskInfo(taskName, taskRefer, lastTask string, retries int) string {
+	dockerWorkspace := "    - name: dockerconfig\n      workspace: docker-credentials\n"
+	return generateTaskInfoBase(taskName, taskRefer, lastTask, retries, dockerWorkspace)
+}
+
+// generateTaskInfoBase formats the base information of a task.
+func generateTaskInfoBase(taskName, taskRefer, lastTask string, retries int, additionalWorkspaces ...string) string {
 	var taskBuilder strings.Builder
 
 	// Define task name and reference
@@ -130,7 +120,11 @@ func generateKanikoTaskInfo(taskName, taskRefer, lastTask string, retries int) s
 
 	// Add fixed workspace configuration
 	taskBuilder.WriteString("    workspaces:\n    - name: source\n      workspace: kurator-pipeline-shared-data\n")
-	taskBuilder.WriteString("    - name: dockerconfig\n      workspace: docker-credentials\n")
+
+	// Add additional workspaces if any additionalWorkspaces exist
+	for _, workspace := range additionalWorkspaces {
+		taskBuilder.WriteString(workspace)
+	}
 
 	// Include retry configuration if applicable
 	if retries > 0 {

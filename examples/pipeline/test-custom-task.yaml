@@ -1,0 +1,21 @@
+apiVersion: pipeline.kurator.dev/v1alpha1
+kind: Pipeline
+metadata:
+  name: test-custom-task
+  namespace: kurator-pipeline
+spec:
+  description: "this is a quick-start pipeline, it shows how to use customTask and predefined Task in a pipeline"
+  tasks:
+    - name: git-clone
+      predefinedTask:
+        name: git-clone
+        params:
+          git-secret-name: git-credentials
+    - name: cat-readme
+      customTask:
+        image: zshusers/zsh:4.3.15
+        command:
+          - /bin/sh
+          - -c
+        args:
+          - "cat $(workspaces.source.path)/README.md"

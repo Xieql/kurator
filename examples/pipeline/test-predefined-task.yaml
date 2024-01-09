@@ -1,0 +1,18 @@
+apiVersion: pipeline.kurator.dev/v1alpha1
+kind: Pipeline
+metadata:
+  name: test-predefined-task
+  namespace: kurator-pipeline
+spec:
+  description: "this is a quick-start pipeline, it shows how to use customTask and predefined Task in a pipeline"
+  tasks:
+    - name: git-clone
+      predefinedTask:
+        name: git-clone
+        params:
+          git-secret-name: git-credentials
+    - name: go-test
+      predefinedTask:
+        name: go-test
+        params:
+          packages: ./...
