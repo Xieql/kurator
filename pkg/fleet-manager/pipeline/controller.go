@@ -15,12 +15,16 @@ package pipeline
 
 import (
 	"context"
-	"github.com/pkg/errors"
+	"fmt"
 	"time"
 
+	"github.com/pkg/errors"
+	corev1 "k8s.io/api/core/v1"
 	v1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	apiserrors "k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	utilerrors "k8s.io/apimachinery/pkg/util/errors"
@@ -36,7 +40,8 @@ import (
 )
 
 const (
-	PipelineFinalizer = "pipeline.kurator.dev"
+	PipelineFinalizer   = "pipeline.kurator.dev"
+	TektonPipelineLabel = "tekton.dev/pipeline"
 )
 
 // PipelineManager reconciles a Pipeline object.
@@ -272,9 +277,41 @@ func (p *PipelineManager) reconcilePipelineStatus(ctx context.Context, pipeline 
 
 // reconcileDeletePipeline handles the deletion of a Pipeline object.
 func (p *PipelineManager) reconcileDeletePipeline(ctx context.Context, pipeline *pipelineapi.Pipeline) (ctrl.Result, error) {
-	// Remove the finalizer from the pipeline.
+	// First, delete all Pods with the specific label.
+	if err := p.deleteAssociatedPods(ctx, pipeline.Namespace, pipeline.Name); err != nil {
+		return ctrl.Result{}, fmt.Errorf("error deleting associated pods: %v", err)
+	}
+
+	// After successful deletion of Pods, remove the finalizer from the Pipeline.
 	controllerutil.RemoveFinalizer(pipeline, PipelineFinalizer)
+
 	return ctrl.Result{}, nil
+}
+
+// deleteAssociatedPods deletes all Pods in the same namespace as the Pipeline
+// that have a label with key TektonPipelineLabel and value equal to pipelineName.
+func (p *PipelineManager) deleteAssociatedPods(ctx context.Context, namespace, pipelineName string) error {
+	// The Kurator pipeline name is equal to the Tekton pipeline name, so we can use MatchingLabels{TektonPipelineLabel: pipelineName}
+	labelSelector := client.MatchingLabels{TektonPipelineLabel: pipelineName}
+	var pods corev1.PodList
+
+	// List all Pods in the same namespace with the specified label selector.
+	if err := p.Client.List(ctx, &pods, client.InNamespace(namespace), labelSelector); err != nil {
+		return fmt.Errorf("error listing pods: %v", err)
+	}
+
+	// Delete each found Pod.
+	for _, pod := range pods.Items {
+		// Delete the Pod using Foreground deletion policy.
+		// This ensures that all dependent resources like PVCs are also deleted before the Pod itself is deleted.
+		err := p.Client.Delete(ctx, &pod, client.PropagationPolicy(metav1.DeletePropagationForeground))
+		if err != nil && !apiserrors.IsNotFound(err) {
+			// If the error is not a NotFound error, return the error.
+			return fmt.Errorf("error deleting pod %s: %v", pod.Name, err)
+		}
+	}
+
+	return nil
 }
 
 // isRBACResourceReady checks if necessary RBAC resources are ready.
