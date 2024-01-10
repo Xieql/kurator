@@ -107,6 +107,8 @@ func (p *PipelineManager) Reconcile(ctx context.Context, req ctrl.Request) (_ ct
 func (p *PipelineManager) reconcilePipeline(ctx context.Context, pipeline *pipelineapi.Pipeline) (ctrl.Result, error) {
 	log := ctrl.LoggerFrom(ctx)
 
+	log.Info("~~~~~~~~~~~~~~~reconcilePipeline")
+
 	// Prepare RBAC configuration for the pipeline.
 	rbacConfig := render.RBACConfig{
 		PipelineName:      pipeline.Name,
@@ -150,6 +152,7 @@ func (p *PipelineManager) reconcilePipeline(ctx context.Context, pipeline *pipel
 // reconcileCreateRBAC creates and applies RBAC resources for the pipeline.
 func (p *PipelineManager) reconcileCreateRBAC(ctx context.Context, rbacConfig render.RBACConfig) (ctrl.Result, error) {
 	log := ctrl.LoggerFrom(ctx)
+	log.Info("~~~~~~~~~~~~~~~reconcileCreateRBAC")
 
 	// Render RBAC configuration.
 	rbac, err := render.RenderRBAC(rbacConfig)
@@ -170,6 +173,7 @@ func (p *PipelineManager) reconcileCreateRBAC(ctx context.Context, rbacConfig re
 // reconcileCreateTasks creates and applies Tekton tasks for the pipeline.
 func (p *PipelineManager) reconcileCreateTasks(ctx context.Context, pipeline *pipelineapi.Pipeline) (ctrl.Result, error) {
 	log := ctrl.LoggerFrom(ctx)
+	log.Info("~~~~~~~~~~~~~~~reconcileCreateTasks")
 
 	// Process each task in the pipeline.
 	for _, task := range pipeline.Spec.Tasks {
@@ -191,6 +195,7 @@ func (p *PipelineManager) reconcileCreateTasks(ctx context.Context, pipeline *pi
 // createPredefinedTask creates a predefined Tekton task and applies it.
 func (p *PipelineManager) createPredefinedTask(ctx context.Context, task *pipelineapi.PipelineTask, pipeline *pipelineapi.Pipeline) error {
 	log := ctrl.LoggerFrom(ctx)
+	log.Info("~~~~~~~~~~~~~~~createPredefinedTask")
 
 	// Render the predefined task.
 	taskResource, err := render.RenderPredefinedTaskWithPipeline(pipeline, task.PredefinedTask)
@@ -211,6 +216,7 @@ func (p *PipelineManager) createPredefinedTask(ctx context.Context, task *pipeli
 // createCustomTask creates a custom Tekton task and applies it.
 func (p *PipelineManager) createCustomTask(ctx context.Context, task *pipelineapi.PipelineTask, pipeline *pipelineapi.Pipeline) error {
 	log := ctrl.LoggerFrom(ctx)
+	log.Info("~~~~~~~~~~~~~~~createCustomTask")
 
 	// Render the custom task.
 	taskResource, err := render.RenderCustomTaskWithPipeline(pipeline, task.Name, task.CustomTask)
@@ -231,6 +237,7 @@ func (p *PipelineManager) createCustomTask(ctx context.Context, task *pipelineap
 // reconcileCreatePipeline creates and applies the Tekton pipeline.
 func (p *PipelineManager) reconcileCreatePipeline(ctx context.Context, pipeline *pipelineapi.Pipeline) (ctrl.Result, error) {
 	log := ctrl.LoggerFrom(ctx)
+	log.Info("~~~~~~~~~~~~~~~reconcileCreatePipeline")
 
 	// Render the pipeline.
 	pipelineResource, err := render.RenderPipelineWithPipeline(pipeline)
@@ -251,6 +258,7 @@ func (p *PipelineManager) reconcileCreatePipeline(ctx context.Context, pipeline 
 // reconcileCreateTrigger creates and applies the Tekton trigger.
 func (p *PipelineManager) reconcileCreateTrigger(ctx context.Context, pipeline *pipelineapi.Pipeline) (ctrl.Result, error) {
 	log := ctrl.LoggerFrom(ctx)
+	log.Info("~~~~~~~~~~~~~~~reconcileCreateTrigger")
 
 	// Render the trigger.
 	triggerResource, err := render.RenderTriggerWithPipeline(pipeline)
@@ -277,8 +285,13 @@ func (p *PipelineManager) reconcilePipelineStatus(ctx context.Context, pipeline 
 
 // reconcileDeletePipeline handles the deletion of a Pipeline object.
 func (p *PipelineManager) reconcileDeletePipeline(ctx context.Context, pipeline *pipelineapi.Pipeline) (ctrl.Result, error) {
+	log := ctrl.LoggerFrom(ctx)
+
+	log.Info("~~~~~~~~~~~~~~~reconcileDeletePipeline")
+
 	// First, delete all Pods with the specific label.
 	if err := p.deleteAssociatedPods(ctx, pipeline.Namespace, pipeline.Name); err != nil {
+		log.Error(err, "Error to delete associated pods")
 		return ctrl.Result{}, fmt.Errorf("error deleting associated pods: %v", err)
 	}
 
@@ -322,7 +335,7 @@ func (p *PipelineManager) isRBACResourceReady(ctx context.Context, rbacConfig re
 	sa := &v1.ServiceAccount{}
 	err := p.Client.Get(ctx, types.NamespacedName{Name: rbacConfig.PipelineName, Namespace: rbacConfig.PipelineNamespace}, sa)
 	if err != nil {
-		log.Error(err, "failed to get ServiceAccount for pipeline")
+		log.Info("ServiceAccount is not ready", "reason", err)
 		return false
 	}
 
@@ -330,7 +343,7 @@ func (p *PipelineManager) isRBACResourceReady(ctx context.Context, rbacConfig re
 	rb := &rbacv1.RoleBinding{}
 	err = p.Client.Get(ctx, types.NamespacedName{Name: rbacConfig.PipelineName, Namespace: rbacConfig.PipelineNamespace}, rb)
 	if err != nil {
-		log.Error(err, "failed to get RoleBinding for pipeline")
+		log.Info("RoleBinding is not ready", "reason", err)
 		return false
 	}
 
@@ -338,7 +351,7 @@ func (p *PipelineManager) isRBACResourceReady(ctx context.Context, rbacConfig re
 	crb := &rbacv1.ClusterRoleBinding{}
 	err = p.Client.Get(ctx, types.NamespacedName{Name: rbacConfig.PipelineName, Namespace: rbacConfig.PipelineNamespace}, crb)
 	if err != nil {
-		log.Error(err, "failed to get ClusterRoleBinding for pipeline")
+		log.Info("ClusterRoleBinding is not ready", "reason", err)
 		return false
 	}
 
