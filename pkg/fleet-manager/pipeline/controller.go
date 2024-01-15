@@ -139,10 +139,9 @@ func (p *PipelineManager) reconcileRBAC(ctx context.Context, pipeline *pipelinea
 
 	// Prepare RBAC configuration for the pipeline.
 	rbacConfig := render.RBACConfig{
-		PipelineName:         pipeline.Name,
-		PipelineNamespace:    pipeline.Namespace,
-		ChainCredentialsName: ChainCredentials,
-		OwnerReference:       render.GeneratePipelineOwnerRef(pipeline),
+		PipelineName:      pipeline.Name,
+		PipelineNamespace: pipeline.Namespace,
+		OwnerReference:    render.GeneratePipelineOwnerRef(pipeline),
 	}
 
 	// Check if we need ChainCredentials
