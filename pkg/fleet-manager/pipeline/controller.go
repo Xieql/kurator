@@ -145,6 +145,11 @@ func (p *PipelineManager) reconcileRBAC(ctx context.Context, pipeline *pipelinea
 		OwnerReference:       render.GeneratePipelineOwnerRef(pipeline),
 	}
 
+	// Check if we need ChainCredentials
+	if needChainCredentials(pipeline) {
+		rbacConfig.ChainCredentialsName = ChainCredentials
+	}
+
 	// Render RBAC configuration.
 	rbac, err := render.RenderRBAC(rbacConfig)
 	if err != nil {
@@ -312,4 +317,18 @@ func (p *PipelineManager) deleteAssociatedPods(ctx context.Context, namespace, p
 func getListenerServiceName(pipeline *pipelineapi.Pipeline) *string {
 	serviceName := "el-" + pipeline.Name + "-listener"
 	return &serviceName
+}
+
+// needChainCredentials show if this pipeline need user create Credentials. Currently, it will return true when we have predefined task named BuildPushImageContent
+func needChainCredentials(pipeline *pipelineapi.Pipeline) bool {
+	for _, task := range pipeline.Spec.Tasks {
+		if task.CustomTask != nil {
+			continue
+		}
+		if task.PredefinedTask.Name == render.BuildPushImageContent {
+			return true
+		}
+	}
+	return false
+
 }
