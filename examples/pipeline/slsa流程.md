@@ -8,7 +8,11 @@
 k create ns kurator-pipeline
 ```
 
-### 创建加密所需密钥。
+### 创建签名校验所需密钥。
+
+安装 cosign 工具，参考 https://docs.sigstore.dev/system_config/installation/  一句话介绍 cosign，pipeline 会使用cosign 进行签名 和校验
+
+
 注意：该密钥名称固定，且内容无法直接变更。如果需要变更，需要先删除再创建。
 
 ```
@@ -53,7 +57,6 @@ WARNING! Your password will be stored unencrypted in /root/.docker/config.json.
 
 创建用于 task 上传image 到 oci仓库所需的 secret
 
-
 ```
 kubectl create secret generic docker-credentials --from-file=/root/.docker/config.json -n kurator-pipeline
 
@@ -88,46 +91,165 @@ kubectl patch configmap chains-config -n tekton-chains -p='{"data":{"artifacts.o
 kubectl patch configmap chains-config -n tekton-chains -p='{"data":{"transparency.enabled": "true"}}'
 ```
 
-git://github.com/acme/myproject.git#refs/heads/mybranch#
-
 ### 创建 kurator pipeline 测试例子
 
 #### apply kurator pipeline 例子
 
 ```
-kubectl apply -f examples/pipeline/quick-start.yaml
-
+echo 'apiVersion: pipeline.kurator.dev/v1alpha1
+kind: Pipeline
+metadata:
+  name: quick-start
+  namespace: kurator-pipeline
+spec:
+  description: "this is a quick-start pipeline, it shows how to use customTask and predefined Task in a pipeline"
+  tasks:
+    - name: git-clone
+      predefinedTask:
+        name: git-clone
+        params:
+          git-secret-name: git-credentials
+    - name: cat-readme
+      customTask:
+        image: zshusers/zsh:4.3.15
+        command:
+          - /bin/sh
+          - -c
+        args:
+          - "cat $(workspaces.source.path)/README.md"
+    - name: go-test
+      predefinedTask:
+        name: go-test
+        params:
+          packages: ./...
+    - name: go-lint
+      predefinedTask:
+        name: go-lint
+        params:
+          packages: "./..."
+          flags: "--disable=errcheck,unused,gosimple,staticcheck --verbose --timeout 10m"
+    - name: build-and-push-image
+      predefinedTask:
+        name: build-and-push-image
+        params:
+          image: "ghcr.io/<username>/<image-name>"'| kubectl apply -f -
 ```
 
-查看日志
-```
-kubectl logs -l app.kubernetes.io/name=kurator-fleet-manager -n kurator-system --tail=-1
-```
+请注意，请将这里的 <username> 改成你的 github 用户名，将 image-name 改为你的镜像名称，例如 kurator-test:0.6.0
 
 ## 暴露服务
 
 ```
-kubectl port-forward --address 0.0.0.0 service/el-quick-start-listener 30000:8080 -n kurator-pipeline
+kubectl port-forward --address 0.0.0.0 service/el-quick-start-listener 30002:8080 -n kurator-pipeline
 ```
 
+## 配置 webhook
+参考 https://kurator.dev/docs/pipeline/operation/ 了解如何给上述服务配置 webhook
 
+## 触发 pipeline 
 
-
-查看 taskrun 状态：
+To trigger the pipeline, you might try pushing some content to the repository, such as a modification to the README. Information about the received event can be observed in the window where the forward service is running.
 
 ```
-k get taskruns.tekton.dev -n chain-test -o yaml 
-## 可以看到 chains.tekton.dev/signed: "true" 说明签名成功
-apiVersion: v1
-items:
-- apiVersion: tekton.dev/v1
-  kind: TaskRun
-  metadata:
-    annotations:
-      chains.tekton.dev/signed: "true"
+Forwarding from 0.0.0.0:30002 -> 8080
+Handling connection for 30002
 ```
 
-### 验证签名
+## 查看pipelin执行结果
+
+After the pipeline is triggered, the system will create individual pods for each task in the pipeline, executing them in order. You can view the current task execution status with a specific command.
+
+```
+$ kubectl  get pod -n kurator-pipeline | grep quick-start
+el-quick-start-listener-fbf79b78-tdtjz             1/1     Running     0          12m
+quick-start-run-q45w6-build-and-push-image-pod     0/2     Completed   0          3m57s
+quick-start-run-q45w6-cat-readme-pod               0/1     Completed   0          6m40s
+quick-start-run-q45w6-git-clone-pod                0/1     Completed   0          6m50s
+quick-start-run-q45w6-go-lint-pod                  0/1     Completed   0          5m11s
+quick-start-run-q45w6-go-test-pod                  0/1     Completed   0          6m37s
+```
+
+同样的，你也可以在 `kurator pipeline execution list  -n kurator-pipeline  --kubeconfig /root/.kube/kurator-host.config` 命令 拿到事件触发的  pipeline execution 名称后，
+通过 通过下面命令查看该pipeline 各个日志的执行结果
+
+```
+kurator pipeline execution logs <pipeline-execution>  -n kurator-pipeline --tail 10 --kubeconfig /root/.kube/kurator-host.config
+INFO[2024-01-04 11:47:34] Fetching logs for TaskRun: quick-start-run-frb7l-git-clone 
+INFO[2024-01-04 11:47:34] Fetching logs for container 'step-clone' in Pod 'quick-start-run-frb7l-git-clone-pod' 
+INFO[2024-01-04 11:47:34] Logs from container 'step-clone':
++ cd /workspace/source/
++ git rev-parse HEAD
++ RESULT_SHA=1858f8e5129516d6e7d9ad993b1ec41cef922d18
++ EXIT_CODE=0
++ '[' 0 '!=' 0 ]
++ git log -1 '--pretty=%ct'
++ RESULT_COMMITTER_DATE=1703581193
++ printf '%s' 1703581193
++ printf '%s' 1858f8e5129516d6e7d9ad993b1ec41cef922d18
++ printf '%s' https://github.com/Xieql/podinfo 
+INFO[2024-01-04 11:47:34] Fetching logs for TaskRun: quick-start-run-frb7l-build-and-push-image 
+INFO[2024-01-04 11:47:34] Fetching logs for container 'step-build-and-push' in Pod 'quick-start-run-frb7l-build-and-push-image-pod' 
+INFO[2024-01-04 11:47:34] Logs from container 'step-build-and-push':
+INFO[0161] RUN chown -R app:app ./                      
+INFO[0161] Cmd: /bin/sh                                 
+INFO[0161] Args: [-c chown -R app:app ./]               
+INFO[0161] Running: [/bin/sh -c chown -R app:app ./]    
+INFO[0161] Taking snapshot of full filesystem...        
+INFO[0162] USER app                                     
+INFO[0162] Cmd: USER                                    
+INFO[0162] CMD ["./podinfo"]                            
+INFO[0162] Pushing image to ghcr.io/xieql/kurator-final:0.4.1 
+INFO[0188] Pushed ghcr.io/xieql/kurator-final@sha256:73c1ad5046233adb70aae2ee5df6e00f2c521e89cc980a954dc024d12add8daf  
+INFO[2024-01-04 11:47:34] Fetching logs for container 'step-write-url' in Pod 'quick-start-run-frb7l-build-and-push-image-pod' 
+INFO[2024-01-04 11:47:34] Logs from container 'step-write-url':
+ghcr.io/xieql/kurator-final:0.4.1 
+INFO[2024-01-04 11:47:34] Fetching logs for TaskRun: quick-start-run-frb7l-cat-readme 
+INFO[2024-01-04 11:47:34] Fetching logs for container 'step-cat-readme-quick-start' in Pod 'quick-start-run-frb7l-cat-readme-pod' 
+INFO[2024-01-04 11:47:34] Logs from container 'step-cat-readme-quick-start':
+To delete podinfo's Helm repository and release from your cluster run:
+
+flux -n default delete source helm podinfo
+flux -n default delete helmrelease podinfo
+
+If you wish to manage the lifecycle of your applications in a **GitOps** manner, check out
+this [workflow example](https://github.com/fluxcd/flux2-kustomize-helm-example)
+for multi-env deployments with Flux, Kustomize and Helm. 
+INFO[2024-01-04 11:47:34] Fetching logs for TaskRun: quick-start-run-frb7l-go-test 
+INFO[2024-01-04 11:47:34] Fetching logs for container 'step-unit-test' in Pod 'quick-start-run-frb7l-go-test-pod' 
+INFO[2024-01-04 11:47:34] Logs from container 'step-unit-test':
+--- PASS: TestInfoHandler (0.00s)
+=== RUN   TestStatusHandler
+--- PASS: TestStatusHandler (0.00s)
+=== RUN   TestTokenHandler
+--- PASS: TestTokenHandler (0.00s)
+=== RUN   TestVersionHandler
+--- PASS: TestVersionHandler (0.00s)
+PASS
+coverage: 14.4% of statements
+ok  	github.com/stefanprodan/podinfo/pkg/api	1.088s	coverage: 14.4% of statements 
+INFO[2024-01-04 11:47:34] Fetching logs for TaskRun: quick-start-run-frb7l-go-lint 
+INFO[2024-01-04 11:47:34] Fetching logs for container 'step-lint' in Pod 'quick-start-run-frb7l-go-lint-pod' 
+INFO[2024-01-04 11:47:34] Logs from container 'step-lint':
+level=info msg="[config_reader] Config search paths: [./ /workspace/src /workspace / /root]"
+level=info msg="[lintersdb] Active 2 linters: [govet ineffassign]"
+level=info msg="[loader] Go packages loading at mode 575 (deps|imports|types_sizes|compiled_files|files|name|exports_file) took 1m0.435700461s"
+level=info msg="[runner/filename_unadjuster] Pre-built 0 adjustments in 4.381259ms"
+level=info msg="[linters_context/goanalysis] analyzers took 1.651993451s with top 10 stages: inspect: 842.409271ms, ctrlflow: 402.369985ms, printf: 382.21663ms, ineffassign: 12.079525ms, slog: 3.20068ms, lostcancel: 1.346293ms, copylocks: 1.333706ms, directive: 1.287065ms, bools: 976.125µs, composites: 435.523µs"
+level=info msg="[runner] processing took 2.828µs with stages: max_same_issues: 349ns, skip_dirs: 325ns, nolint: 302ns, cgo: 230ns, exclude-rules: 208ns, max_from_linter: 146ns, source_code: 143ns, path_prettifier: 133ns, filename_unadjuster: 133ns, autogenerated_exclude: 131ns, skip_files: 124ns, identifier_marker: 118ns, max_per_file_from_linter: 72ns, severity-rules: 59ns, path_shortener: 56ns, sort_results: 53ns, diff: 51ns, exclude: 50ns, uniq_by_line: 50ns, fixer: 50ns, path_prefixer: 45ns"
+level=info msg="[runner] linters took 3.81614172s with stages: goanalysis_metalinter: 3.816076131s"
+level=info msg="File cache stats: 0 entries of total size 0B"
+level=info msg="Memory: 644 samples, avg is 35.5MB, max is 435.9MB"
+level=info msg="Execution took 1m4.265454941s" 
+```
+
+## 在github中 查看已上传的镜像、签名与 出处证明
+
+当上述例子的pipelin 执行 完毕后，
+登录你的 github，进入 package 页面，你会发现新增了 所指定的image，点击后可以看到类似下面的内容：
+
+
+
+## 验证签名
 
 登录 ghcr 查看，可以看到对应pkg下的镜像以及对应的 .sig 签名 和 .att 出处证明
 
@@ -283,12 +405,7 @@ echo 'eyJfdHlwZSI6Imh0dHBzOi8vaW4tdG90by5pby9TdGF0ZW1lbnQvdjAuMSIsInByZWRpY2F0ZV
     ]
   }
 }
-
 ```
-
-
-
-
 
 
 ## clean up
@@ -297,21 +414,6 @@ echo 'eyJfdHlwZSI6Imh0dHBzOi8vaW4tdG90by5pby9TdGF0ZW1lbnQvdjAuMSIsInByZWRpY2F0ZV
 ```
 k delete ns chain-test
 ```
-删除不掉？？？
-似乎没有看到如何删除相关资源
-
-无法删除的时候重装：
-
-```
-kubectl delete --f https://storage.googleapis.com/tekton-releases/chains/latest/release.yaml
-```
-
-```
-kubectl apply --f https://storage.googleapis.com/tekton-releases/chains/latest/release.yaml
-```
-
-
-
 
 删除cosign密钥
 ```
@@ -323,7 +425,3 @@ kubectl delete secret signing-secrets -n tekton-chains
 ```
 docker logout ghcr.io 
 ```
-
-注意：
-多个版本的推向同一个仓库，新的会把旧的覆盖掉。这个应该是可以配置的。理论上需要同时保持多个 镜像版本。
-此外，如果多个精选版本，是否还可以进行验证。因为有多个验证文件可选，cosign 能否匹配对应的信息。如果不行，可能需要考虑额外的方案
